@@ -1318,8 +1318,8 @@ const RagdollArena = () => {
           else if (f.x >= WALL_R - 10 && rng(0, 1) < 0.4) startWallRun(f, 1);
         }
 
-        f.x += f.vx * spd; f.vx *= 0.86;
-        if (f.state === 'walk') { f.x += f.facing * 3.2 * spd; f.walkCycle += 0.14 * spd; }
+        f.x += f.vx * spd; f.vx *= 0.88; // Smoother deceleration
+        if (f.state === 'walk') { f.x += f.facing * 3.0 * spd; f.walkCycle += 0.12 * spd; }
         else if (f.state === 'walkBack') { f.x -= f.facing * 2.2 * spd; f.walkCycle += 0.1 * spd; }
         f.x = clamp(f.x, WALL_L, WALL_R); f.bob += 0.04 * spd;
         if (f.hitImpact > 0) f.hitImpact *= 0.84;
