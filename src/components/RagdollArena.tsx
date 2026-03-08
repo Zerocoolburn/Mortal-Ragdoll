@@ -1208,7 +1208,66 @@ function poseRagdoll(f: Fighter) {
 // ═══════════════════════════════════════════════════════
 // COMPONENT
 // ═══════════════════════════════════════════════════════
-type GameScreen = 'menu' | 'settings' | 'fight' | 'charSelect';
+type GameScreen = 'menu' | 'settings' | 'fight' | 'charSelect' | 'campaignSelect' | 'cinematic' | 'campaignFight' | 'victory';
+
+// ═══════════════════════════════════════════════════════
+// GAMEPAD SUPPORT (PS4/generic)
+// ═══════════════════════════════════════════════════════
+const GAMEPAD_BUTTONS = {
+  cross: 0, circle: 1, square: 2, triangle: 3,
+  L1: 4, R1: 5, L2: 6, R2: 7,
+  share: 8, options: 9,
+  L3: 10, R3: 11,
+  up: 12, down: 13, left: 14, right: 15,
+};
+
+interface GamepadState {
+  left: boolean; right: boolean; up: boolean; down: boolean;
+  slash: boolean; heavySlash: boolean; kick: boolean; block: boolean;
+  special: boolean; dodge: boolean; shoot: boolean; grab: boolean;
+}
+
+function readGamepad(): GamepadState {
+  const gp = navigator.getGamepads?.()[0];
+  if (!gp) return { left: false, right: false, up: false, down: false, slash: false, heavySlash: false, kick: false, block: false, special: false, dodge: false, shoot: false, grab: false };
+  const ax0 = gp.axes[0] ?? 0;
+  const ax1 = gp.axes[1] ?? 0;
+  return {
+    left: ax0 < -0.3 || gp.buttons[GAMEPAD_BUTTONS.left]?.pressed,
+    right: ax0 > 0.3 || gp.buttons[GAMEPAD_BUTTONS.right]?.pressed,
+    up: ax1 < -0.3 || gp.buttons[GAMEPAD_BUTTONS.up]?.pressed,
+    down: ax1 > 0.3 || gp.buttons[GAMEPAD_BUTTONS.down]?.pressed,
+    slash: gp.buttons[GAMEPAD_BUTTONS.square]?.pressed,
+    heavySlash: gp.buttons[GAMEPAD_BUTTONS.triangle]?.pressed,
+    kick: gp.buttons[GAMEPAD_BUTTONS.circle]?.pressed,
+    block: gp.buttons[GAMEPAD_BUTTONS.L1]?.pressed,
+    special: gp.buttons[GAMEPAD_BUTTONS.R1]?.pressed && gp.buttons[GAMEPAD_BUTTONS.R2]?.pressed,
+    dodge: gp.buttons[GAMEPAD_BUTTONS.cross]?.pressed && (ax0 < -0.3 || ax0 > 0.3),
+    shoot: gp.buttons[GAMEPAD_BUTTONS.R2]?.pressed,
+    grab: gp.buttons[GAMEPAD_BUTTONS.L2]?.pressed,
+  };
+}
+
+// ═══════════════════════════════════════════════════════
+// CAMPAIGN STATE
+// ═══════════════════════════════════════════════════════
+interface CampaignState {
+  level: number;
+  playerCharId: string;
+  totalScore: number;
+  levelScores: number[];
+  totalDamageDealt: number;
+  totalCombos: number;
+  bestCombo: number;
+  totalTime: number;
+  levelsComplete: boolean[];
+}
+
+const initCampaign = (charId: string): CampaignState => ({
+  level: 1, playerCharId: charId, totalScore: 0,
+  levelScores: [], totalDamageDealt: 0, totalCombos: 0,
+  bestCombo: 0, totalTime: 0, levelsComplete: Array(12).fill(false),
+});
 
 const RagdollArena = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -1218,6 +1277,9 @@ const RagdollArena = () => {
   const [selectedP1, setSelectedP1] = useState<string>('siegfried');
   const [selectedP2, setSelectedP2] = useState<string>('nightmare');
   const [selectingFor, setSelectingFor] = useState<1 | 2>(1);
+  const [campaign, setCampaign] = useState<CampaignState>(initCampaign('siegfried'));
+  const [campaignChar, setCampaignChar] = useState<string>('siegfried');
+  const campaignRef = useRef<CampaignState>(initCampaign('siegfried'));
 
   const G = useRef({
     fighters: [
