@@ -1474,6 +1474,8 @@ const RagdollArena = () => {
           if (f.state === 'wallFlip') { dmg *= 1.8; spawnRing(hitPt.x, hitPt.y, 90, '#8ff'); g.slowMo = 0.2; g.slowTimer = 18; g.flash = 6; g.flashColor = '#8af'; }
           if (f.state === 'divekick') { dmg *= 1.6; spawnRing(hitPt.x, hitPt.y, 70, '#fa0'); g.slowMo = 0.25; g.slowTimer = 15; g.flash = 5; g.flashColor = '#fa0'; }
           if (f.state === 'roundhouse') { dmg *= 1.4; spawnRing(hitPt.x, hitPt.y, 60, '#f80'); g.slowMo = 0.3; g.slowTimer = 10; }
+          if (f.state === 'headbutt') { dmg *= 1.3; spawnRing(hitPt.x, hitPt.y, 50, '#ff0'); g.slowMo = 0.4; g.slowTimer = 8; o.headHits++; }
+          if (f.state === 'punch' && !f.hasSword) { dmg *= 0.7; } // Punches do less but are fast
 
           const hitDir2 = v(f.facing, -0.3);
           if (aiData[idx]) { aiData[idx].mem.lastAtkLanded = true; aiData[idx].mem.excitement += 2; }
