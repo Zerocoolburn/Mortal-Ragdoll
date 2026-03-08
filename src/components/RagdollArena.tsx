@@ -317,6 +317,49 @@ function poseRagdoll(f: Fighter) {
     targets[13] = v(lFootX, footY);
   }
 
+  // ── HEADBUTT POSE ──
+  if (f.state === 'headbutt') {
+    const windUp = ap < 0.25 ? ap / 0.25 : 0;
+    const strike = ap < 0.25 ? 0 : ap < 0.5 ? (ap - 0.25) / 0.25 : 1;
+    const recover = ap > 0.6 ? (ap - 0.6) / 0.4 : 0;
+    // Lean back then thrust head forward
+    for (let i = 0; i < 5; i++) {
+      targets[i].x -= s * 12 * windUp;
+      targets[i].x += s * 25 * strike - s * 10 * recover;
+    }
+    // Head lunges forward
+    targets[0] = v(sway + s * 30 * strike - s * 5 * recover, -108 * S + bob2 + 15 * strike);
+    targets[1] = v(sway + s * 15 * strike, -93 * S + bob2 + 8 * strike);
+    // Plant legs firmly
+    targets[12] = v(lKneeX - s * 5 * strike, lKneeY + 5 * strike);
+    targets[15] = v(rKneeX + s * 5 * strike, rKneeY + 5 * strike);
+  }
+
+  // ── PUNCH POSE (unarmed) ──
+  if (f.state === 'punch') {
+    const windUp = ap < 0.2 ? ap / 0.2 : 0;
+    const strike = ap < 0.2 ? 0 : ap < 0.5 ? (ap - 0.2) / 0.3 : 1;
+    const recover = ap > 0.6 ? (ap - 0.6) / 0.4 : 0;
+    // Right arm punches forward
+    targets[8] = v((15 + 20 * strike - 10 * recover) * s * S, (-86 + 10 * windUp) * S + bob2);
+    targets[9] = v((28 + 35 * strike - 15 * recover) * s * S, (-64 + 15 * strike - 5 * recover) * S + bob2);
+    targets[10] = v((35 + 50 * strike - 20 * recover) * s * S, (-55 + 20 * strike - 8 * recover) * S + bob2);
+    // Lean into punch
+    for (let i = 0; i < 5; i++) targets[i].x += s * 8 * strike - s * 3 * recover;
+  }
+
+  // ── SWORD THROW POSE ──
+  if (f.state === 'swordThrow') {
+    const windUp = ap < 0.3 ? ap / 0.3 : 0;
+    const release = ap < 0.3 ? 0 : ap < 0.5 ? (ap - 0.3) / 0.2 : 1;
+    // Wind up - arm goes back
+    targets[8] = v((15 - 25 * windUp + 30 * release) * s * S, (-86 - 15 * windUp + 10 * release) * S);
+    targets[9] = v((28 - 30 * windUp + 40 * release) * s * S, (-64 - 20 * windUp + 15 * release) * S);
+    targets[10] = v((35 - 35 * windUp + 50 * release) * s * S, (-46 - 25 * windUp + 20 * release) * S);
+    // Body twist
+    for (let i = 0; i < 5; i++) targets[i].x += s * (-8 * windUp + 12 * release);
+  }
+
   if (f.state === 'fatality') {
     // Different fatality poses based on fatalityType
     const ft = f.fatalityType % 5; // cycle through pose groups
