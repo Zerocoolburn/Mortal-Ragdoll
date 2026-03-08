@@ -288,10 +288,10 @@ const RagdollArena = () => {
     const g = G.current;
     for (let i = 0; i < count; i++) {
       g.blood.push({
-        x: x + (Math.random() - 0.5) * 8, y: y - Math.random() * 8,
-        vx: dir * (1 + Math.random() * power * 4) + (Math.random() - 0.5) * power * 3,
-        vy: -(1 + Math.random() * power * 5) + Math.random() * 2,
-        life: 80 + Math.random() * 100, maxLife: 180, sz: 1 + Math.random() * 3 * power,
+        x: x + (Math.random() - 0.5) * 12, y: y - Math.random() * 10,
+        vx: dir * (2 + Math.random() * power * 6) + (Math.random() - 0.5) * power * 5,
+        vy: -(2 + Math.random() * power * 7) + Math.random() * 3,
+        life: 120 + Math.random() * 160, maxLife: 280, sz: 1.5 + Math.random() * 4 * power,
         grounded: false,
       });
     }
