@@ -2594,23 +2594,6 @@ const RagdollArena = () => {
         </div>
       </div>
 
-      {/* Bottom bar */}
-      <div className="absolute bottom-0 left-0 right-0 pointer-events-auto" style={{ maxWidth: W, margin: '0 auto' }}>
-        <div className="flex items-center justify-between px-4 py-2" style={{
-          background: 'linear-gradient(180deg, transparent 0%, rgba(0,0,0,0.6) 50%, rgba(0,0,0,0.8) 100%)',
-        }}>
-          <button
-            onClick={() => setGameScreen('menu')}
-            className="text-[10px] tracking-widest uppercase px-3 py-1 transition-all hover:text-red-400"
-            style={{ fontFamily: '"Orbitron", sans-serif', color: '#444', border: '1px solid #333' }}
-          >
-            ESC MENU
-          </button>
-          <div className="text-[9px] tracking-[0.15em] uppercase" style={{ fontFamily: '"Orbitron", sans-serif', color: '#333' }}>
-            J Slash • K Stab • G Kick • H HeadKick • X Fatality
-          </div>
-        </div>
-      </div>
     </div>
   );
 };
