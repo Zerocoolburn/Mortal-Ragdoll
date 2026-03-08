@@ -124,7 +124,7 @@ export const CHARACTERS: CharacterDef[] = [
     color: '#2a5a2a', color2: '#44ff44',
     skin: '#b8a878', hair: '#1a3a1a',
     weaponKey: 'longsword', specialType: 'poisonCloud',
-    specialName: 'TOXIC MIASMA', specialColor: '#4f4', specialGlow: '#8f8',
+    specialName: 'TOXIC MIASMA', specialColor: '#44ff44', specialGlow: '#88ff88',
     aiStyles: ['assassin', 'wild', 'acrobat'],
     voicePitch: 1.0, voiceRate: 1.12,
     bodyScale: 0.85, headScale: 0.9,
