@@ -816,9 +816,13 @@ const RagdollArena = () => {
     };
     const ca = (f: Fighter) => ['idle', 'walk', 'walkBack', 'crouch'].includes(f.state);
     const doAtk = (f: Fighter, t: string) => {
+      // If no sword, redirect sword attacks to punches/kicks
+      if (!f.hasSword && ['slash', 'heavySlash', 'stab', 'overhead', 'spinSlash', 'dashStab', 'execution'].includes(t)) {
+        t = pick(['punch', 'kick', 'headKick', 'kneeStrike', 'headbutt']);
+      }
       const d = ATK[t]; if (!d || !ca(f) || f.stamina < d.stCost) return false;
       f.stamina -= d.stCost;
-      ss(f, t as FState, Math.round(d.frames / f.weapon.speed));
+      ss(f, t as FState, Math.round(d.frames / (f.hasSword ? f.weapon.speed : 1.2)));
       if (t === 'dashStab') f.vx = f.facing * 12;
       if (t === 'uppercut') { f.vy = -6; f.grounded = false; }
       if (t === 'spinSlash') f.vx = f.facing * 5;
@@ -830,7 +834,26 @@ const RagdollArena = () => {
       if (t === 'headKick') { f.vx = f.facing * 3; }
       if (t === 'kneeStrike') f.vx = f.facing * 6;
       if (t === 'roundhouse') { f.vx = f.facing * 3; }
+      if (t === 'headbutt') { f.vx = f.facing * 8; }
+      if (t === 'punch') { f.vx = f.facing * 5; }
+      if (t === 'swordThrow') { f.vx = f.facing * 2; }
       spawnAfterimage(f); return true;
+    };
+    const doSwordThrow = (f: Fighter, idx: number) => {
+      if (!f.hasSword || !ca(f) || f.stamina < 5) return false;
+      f.stamina -= 5;
+      f.hasSword = false;
+      ss(f, 'swordThrow' as FState, 20);
+      const hand = f.rag.pts[10].pos;
+      const target = g.fighters[1 - idx];
+      const ang = Math.atan2(target.y - 60 - hand.y, target.x - hand.x);
+      g.thrownSwords.push({
+        x: hand.x, y: hand.y, vx: Math.cos(ang) * 18, vy: Math.sin(ang) * 18 - 3,
+        ang: ang, angV: f.facing * 0.8, life: 80, dmg: f.weapon.heavyDmg * 1.5,
+        owner: idx, weapon: f.weapon, stuck: false,
+      });
+      spawnAfterimage(f);
+      return true;
     };
     const doFatality = (f: Fighter, o: Fighter) => {
       if (o.hp > 15 || !ca(f)) return false;
