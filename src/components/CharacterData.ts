@@ -261,7 +261,7 @@ export const CHARACTERS: CharacterDef[] = [
   // ── 12. PHOENIX — Flame Spirit ──
   {
     id: 'phoenix', name: 'PHOENIX', title: 'Flame Spirit',
-    color: '#aa5500', color2: '#fc0',
+    color: '#aa5500', color2: '#ffcc00',
     skin: '#e8c888', hair: '#ff6600',
     weaponKey: 'longsword', specialType: 'fireTornado',
     specialName: 'FIRE VORTEX', specialColor: '#f80', specialGlow: '#fc0',
