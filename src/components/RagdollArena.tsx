@@ -1209,6 +1209,7 @@ function poseRagdoll(f: Fighter) {
 // COMPONENT
 // ═══════════════════════════════════════════════════════
 type GameScreen = 'menu' | 'settings' | 'fight' | 'charSelect' | 'campaignSelect' | 'cinematic' | 'campaignFight' | 'victory';
+type SettingsTab = 'general' | 'controls' | 'gameplay' | 'display';
 
 // ═══════════════════════════════════════════════════════
 // GAMEPAD SUPPORT (PS4/generic)
@@ -1225,28 +1226,41 @@ interface GamepadState {
   left: boolean; right: boolean; up: boolean; down: boolean;
   slash: boolean; heavySlash: boolean; kick: boolean; block: boolean;
   special: boolean; dodge: boolean; shoot: boolean; grab: boolean;
+  analogX: number; analogY: number;
+  confirm: boolean; back: boolean; start: boolean;
 }
 
-function readGamepad(): GamepadState {
+function readGamepad(deadzone = 0.15): GamepadState {
   const gp = navigator.getGamepads?.()[0];
-  if (!gp) return { left: false, right: false, up: false, down: false, slash: false, heavySlash: false, kick: false, block: false, special: false, dodge: false, shoot: false, grab: false };
-  const ax0 = gp.axes[0] ?? 0;
-  const ax1 = gp.axes[1] ?? 0;
+  if (!gp) return { left: false, right: false, up: false, down: false, slash: false, heavySlash: false, kick: false, block: false, special: false, dodge: false, shoot: false, grab: false, analogX: 0, analogY: 0, confirm: false, back: false, start: false };
+  let ax0 = gp.axes[0] ?? 0;
+  let ax1 = gp.axes[1] ?? 0;
+  // Apply deadzone
+  if (Math.abs(ax0) < deadzone) ax0 = 0;
+  if (Math.abs(ax1) < deadzone) ax1 = 0;
   return {
-    left: ax0 < -0.3 || gp.buttons[GAMEPAD_BUTTONS.left]?.pressed,
-    right: ax0 > 0.3 || gp.buttons[GAMEPAD_BUTTONS.right]?.pressed,
-    up: ax1 < -0.3 || gp.buttons[GAMEPAD_BUTTONS.up]?.pressed,
-    down: ax1 > 0.3 || gp.buttons[GAMEPAD_BUTTONS.down]?.pressed,
+    left: ax0 < -deadzone || gp.buttons[GAMEPAD_BUTTONS.left]?.pressed,
+    right: ax0 > deadzone || gp.buttons[GAMEPAD_BUTTONS.right]?.pressed,
+    up: ax1 < -deadzone || gp.buttons[GAMEPAD_BUTTONS.up]?.pressed,
+    down: ax1 > deadzone || gp.buttons[GAMEPAD_BUTTONS.down]?.pressed,
+    analogX: ax0,
+    analogY: ax1,
     slash: gp.buttons[GAMEPAD_BUTTONS.square]?.pressed,
     heavySlash: gp.buttons[GAMEPAD_BUTTONS.triangle]?.pressed,
     kick: gp.buttons[GAMEPAD_BUTTONS.circle]?.pressed,
     block: gp.buttons[GAMEPAD_BUTTONS.L1]?.pressed,
     special: gp.buttons[GAMEPAD_BUTTONS.R1]?.pressed && gp.buttons[GAMEPAD_BUTTONS.R2]?.pressed,
-    dodge: gp.buttons[GAMEPAD_BUTTONS.cross]?.pressed && (ax0 < -0.3 || ax0 > 0.3),
-    shoot: gp.buttons[GAMEPAD_BUTTONS.R2]?.pressed,
+    dodge: gp.buttons[GAMEPAD_BUTTONS.cross]?.pressed && (Math.abs(ax0) > deadzone),
+    shoot: gp.buttons[GAMEPAD_BUTTONS.R2]?.pressed && !gp.buttons[GAMEPAD_BUTTONS.R1]?.pressed,
     grab: gp.buttons[GAMEPAD_BUTTONS.L2]?.pressed,
+    confirm: gp.buttons[GAMEPAD_BUTTONS.cross]?.pressed,
+    back: gp.buttons[GAMEPAD_BUTTONS.circle]?.pressed,
+    start: gp.buttons[GAMEPAD_BUTTONS.options]?.pressed,
   };
 }
+
+// Gamepad menu navigation state (prevents repeat)
+let gpMenuPrev = { up: false, down: false, left: false, right: false, confirm: false, back: false, start: false };
 
 // ═══════════════════════════════════════════════════════
 // CAMPAIGN STATE
