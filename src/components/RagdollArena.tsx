@@ -1934,16 +1934,23 @@ const RagdollArena = () => {
           }
           // Smooth ragdoll stepping for both
           stepRagdoll(winner.rag.pts, winner.rag.sticks, spd, 0.3);
+          clampRagdollToArena(winner);
           if (!winner.ragdolling) poseRagdoll(winner);
           stepRagdoll(loser.rag.pts, loser.rag.sticks, spd, 0.4);
+          clampRagdollToArena(loser);
           if (!winner.grounded) { winner.vy += GRAV * spd; winner.y += winner.vy * spd; if (winner.y >= GY) { winner.y = GY; winner.vy = 0; winner.grounded = true; } }
           winner.x += winner.vx * spd; winner.vx *= 0.86;
+          winner.x = clamp(winner.x, WALL_L, WALL_R);
           winner.bob += 0.04 * spd;
           // Dampen loser velocity to prevent jitter
           for (const pt of loser.rag.pts) {
             const vel = vsub(pt.pos, pt.old);
             pt.old = vlerp(pt.old, pt.pos, 0.15); // heavy damping
           }
+          // Keep loser position synced to ragdoll center
+          const loserCenter = loser.rag.pts[4].pos;
+          loser.x = clamp(loserCenter.x, WALL_L, WALL_R);
+          loser.y = Math.min(loserCenter.y, GY);
         }
         if (g.koTimer <= 0) {
           g.round++;
