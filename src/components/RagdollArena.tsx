@@ -999,9 +999,12 @@ const RagdollArena = () => {
         else if (f.state === 'stab') f.wTarget = ap2 < 0.3 ? -0.3 : ap2 < 0.55 ? 0.15 : -0.3;
         else if (f.state === 'overhead') f.wTarget = ap2 < 0.4 ? -2.8 : ap2 < 0.6 ? 2.0 : -0.2;
         else if (f.state === 'jumpAtk') f.wTarget = ap2 < 0.25 ? -2.5 : ap2 < 0.65 ? 2.5 : 0.5;
+        else if (f.state === 'uppercut') f.wTarget = ap2 < 0.3 ? -1.0 : ap2 < 0.5 ? -2.8 : -0.5;
+        else if (f.state === 'spinSlash') { const spin = ap2 * Math.PI * 2; f.wTarget = Math.sin(spin) * 2.5; }
+        else if (f.state === 'dashStab') f.wTarget = ap2 < 0.2 ? -0.2 : ap2 < 0.7 ? 0.1 : -0.3;
         else if (f.state === 'limbSmash') f.wTarget = ap2 < 0.3 ? -2.0 : ap2 < 0.55 ? 1.8 : 0.2;
         else f.wTarget = f.state === 'block' ? -1.3 : -0.5;
-        f.wAngle += (f.wTarget - f.wAngle) * 0.32;
+        f.wAngle += (f.wTarget - f.wAngle) * 0.38;
 
         // Bleed from stumps
         if (f.bleedTimer > 0) {
