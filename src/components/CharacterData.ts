@@ -181,7 +181,7 @@ export const CHARACTERS: CharacterDef[] = [
   // ── 8. VOLT — Lightning Fighter ──
   {
     id: 'volt', name: 'VOLT', title: 'Lightning Fighter',
-    color: '#4a4a1a', color2: '#ff0',
+    color: '#4a4a1a', color2: '#ffff00',
     skin: '#e8d8a8', hair: '#eee060',
     weaponKey: 'spear', specialType: 'lightningStorm',
     specialName: 'THUNDER REIGN', specialColor: '#ff0', specialGlow: '#ffa',
