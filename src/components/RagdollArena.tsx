@@ -264,7 +264,7 @@ const RagdollArena = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const G = useRef({
     fighters: [
-      mkFighter(350, 'SIEGFRIED', '#8B0000', '#e8b878', '#2a1a0a', 'greatsword', false),
+      mkFighter(350, 'SIEGFRIED', '#8B0000', '#e8b878', '#2a1a0a', 'greatsword', true),
       mkFighter(930, 'NIGHTMARE', '#1a1a4a', '#c4956a', '#111', 'axe', true),
     ],
     blood: [] as Blood[],
