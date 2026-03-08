@@ -3405,63 +3405,44 @@ const RagdollArena = () => {
 
           {/* Menu buttons */}
           <div className="flex flex-col gap-4 items-center">
-            <button
-              onClick={() => setGameScreen('campaignSelect')}
-              className="group relative px-12 py-4 text-xl font-bold tracking-[0.2em] uppercase transition-all duration-300 hover:scale-105"
-              style={{
-                fontFamily: '"Orbitron", sans-serif',
-                color: '#fff',
-                background: 'linear-gradient(180deg, rgba(200,120,0,0.8) 0%, rgba(100,50,0,0.9) 100%)',
-                border: '2px solid #da0',
-                clipPath: 'polygon(8% 0%, 100% 0%, 92% 100%, 0% 100%)',
-                textShadow: '0 0 10px #fa0',
-              }}
-            >
-              <span className="relative z-10">⚔ CAMPAIGN</span>
-              <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity" style={{
-                background: 'linear-gradient(180deg, rgba(255,150,0,0.3) 0%, rgba(180,80,0,0.4) 100%)',
-              }} />
-            </button>
-
-            <button
-              onClick={() => setGameScreen('charSelect')}
-              className="group relative px-12 py-4 text-xl font-bold tracking-[0.2em] uppercase transition-all duration-300 hover:scale-105"
-              style={{
-                fontFamily: '"Orbitron", sans-serif',
-                color: '#fff',
-                background: 'linear-gradient(180deg, rgba(180,0,0,0.8) 0%, rgba(80,0,0,0.9) 100%)',
-                border: '2px solid #a00',
-                clipPath: 'polygon(8% 0%, 100% 0%, 92% 100%, 0% 100%)',
-                textShadow: '0 0 10px #f00',
-              }}
-            >
-              <span className="relative z-10">AI vs AI</span>
-              <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity" style={{
-                background: 'linear-gradient(180deg, rgba(255,0,0,0.3) 0%, rgba(180,0,0,0.4) 100%)',
-              }} />
-            </button>
-
-            <button
-              onClick={() => setGameScreen('settings')}
-              className="group relative px-10 py-3 text-base font-bold tracking-[0.2em] uppercase transition-all duration-300 hover:scale-105"
-              style={{
-                fontFamily: '"Orbitron", sans-serif',
-                color: '#aaa',
-                background: 'linear-gradient(180deg, rgba(40,40,40,0.8) 0%, rgba(20,20,20,0.9) 100%)',
-                border: '1px solid #444',
-                clipPath: 'polygon(6% 0%, 100% 0%, 94% 100%, 0% 100%)',
-              }}
-            >
-              SETTINGS
-            </button>
+            {[
+              { label: '⚔ CAMPAIGN', screen: 'campaignSelect' as GameScreen, bg: 'rgba(200,120,0,0.8)', bg2: 'rgba(100,50,0,0.9)', border: '#da0', shadow: '#fa0', hoverBg: 'rgba(255,150,0,0.3)', size: 'text-xl', px: 'px-12', py: 'py-4' },
+              { label: 'AI vs AI', screen: 'charSelect' as GameScreen, bg: 'rgba(180,0,0,0.8)', bg2: 'rgba(80,0,0,0.9)', border: '#a00', shadow: '#f00', hoverBg: 'rgba(255,0,0,0.3)', size: 'text-xl', px: 'px-12', py: 'py-4' },
+              { label: 'SETTINGS', screen: 'settings' as GameScreen, bg: 'rgba(40,40,40,0.8)', bg2: 'rgba(20,20,20,0.9)', border: '#444', shadow: '', hoverBg: 'rgba(100,100,100,0.2)', size: 'text-base', px: 'px-10', py: 'py-3' },
+            ].map((item, idx) => (
+              <button key={idx}
+                onClick={() => { setMenuIndex(idx); setGameScreen(item.screen); }}
+                onMouseEnter={() => setMenuIndex(idx)}
+                className={`group relative ${item.px} ${item.py} ${item.size} font-bold tracking-[0.2em] uppercase transition-all duration-300 hover:scale-105`}
+                style={{
+                  fontFamily: '"Orbitron", sans-serif',
+                  color: menuIndex === idx ? '#fff' : (idx === 2 ? '#aaa' : '#ddd'),
+                  background: `linear-gradient(180deg, ${item.bg} 0%, ${item.bg2} 100%)`,
+                  border: menuIndex === idx ? `2px solid #fff` : `2px solid ${item.border}`,
+                  clipPath: 'polygon(8% 0%, 100% 0%, 92% 100%, 0% 100%)',
+                  textShadow: item.shadow ? `0 0 10px ${item.shadow}` : 'none',
+                  transform: menuIndex === idx ? 'scale(1.08)' : 'scale(1)',
+                  boxShadow: menuIndex === idx ? `0 0 25px ${item.border}88, inset 0 0 15px ${item.border}44` : 'none',
+                }}>
+                <span className="relative z-10">{item.label}</span>
+                {menuIndex === idx && <div className="absolute left-[-20px] top-1/2 -translate-y-1/2 text-sm" style={{ color: '#fa0' }}>▶</div>}
+              </button>
+            ))}
           </div>
+
+          {/* Controller navigation hint */}
+          {gamepadConnected && (
+            <div className="mt-1 flex items-center gap-2 text-[10px]" style={{ fontFamily: '"Orbitron", sans-serif', color: '#4af' }}>
+              <span>🎮</span> <span>D-Pad to navigate • ✕ to select</span>
+            </div>
+          )}
 
           {/* Controls hint */}
-          <div className="mt-2 text-[9px] tracking-[0.2em] uppercase text-center" style={{ fontFamily: '"Orbitron", sans-serif', color: '#444' }}>
-            Campaign: WASD/Arrows move • J/Z slash • K/X heavy • L/C kick • Shift block • Space dodge • F shoot • Q+E special
+          <div className="mt-2 text-[9px] tracking-[0.15em] uppercase text-center" style={{ fontFamily: '"Orbitron", sans-serif', color: '#444' }}>
+            WASD/Arrows move • J/Z slash • K/X heavy • L/C kick • Shift block • Space dodge
           </div>
-          <div className="text-[9px] tracking-[0.2em] uppercase text-center" style={{ fontFamily: '"Orbitron", sans-serif', color: '#333' }}>
-            PS4 Controller supported • □ slash • △ heavy • ○ kick • L1 block • R1+R2 special
+          <div className="text-[9px] tracking-[0.15em] uppercase text-center" style={{ fontFamily: '"Orbitron", sans-serif', color: '#333' }}>
+            🎮 □ slash • △ heavy • ○ kick • L1 block • R1+R2 special • See SETTINGS for full layout
           </div>
         </div>
       </div>
