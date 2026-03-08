@@ -895,6 +895,7 @@ function mkFighter(x: number, name: string, color: string, skin: string, hair: s
     wallRunTimer: 0, wallSide: 0, gunCooldown: 0, muzzleFlash: 0,
     headHits: 0, shieldHP: 50, fatalityType: 0,
     hasSword: true, groundBeatTimer: 0,
+    specialCooldown: 300 + Math.floor(rng(0, 200)),
   };
 }
 
