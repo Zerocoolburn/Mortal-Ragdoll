@@ -2621,7 +2621,7 @@ const RagdollArena = () => {
       g.lightnings.forEach(l => { ctx.globalAlpha = l.life / 8; l.branches.forEach(branch => { ctx.strokeStyle = '#fff'; ctx.lineWidth = 2 + l.life * 0.3; ctx.beginPath(); branch.forEach((p4, i) => { if (i === 0) ctx.moveTo(p4.x, p4.y); else ctx.lineTo(p4.x, p4.y); }); ctx.stroke(); }); }); ctx.globalAlpha = 1;
 
       // ── SKULL FIRE SPECIAL ──
-      g.skullFires.forEach(sk => {
+      g.specials.filter(s => s.type === 'skullFire').forEach(sk => {
         const progress = 1 - sk.life / sk.maxLife;
         const alpha = sk.phase === 'fade' ? (sk.life / (sk.maxLife * 0.15)) : 1;
         ctx.save(); ctx.globalAlpha = alpha;
