@@ -779,21 +779,24 @@ const RagdollArena = () => {
         }
         case 'pressure': {
           if (d > wr + 15) {
-            ss(bot, 'walk'); bot.aiTimer = 1 + rng(0, 3) | 0;
-            if (d > 130 && rng(0, 1) < 0.5 && mem.dashCooldown <= 0) { bot.vx = bot.facing * (8 + rng(0, 5)); mem.dashCooldown = 10; }
-          } else if (ca(bot) && st > 0.1) {
+            ss(bot, 'walk'); bot.aiTimer = 1;
+            if (d > 100 && rng(0, 1) < 0.6 && mem.dashCooldown <= 0) { bot.vx = bot.facing * (10 + rng(0, 6)); mem.dashCooldown = 8; }
+          } else if (ca(bot) && st > 0.06) {
             const r = Math.random();
-            if (bot.heldLimb && r < 0.3) doLimbSmash(bot);
-            else if (r < 0.4) doAtk(bot, 'slash');
-            else if (r < 0.55) doAtk(bot, 'stab');
-            else if (r < 0.7 && bot.stamina > 24) doAtk(bot, 'heavySlash');
-            else if (r < 0.85 && bot.stamina > 20) doAtk(bot, 'overhead');
+            if (bot.heldLimb && r < 0.25) doLimbSmash(bot);
+            else if (r < 0.2) doAtk(bot, 'slash');
+            else if (r < 0.35) doAtk(bot, 'stab');
+            else if (r < 0.45) doAtk(bot, 'dashStab');
+            else if (r < 0.55) doAtk(bot, 'uppercut');
+            else if (r < 0.65) doAtk(bot, 'spinSlash');
+            else if (r < 0.75 && bot.stamina > 18) doAtk(bot, 'heavySlash');
+            else if (r < 0.85 && bot.stamina > 16) doAtk(bot, 'overhead');
             else doAtk(bot, pers.preferredAtk);
-            bot.aiTimer = 2 + rng(0, 4) | 0;
+            bot.aiTimer = 1; // Near instant follow-up
             mem.comboStep++;
-            if (mem.comboStep < 4 && rng(0, 1) < pers.comboChance) bot.aiTimer = 1;
+            if (mem.comboStep < 8 && rng(0, 1) < 0.85) bot.aiTimer = 0; // CHAIN ATTACKS
             else mem.comboStep = 0;
-          } else { ss(bot, 'walk'); bot.aiTimer = 1 + rng(0, 3) | 0; }
+          } else { ss(bot, 'walk'); bot.aiTimer = 1; }
           break;
         }
         case 'executeCombo': {
