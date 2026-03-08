@@ -335,7 +335,8 @@ function updatePhys(b: Bot, dt: number) {
   if (b.bleed > 0) { b.bleedTick -= dt; if (b.bleedTick <= 0) { b.hp -= b.bleed; b.bleedTick = 0.4; b.bleed = Math.max(0, b.bleed - 0.4); } }
   if (b.comboTimer > 0) { b.comboTimer -= dt; if (b.comboTimer <= 0) { b.combo = 0; b.comboChain = null; b.comboIdx = 0; } }
 
-  if (b.ragdoll > 0) {
+  // Dead bodies keep ragdoll; living fighters stay upright
+  if (b.ragdoll > 0 && !b.alive) {
     b.ragdoll -= dt; b.vel.x *= 0.88; b.vel.y *= 0.88;
     if (b.ragdoll <= 0) {
       b.ragdoll = 0;
@@ -353,6 +354,8 @@ function updatePhys(b: Bot, dt: number) {
     b.pos.x += b.vel.x * dt; b.pos.y += b.vel.y * dt;
     b.vel.x *= (1 - 10 * dt); b.vel.y *= (1 - 10 * dt);
     if (b.sprint) b.stamina -= 12 * dt;
+    // If a living bot had ragdoll leftover from earlier, clear it immediately
+    if (b.ragdoll > 0) b.ragdoll = 0;
   }
 
   // Facing
