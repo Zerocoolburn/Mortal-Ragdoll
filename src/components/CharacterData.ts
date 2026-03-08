@@ -64,7 +64,7 @@ export const CHARACTERS: CharacterDef[] = [
     color: '#1a1a4a', color2: '#6a0a6a',
     skin: '#c4956a', hair: '#111',
     weaponKey: 'axe', specialType: 'dragonStrike',
-    specialName: 'DRAGON FURY', specialColor: '#08f', specialGlow: '#0af',
+    specialName: 'DRAGON FURY', specialColor: '#0088ff', specialGlow: '#00aaff',
     aiStyles: ['assassin', 'wild', 'tactician'],
     voicePitch: 0.65, voiceRate: 0.82,
     bodyScale: 1.15, headScale: 1.05,
