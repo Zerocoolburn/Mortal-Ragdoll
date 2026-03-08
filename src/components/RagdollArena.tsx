@@ -1689,37 +1689,8 @@ const RagdollArena = () => {
         if (ttsEnabled) speakLine(pick(KO_LINES), 0.6, 0.9);
       }
 
-      // Player controls
-      let p1HasInput = false;
-      if (ca(p1) || p1.state === 'block') {
-        if (g.keys.has('j')) { doAtk(p1, 'slash'); p1HasInput = true; }
-        else if (g.keys.has('k')) { doAtk(p1, 'stab'); p1HasInput = true; }
-        else if (g.keys.has('l')) { doAtk(p1, 'heavySlash'); p1HasInput = true; }
-        else if (g.keys.has('u')) { doAtk(p1, 'overhead'); p1HasInput = true; }
-        else if (g.keys.has('f')) { doShoot(p1, 0); p1HasInput = true; }
-        else if (g.keys.has('r')) { doAtk(p1, 'backflipKick'); p1HasInput = true; }
-        else if (g.keys.has('t')) { doAtk(p1, 'divekick'); p1HasInput = true; }
-        else if (g.keys.has('g')) { doAtk(p1, 'kick'); p1HasInput = true; }
-        else if (g.keys.has('h')) { doAtk(p1, 'headKick'); p1HasInput = true; }
-        else if (g.keys.has('n')) { doAtk(p1, 'kneeStrike'); p1HasInput = true; }
-        else if (g.keys.has('m')) { doAtk(p1, 'roundhouse'); p1HasInput = true; }
-        else if (g.keys.has('b')) { doAtk(p1, 'headbutt'); p1HasInput = true; }
-        else if (g.keys.has('v')) { doSwordThrow(p1, 0); p1HasInput = true; }
-        else if (g.keys.has('c')) { doAtk(p1, 'punch'); p1HasInput = true; }
-        else if (g.keys.has('x')) { doFatality(p1, p2); p1HasInput = true; }
-        else if (g.keys.has('s') && g.keys.has('shift')) { ss(p1, 'block'); p1HasInput = true; }
-        else if (g.keys.has('s')) { ss(p1, 'crouch'); p1HasInput = true; }
-        else if (g.keys.has('w') && p1.grounded) { p1.vy = -11; p1.grounded = false; ss(p1, 'jump'); p1HasInput = true; }
-        else if (g.keys.has('a')) { p1.vx = -3.5; if (p1.grounded) ss(p1, p1.facing === -1 ? 'walk' : 'walkBack'); p1HasInput = true; }
-        else if (g.keys.has('d')) { p1.vx = 3.5; if (p1.grounded) ss(p1, p1.facing === 1 ? 'walk' : 'walkBack'); p1HasInput = true; }
-      }
-      if (!p1HasInput && !p1.grounded) {
-        if (g.keys.has('a') && p1.x < WALL_L + 40) { startWallRun(p1, -1); p1HasInput = true; }
-        if (g.keys.has('d') && p1.x > WALL_R - 40) { startWallRun(p1, 1); p1HasInput = true; }
-      }
-      if (p1.state === 'wallRun' && g.keys.has('w')) { doAtk(p1, 'wallFlip'); p1HasInput = true; }
-
-      if (!p1HasInput) ai(p1, p2, 0);
+      // Both fighters are AI controlled
+      ai(p1, p2, 0);
       ai(p2, p1, 1);
 
       // Update fighters
