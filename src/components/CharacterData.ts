@@ -44,7 +44,7 @@ export const CHARACTERS: CharacterDef[] = [
     color: '#8B0000', color2: '#daa520',
     skin: '#e8b878', hair: '#2a1a0a',
     weaponKey: 'greatsword', specialType: 'skullFire',
-    specialName: 'SKULL INFERNO', specialColor: '#f80', specialGlow: '#fa0',
+    specialName: 'SKULL INFERNO', specialColor: '#ff8800', specialGlow: '#ffaa00',
     aiStyles: ['berserker', 'guardian', 'juggernaut'],
     voicePitch: 0.75, voiceRate: 0.88,
     bodyScale: 1.1, headScale: 1.0,
