@@ -158,16 +158,28 @@ function poseRagdoll(f: Fighter) {
   const wk = f.state === 'walk' || f.state === 'walkBack' ? f.walkCycle : 0;
   const ap = f.dur > 0 ? f.frame / f.dur : 0;
   const jmp = !f.grounded ? -10 : 0;
-  const legSwing = Math.sin(wk) * 8;
-  const legBob = Math.cos(wk) * 2;
+  const legSwing = Math.sin(wk) * 12;
+  const legBend = Math.abs(Math.sin(wk)) * 6;
+
+  // Leg IK: hips stay fixed, knees bend naturally, feet stay on ground
+  const lHipX = -9 * s, rHipX = 9 * s;
+  const hipY = -33 + jmp;
+  const footY = -1; // always on ground plane
+  const lFootX = (lHipX - legSwing * 0.8 * s);
+  const rFootX = (rHipX + legSwing * 0.8 * s);
+  // Knees: midpoint between hip and foot, pushed forward
+  const lKneeX = (lHipX + lFootX) / 2 + s * 4;
+  const lKneeY = (hipY + footY) / 2 - legBend - 4;
+  const rKneeX = (rHipX + rFootX) / 2 + s * 4;
+  const rKneeY = (hipY + footY) / 2 - legBend - 4;
 
   const targets: V[] = [
     v(0, -108 + bob2 + co + jmp), v(0, -93 + bob2 + co + jmp),
-    v(0, -72 + bob2 + co + jmp), v(0, -52 + co + jmp), v(0, -36 + jmp),
+    v(0, -72 + bob2 + co + jmp), v(0, -52 + co + jmp), v(0, hipY),
     v(-15 * s, -86 + bob2 + co + jmp), v(-28 * s, -64 + bob2 + co + jmp), v(-35 * s, -46 + bob2 + co + jmp),
     v(15 * s, -86 + bob2 + co + jmp), v(28 * s, -64 + bob2 + co + jmp), v(35 * s, -46 + bob2 + co + jmp),
-    v(-9 * s, -33 + jmp), v((-11 - legSwing) * s, -16 + legBob + jmp), v((-9 - legSwing * 1.1) * s, -1),
-    v(9 * s, -33 + jmp), v((11 + legSwing) * s, -16 - legBob + jmp), v((9 + legSwing * 1.1) * s, -1),
+    v(lHipX, hipY), v(lKneeX, lKneeY + jmp), v(lFootX, footY),
+    v(rHipX, hipY), v(rKneeX, rKneeY + jmp), v(rFootX, footY),
   ];
 
   if (f.hitImpact > 0) {
@@ -214,11 +226,13 @@ function poseRagdoll(f: Fighter) {
     if (f.y + targets[i].y > GY) targets[i].y = GY - f.y;
   }
 
-  const blend = f.ragdolling ? 0 : 0.35;
+  const blend = f.ragdolling ? 0 : 0.45;
   for (let i = 0; i < r.pts.length && i < targets.length; i++) {
     const target = vadd(v(f.x, f.y), targets[i]);
-    r.pts[i].pos = vlerp(r.pts[i].pos, target, blend);
-    if (!f.ragdolling) r.pts[i].old = vlerp(r.pts[i].old, target, blend * 0.8);
+    // Legs get stronger blend for snappier IK
+    const b = (i >= 11) ? Math.min(blend * 1.4, 0.6) : blend;
+    r.pts[i].pos = vlerp(r.pts[i].pos, target, b);
+    if (!f.ragdolling) r.pts[i].old = vlerp(r.pts[i].old, target, b * 0.85);
   }
 }
 
@@ -248,7 +262,7 @@ const RagdollArena = () => {
     keys: new Set<string>(),
     bgTime: 0,
     clouds: Array.from({ length: 8 }, () => ({ x: rng(0, W), y: rng(20, 200), w: rng(60, 200), speed: rng(0.1, 0.5), opacity: rng(0.02, 0.08) })),
-    torches: [{ x: 505, y: GY - 240 }, { x: 775, y: GY - 220 }, { x: 120, y: GY - 160 }, { x: 1160, y: GY - 140 }],
+    torches: [{ x: 505, y: GY - 55 }, { x: 775, y: GY - 55 }, { x: 90, y: GY - 45 }, { x: 1190, y: GY - 45 }],
   });
   const [hud, setHud] = useState({
     p1hp: 100, p2hp: 100, timer: 99, round: 1,
@@ -959,7 +973,7 @@ const RagdollArena = () => {
         else if (f.state === 'jumpAtk') f.wTarget = ap2 < 0.25 ? -2.5 : ap2 < 0.65 ? 2.5 : 0.5;
         else if (f.state === 'limbSmash') f.wTarget = ap2 < 0.3 ? -2.0 : ap2 < 0.55 ? 1.8 : 0.2;
         else f.wTarget = f.state === 'block' ? -1.3 : -0.5;
-        f.wAngle += (f.wTarget - f.wAngle) * 0.22;
+        f.wAngle += (f.wTarget - f.wAngle) * 0.32;
 
         // Bleed from stumps
         if (f.bleedTimer > 0) {
