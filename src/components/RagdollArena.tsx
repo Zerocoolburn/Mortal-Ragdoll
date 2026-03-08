@@ -2450,8 +2450,8 @@ const RagdollArena = () => {
   const p2Pct = Math.max(0, (hud.p2hp / MAX_HP) * 100);
 
   return (
-    <div className="relative w-full h-full flex items-center justify-center bg-black select-none">
-      <canvas ref={canvasRef} width={W} height={H} className="max-w-full max-h-full" />
+    <div className="relative w-screen h-screen bg-black select-none overflow-hidden">
+      <canvas ref={canvasRef} width={W} height={H} className="w-full h-full" style={{ objectFit: 'cover' }} />
 
       {/* MK-STYLE HUD OVERLAY */}
       <div className="absolute top-0 left-0 right-0 pointer-events-none" style={{ maxWidth: W, margin: '0 auto' }}>
