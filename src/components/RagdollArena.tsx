@@ -1028,7 +1028,7 @@ const RagdollArena = () => {
         if (f.comboTimer > 0) { f.comboTimer -= spd; if (f.comboTimer <= 0) f.combo = 0; }
 
         // Afterimage on fast movement
-        if (fc % 4 === 0 && (Math.abs(f.vx) > 5 || ['slash', 'heavySlash', 'jumpAtk', 'limbSmash', 'dodge'].includes(f.state))) {
+        if (fc % 3 === 0 && (Math.abs(f.vx) > 4 || ['slash', 'heavySlash', 'jumpAtk', 'uppercut', 'spinSlash', 'dashStab', 'limbSmash', 'dodge'].includes(f.state))) {
           spawnAfterimage(f);
         }
 
