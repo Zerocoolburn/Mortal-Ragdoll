@@ -404,14 +404,31 @@ const RagdollArena = () => {
       if (!f.severed.has(part)) return;
       const idx = part === 'leftArm' ? 5 : part === 'rightArm' ? 8 :
         part === 'leftLeg' ? 11 : part === 'rightLeg' ? 14 : 1;
-      ctx.fillStyle = '#600'; ctx.beginPath();
-      ctx.arc(p[idx].pos.x, p[idx].pos.y, 4, 0, Math.PI * 2); ctx.fill();
-      // Drip
-      if (f.bleedTimer > 0 && t % 6 === 0) {
-        ctx.fillStyle = `rgba(100,0,0,${f.bleedTimer / 240})`;
+      ctx.fillStyle = '#800'; ctx.beginPath();
+      ctx.arc(p[idx].pos.x, p[idx].pos.y, 6, 0, Math.PI * 2); ctx.fill();
+      // Gushing blood effect
+      if (f.bleedTimer > 0) {
+        const spurts = 3 + Math.floor(Math.random() * 3);
+        for (let s = 0; s < spurts; s++) {
+          const sx2 = p[idx].pos.x + (Math.random() - 0.5) * 10;
+          const sy2 = p[idx].pos.y - Math.random() * 15;
+          ctx.fillStyle = `rgba(200,0,0,${0.5 + Math.random() * 0.4})`;
+          ctx.beginPath();
+          ctx.arc(sx2, sy2, 1.5 + Math.random() * 3, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        // Blood stream
+        ctx.strokeStyle = `rgba(180,0,0,${Math.min(1, f.bleedTimer / 200)})`;
+        ctx.lineWidth = 2 + Math.random() * 2;
         ctx.beginPath();
-        ctx.arc(p[idx].pos.x + (Math.random() - 0.5) * 6, p[idx].pos.y + Math.random() * 8, 2, 0, Math.PI * 2);
-        ctx.fill();
+        ctx.moveTo(p[idx].pos.x, p[idx].pos.y);
+        ctx.quadraticCurveTo(
+          p[idx].pos.x + (Math.random() - 0.5) * 20, 
+          p[idx].pos.y + 10 + Math.random() * 15,
+          p[idx].pos.x + (Math.random() - 0.5) * 30, 
+          p[idx].pos.y + 20 + Math.random() * 20
+        );
+        ctx.stroke();
       }
     });
 
