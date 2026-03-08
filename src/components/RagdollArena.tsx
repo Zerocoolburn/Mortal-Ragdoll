@@ -125,15 +125,14 @@ function startAttack(b: Bot, type: AtkType) {
 }
 
 function comboAttack(b: Bot) {
-  // Chain attacks based on style
-  const chains: AtkType[][] = {
+  const chainsMap: Record<Style, AtkType[]> = {
     aggro: ['slash_r','slash_l','overhead'],
     def: ['thrust','slash_r'],
     zerk: ['slash_r','slash_l','slash_r','spin'],
     tact: ['thrust','slash_l','sweep'],
     assassin: ['thrust','thrust','overhead'],
-  }[b.style] || ['slash_r'];
-  
+  };
+  const chains = chainsMap[b.style];
   const idx = b.combo % chains.length;
   startAttack(b, chains[idx]);
 }
