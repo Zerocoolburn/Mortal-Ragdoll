@@ -1365,8 +1365,8 @@ const RagdollArena = () => {
             // Dismemberment
             if (o.hp < 100 && rng(0, 1) < 0.35) {
               const parts = ['leftArm', 'rightArm'].filter(p3 => !o.severed.has(p3));
-              if (o.hp < 40) parts.push(...['leftLeg', 'rightLeg'].filter(p3 => !o.severed.has(p3)));
-              if (o.hp < 12) parts.push('head');
+              if (o.hp < 60) parts.push(...['leftLeg', 'rightLeg'].filter(p3 => !o.severed.has(p3)));
+              if (o.hp < 25) parts.push('head');
               if (parts.length > 0) { sever(o, pick(parts), f.facing); if (rng(0, 1) < 0.4) { const rem = ['leftArm', 'rightArm', 'leftLeg', 'rightLeg'].filter(p3 => !o.severed.has(p3)); if (rem.length > 0) sever(o, pick(rem), f.facing); } }
             }
             if (o.hp <= 0) {
