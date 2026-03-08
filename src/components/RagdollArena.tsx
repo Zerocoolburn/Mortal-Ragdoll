@@ -922,7 +922,7 @@ const RagdollArena = () => {
             }
           }
           if (stRatio > 0.5) {
-            aiMem.intent = pickNewIntent(bot, pl);
+            aiMem.intent = pickNewIntent(bot, pl, aiPersonality, aiMem);
             aiMem.intentTimer = 30;
           }
           break;
