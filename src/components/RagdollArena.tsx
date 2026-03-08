@@ -3355,7 +3355,7 @@ const RagdollArena = () => {
     };
     aid = requestAnimationFrame(render);
     return () => { cancelAnimationFrame(aid); window.removeEventListener('keydown', kd); window.removeEventListener('keyup', ku); };
-  }, [gameScreen, drawFighter, spawnBlood, spawnSparks, sever, spawnGore, spawnAfterimage, spawnRing, spawnLightning, spawnBullet, spawnWallSparks, sfxVolume, ttsEnabled, selectedP1, selectedP2]);
+  }, [gameScreen, drawFighter, spawnBlood, spawnSparks, sever, spawnGore, spawnAfterimage, spawnRing, spawnLightning, spawnBullet, spawnWallSparks, sfxVolume, ttsEnabled, selectedP1, selectedP2, moveSpeed, gamepadDeadzone]);
 
   // ═══════════════════════════════════════════════════════
   // MAIN MENU
