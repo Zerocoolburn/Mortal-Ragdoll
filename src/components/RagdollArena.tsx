@@ -1205,7 +1205,7 @@ const RagdollArena = () => {
               ss(o, 'ko');
               startRagdoll(o, vscl(hitDir2, 22), 999);
               f.wins++; g.rs = 'ko'; g.koTimer = 280;
-              g.shake = 40; g.slowMo = 0.05; g.slowTimer = 55;
+              g.slowMo = 0.05; g.slowTimer = 55;
               g.flash = 15; g.flashColor = '#fff';
               spawnBlood(hitPt.x, hitPt.y, f.facing, 120, 7);
               spawnBlood(hitPt.x, hitPt.y - 25, -f.facing, 60, 6);
