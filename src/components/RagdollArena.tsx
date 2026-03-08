@@ -828,6 +828,8 @@ const ATK: Record<string, AtkDef> = {
   swordThrow:   { frames: 20, hitStart: 6,  hitEnd: 8,  dmgKey: 'heavyDmg', kb: v(12, -4),  stCost: 5,  canSever: true },
   punch:        { frames: 12, hitStart: 3,  hitEnd: 8,  dmgKey: 'stabDmg',  kb: v(6, -2),   stCost: 4,  canSever: false, isPunch: true },
   fatality:     { frames: 80, hitStart: 10, hitEnd: 70, dmgKey: 'heavyDmg', kb: v(2, -2),   stCost: 0,  canSever: true },
+  skullFire:    { frames: 90, hitStart: 20, hitEnd: 80, dmgKey: 'heavyDmg', kb: v(18, -8),  stCost: 40, canSever: true },
+  dragonStrike: { frames: 80, hitStart: 15, hitEnd: 70, dmgKey: 'heavyDmg', kb: v(22, -12), stCost: 40, canSever: true },
 };
 
 interface Blood { x: number; y: number; vx: number; vy: number; life: number; maxLife: number; sz: number; grounded: boolean }
