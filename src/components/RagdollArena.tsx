@@ -1190,35 +1190,41 @@ const RagdollArena = () => {
               spawnBlood(o.rag.pts[hitJoint].pos.x, o.rag.pts[hitJoint].pos.y - 5, 0, 6, 1.8);
             }
 
-            // Dismemberment - much more frequent
-            if (ad.canSever && o.hp < 45 && Math.random() < 0.65) {
+            // Dismemberment - very frequent and exaggerated
+            if (o.hp < 60 && Math.random() < 0.5) {
               const parts = ['leftArm', 'rightArm'].filter(p => !o.severed.has(p));
-              if (o.hp < 30) parts.push(...['leftLeg', 'rightLeg'].filter(p => !o.severed.has(p)));
-              if (o.hp <= 0) parts.push('head');
+              if (o.hp < 40) parts.push(...['leftLeg', 'rightLeg'].filter(p => !o.severed.has(p)));
+              if (o.hp < 15) parts.push('head');
               if (parts.length > 0) {
                 sever(o, parts[Math.floor(Math.random() * parts.length)], f.facing);
-                if (o.hp <= 0 && parts.length > 1 && Math.random() < 0.5) {
-                  const remaining = parts.filter(p => !o.severed.has(p));
+                // Multiple severing
+                if (Math.random() < 0.4) {
+                  const remaining = ['leftArm', 'rightArm', 'leftLeg', 'rightLeg'].filter(p => !o.severed.has(p));
                   if (remaining.length > 0) sever(o, remaining[Math.floor(Math.random() * remaining.length)], f.facing);
                 }
               }
             }
-            if (!ad.canSever && o.hp < 10 && Math.random() < 0.3) {
-              const parts = ['leftArm', 'rightArm'].filter(p => !o.severed.has(p));
-              if (parts.length > 0) sever(o, parts[Math.floor(Math.random() * parts.length)], f.facing);
-            }
 
-            // KO
+            // KO - ALWAYS sever head + massive blood fountain
             if (o.hp <= 0) {
               ss(o, 'ko');
-              startRagdoll(o, vscl(hitDir2, 18), 999);
-              f.wins++; g.rs = 'ko'; g.koTimer = 200;
-              g.shake = 22; g.slowMo = 0.12; g.slowTimer = 35;
-              spawnBlood(hitPt.x, hitPt.y, f.facing, 50, 4);
-              spawnBlood(hitPt.x, hitPt.y - 20, -f.facing, 25, 3);
-              if (!o.severed.has('head') && Math.random() < 0.4) sever(o, 'head', f.facing);
+              startRagdoll(o, vscl(hitDir2, 20), 999);
+              f.wins++; g.rs = 'ko'; g.koTimer = 250;
+              g.shake = 30; g.slowMo = 0.08; g.slowTimer = 45;
+              // Massive blood explosion
+              spawnBlood(hitPt.x, hitPt.y, f.facing, 80, 5);
+              spawnBlood(hitPt.x, hitPt.y - 20, -f.facing, 40, 4);
+              spawnBlood(hitPt.x, hitPt.y - 40, 0, 30, 3.5);
+              spawnBlood(hitPt.x + f.facing * 20, hitPt.y - 30, f.facing * 0.5, 25, 4);
+              // ALWAYS sever head on KO
+              if (!o.severed.has('head')) sever(o, 'head', f.facing);
+              // Sever 1-2 more limbs
               const limbParts = ['leftArm', 'rightArm', 'leftLeg', 'rightLeg'].filter(p => !o.severed.has(p));
-              if (limbParts.length > 0 && Math.random() < 0.6) sever(o, limbParts[Math.floor(Math.random() * limbParts.length)], f.facing);
+              if (limbParts.length > 0) sever(o, limbParts[Math.floor(Math.random() * limbParts.length)], f.facing);
+              if (limbParts.length > 1 && Math.random() < 0.6) {
+                const remaining = limbParts.filter(p => !o.severed.has(p));
+                if (remaining.length > 0) sever(o, remaining[Math.floor(Math.random() * remaining.length)], f.facing);
+              }
             }
           }
         }
