@@ -707,20 +707,23 @@ const RagdollArena = () => {
     };
 
     const AI_COMBOS = [
-      // Long devastating combos
-      ['slash', 'slash', 'stab', 'slash', 'stab', 'stab', 'uppercut', 'jumpAtk', 'overhead', 'heavySlash'],
-      ['stab', 'stab', 'slash', 'stab', 'slash', 'uppercut', 'stab', 'spinSlash'],
+      // Long devastating combos with flips
+      ['slash', 'slash', 'stab', 'slash', 'stab', 'stab', 'uppercut', 'jumpAtk', 'backflipKick', 'heavySlash'],
+      ['stab', 'stab', 'slash', 'stab', 'slash', 'uppercut', 'backflipKick', 'spinSlash'],
       ['slash', 'stab', 'slash', 'stab', 'slash', 'stab', 'heavySlash'],
-      ['dashStab', 'slash', 'slash', 'uppercut', 'jumpAtk', 'overhead'],
-      ['slash', 'slash', 'slash', 'slash', 'spinSlash', 'heavySlash'],
-      ['stab', 'slash', 'stab', 'uppercut', 'jumpAtk'],
+      ['dashStab', 'slash', 'slash', 'uppercut', 'jumpAtk', 'backflipKick', 'overhead'],
+      ['slash', 'slash', 'slash', 'slash', 'spinSlash', 'backflipKick', 'heavySlash'],
+      ['stab', 'slash', 'stab', 'uppercut', 'backflipKick', 'jumpAtk'],
       ['dashStab', 'stab', 'stab', 'slash', 'slash', 'overhead'],
-      ['spinSlash', 'stab', 'slash', 'stab', 'uppercut', 'heavySlash'],
-      // Short brutal combos
-      ['uppercut', 'jumpAtk', 'overhead'],
-      ['dashStab', 'spinSlash', 'heavySlash'],
-      ['slash', 'slash', 'dashStab', 'uppercut'],
-      ['stab', 'stab', 'stab', 'stab', 'spinSlash'],
+      ['spinSlash', 'stab', 'slash', 'stab', 'uppercut', 'backflipKick', 'heavySlash'],
+      // Execution combos (finish them!)
+      ['uppercut', 'jumpAtk', 'backflipKick', 'execution'],
+      ['dashStab', 'spinSlash', 'backflipKick', 'heavySlash'],
+      ['slash', 'slash', 'dashStab', 'uppercut', 'backflipKick'],
+      ['stab', 'stab', 'stab', 'stab', 'spinSlash', 'execution'],
+      // Pure flip combos
+      ['backflipKick', 'dashStab', 'backflipKick', 'uppercut', 'jumpAtk'],
+      ['uppercut', 'backflipKick', 'spinSlash', 'backflipKick', 'execution'],
     ];
 
     const ai = (bot: Fighter, pl: Fighter, idx: number) => {
