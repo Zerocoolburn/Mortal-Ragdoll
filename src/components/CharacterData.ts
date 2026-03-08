@@ -142,7 +142,7 @@ export const CHARACTERS: CharacterDef[] = [
   {
     id: 'titan', name: 'TITAN', title: 'War Juggernaut',
     color: '#5a4a2a', color2: '#a88040',
-    skin: '#6a4a2a', hair: '#000',
+    skin: '#6a4a2a', hair: '#000000',
     weaponKey: 'axe', specialType: 'earthquake',
     specialName: 'SEISMIC SLAM', specialColor: '#aa8800', specialGlow: '#ffaa00',
     aiStyles: ['juggernaut', 'berserker', 'guardian'],
