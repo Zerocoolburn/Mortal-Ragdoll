@@ -571,20 +571,18 @@ const RagdollArena = () => {
     type AIStyle = 'aggressive' | 'defensive' | 'counter' | 'wild' | 'calculated';
     type AIIntent = 'pressure' | 'retreat' | 'circle' | 'feint' | 'punish' | 'bait' | 'rush' | 'rest';
 
-    // Per-round AI personality - randomized each round
-    const aiPersonality = {
+    const mkPersonality = () => ({
       style: (['aggressive', 'defensive', 'counter', 'wild', 'calculated'] as AIStyle[])[Math.floor(Math.random() * 5)],
-      aggression: 0.3 + Math.random() * 0.7, // 0.3-1.0
+      aggression: 0.4 + Math.random() * 0.6,
       patience: 0.2 + Math.random() * 0.8,
-      riskTaking: 0.1 + Math.random() * 0.9,
+      riskTaking: 0.2 + Math.random() * 0.8,
       adaptSpeed: 0.3 + Math.random() * 0.7,
       preferredAtk: (['slash', 'stab', 'heavySlash', 'overhead'] as const)[Math.floor(Math.random() * 4)],
-      comboChance: 0.2 + Math.random() * 0.5,
+      comboChance: 0.3 + Math.random() * 0.5,
       feintChance: 0.1 + Math.random() * 0.3,
-    };
+    });
 
-    // AI memory - tracks fight state
-    const aiMem = {
+    const mkAiMem = () => ({
       intent: 'pressure' as AIIntent,
       intentTimer: 0,
       lastHitBy: '',
@@ -594,37 +592,37 @@ const RagdollArena = () => {
       lastAtk: '',
       lastAtkTime: 0,
       circleDir: Math.random() > 0.5 ? 1 : -1,
-      styleShiftTimer: 300 + Math.random() * 400,
+      styleShiftTimer: 120 + Math.random() * 200,
       dashCooldown: 0,
       feinting: false,
       feintTimer: 0,
       comboStep: 0,
       retreatTimer: 0,
       rushMomentum: 0,
-    };
+    });
 
-    const pickNewIntent = (bot: Fighter, pl: Fighter): AIIntent => {
+    // Each fighter gets their own personality and memory
+    const aiData = [
+      { personality: mkPersonality(), mem: mkAiMem() },
+      { personality: mkPersonality(), mem: mkAiMem() },
+    ];
+
+    const pickNewIntent = (bot: Fighter, pl: Fighter, personality: ReturnType<typeof mkPersonality>, mem: ReturnType<typeof mkAiMem>): AIIntent => {
       const d = Math.abs(bot.x - pl.x);
       const hpRatio = bot.hp / 100;
       const plHpRatio = pl.hp / 100;
       const stRatio = bot.stamina / 100;
       const r = Math.random();
 
-      // Desperate mode when low HP
       if (hpRatio < 0.2) {
-        return r < 0.4 * aiPersonality.riskTaking ? 'rush' : r < 0.7 ? 'retreat' : 'punish';
+        return r < 0.4 * personality.riskTaking ? 'rush' : r < 0.7 ? 'retreat' : 'punish';
       }
-
-      // Smell blood when opponent is low
       if (plHpRatio < 0.25) {
-        return r < 0.6 * aiPersonality.aggression ? 'rush' : 'pressure';
+        return r < 0.6 * personality.aggression ? 'rush' : 'pressure';
       }
-
-      // Need stamina
       if (stRatio < 0.2) return 'rest';
 
-      // Style-based intent selection
-      switch (aiPersonality.style) {
+      switch (personality.style) {
         case 'aggressive':
           if (r < 0.35) return 'pressure';
           if (r < 0.55) return 'rush';
@@ -644,16 +642,18 @@ const RagdollArena = () => {
           const choices: AIIntent[] = ['rush', 'pressure', 'feint', 'retreat', 'circle', 'punish', 'bait'];
           return choices[Math.floor(Math.random() * choices.length)];
         case 'calculated':
-          if (aiMem.timesHit > 3) return 'retreat';
+          if (mem.timesHit > 3) return 'retreat';
           if (d < 100) return r < 0.5 ? 'punish' : 'circle';
           return r < 0.4 ? 'pressure' : r < 0.7 ? 'feint' : 'bait';
         default: return 'pressure';
       }
     };
 
-    const ai = (bot: Fighter, pl: Fighter) => {
+    const ai = (bot: Fighter, pl: Fighter, idx: number) => {
       if (bot.state === 'ko' || bot.state === 'ragdoll') return;
-      // Can still think during hit/stagger but can't act until ca() is true
+      
+      const aiPersonality = aiData[idx].personality;
+      const aiMem = aiData[idx].mem;
       
       bot.aiTimer--;
       aiMem.dashCooldown = Math.max(0, aiMem.dashCooldown - 1);
