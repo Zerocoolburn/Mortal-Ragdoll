@@ -120,19 +120,25 @@ const RagdollArena = () => {
       if(bot.state==='ko'||bot.state==='hit')return;
       bot.aiTimer--;if(bot.aiTimer>0)return;
       const d=Math.abs(bot.x-pl.x),fp=(pl.x>bot.x&&bot.facing===1)||(pl.x<bot.x&&bot.facing===-1);
+      // React to player attacks
       if(['punch','kick','heavy','uppercut'].includes(pl.state)&&d<120&&Math.random()>0.35){
-        if(Math.random()>0.5){ss(bot,'block');bot.aiTimer=20+Math.random()*15|0;return;}
-        bot.vx=-bot.facing*8;bot.aiTimer=15;return;
+        if(Math.random()>0.5){ss(bot,'block');bot.aiTimer=15+Math.random()*10|0;return;}
+        bot.vx=-bot.facing*8;bot.aiTimer=12;return;
       }
-      if(d<80&&fp&&ca(bot)){
+      if(d<100&&ca(bot)){
+        // Close range - always attack
         const r=Math.random();
-        if(r<0.3)doAtk(bot,'punch');else if(r<0.55)doAtk(bot,'kick');else if(r<0.75)doAtk(bot,'heavy');else if(r<0.85)doAtk(bot,'uppercut');else ss(bot,'block');
-        bot.aiTimer=8+Math.random()*12|0;
-      }else if(d<200){
-        if(Math.random()>0.3&&fp)ss(bot,'walk');
-        else if(bot.grounded&&Math.random()>0.5){bot.vy=JUMP_FORCE;bot.grounded=false;bot.vx=bot.facing*4;}
-        bot.aiTimer=10+Math.random()*20|0;
-      }else{ss(bot,'walk');bot.aiTimer=15+Math.random()*25|0;}
+        if(r<0.35)doAtk(bot,'punch');else if(r<0.6)doAtk(bot,'kick');else if(r<0.8)doAtk(bot,'heavy');else doAtk(bot,'uppercut');
+        bot.aiTimer=5+Math.random()*10|0;
+      }else if(d<250){
+        // Mid range - approach or jump
+        if(Math.random()>0.2&&fp){ss(bot,'walk');bot.aiTimer=8+Math.random()*12|0;}
+        else if(bot.grounded&&Math.random()>0.6){bot.vy=JUMP_FORCE;bot.grounded=false;bot.vx=bot.facing*5;bot.aiTimer=15;}
+        else{bot.aiTimer=5+Math.random()*8|0;}
+      }else{
+        // Far - close distance
+        ss(bot,'walk');bot.aiTimer=10+Math.random()*15|0;
+      }
     };
 
     const tick=()=>{
