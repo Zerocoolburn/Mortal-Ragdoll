@@ -194,7 +194,7 @@ interface Fighter {
 
 function mkFighter(x: number, name: string, color: string, skin: string, hair: string, wKey: string, isAI: boolean): Fighter {
   return {
-    x, y: GY, vx: 0, vy: 0, hp: 100, stamina: 100,
+    x, y: GY, vx: 0, vy: 0, hp: 250, stamina: 100,
     state: 'idle', frame: 0, dur: 0, facing: 1, grounded: true,
     weapon: WEAPONS[wKey], combo: 0, comboTimer: 0,
     name, color, skin, hair, isAI, wins: 0, aiTimer: 0,
@@ -213,7 +213,12 @@ function poseRagdoll(f: Fighter) {
   const r = f.rag;
   const s = f.facing;
   const S = 1.35;
-  const bob2 = f.state === 'idle' ? Math.sin(f.bob) * 2 : 0;
+  const isIdle = f.state === 'idle';
+  const bob2 = isIdle ? Math.sin(f.bob) * 2 : 0;
+  const breathe = isIdle ? Math.sin(f.bob * 1.2) * 1.5 : 0;
+  const sway = isIdle ? Math.sin(f.bob * 0.7) * 3 : 0;
+  const weightShift = isIdle ? Math.sin(f.bob * 0.5) * 2 : 0;
+  const armIdle = isIdle ? Math.sin(f.bob * 0.9) * 4 : 0;
   const co = f.state === 'crouch' ? 15 : 0;
   const wk = f.state === 'walk' || f.state === 'walkBack' ? f.walkCycle : 0;
   const ap = f.dur > 0 ? f.frame / f.dur : 0;
@@ -232,12 +237,12 @@ function poseRagdoll(f: Fighter) {
   const rKneeY = (hipY + footY) / 2 - legBend - 4 * S;
 
   const targets: V[] = [
-    v(0, -108 * S + bob2 + co + jmp), v(0, -93 * S + bob2 + co + jmp),
-    v(0, -72 * S + bob2 + co + jmp), v(0, -52 * S + co + jmp), v(0, hipY),
-    v(-15 * s * S, -86 * S + bob2 + co + jmp), v(-28 * s * S, -64 * S + bob2 + co + jmp), v(-35 * s * S, -46 * S + bob2 + co + jmp),
-    v(15 * s * S, -86 * S + bob2 + co + jmp), v(28 * s * S, -64 * S + bob2 + co + jmp), v(35 * s * S, -46 * S + bob2 + co + jmp),
-    v(lHipX, hipY), v(lKneeX, lKneeY + jmp), v(lFootX, footY),
-    v(rHipX, hipY), v(rKneeX, rKneeY + jmp), v(rFootX, footY),
+    v(sway * 0.5, -108 * S + bob2 + co + jmp + breathe * 0.3), v(sway * 0.4, -93 * S + bob2 + co + jmp + breathe * 0.5),
+    v(sway * 0.3, -72 * S + bob2 + co + jmp + breathe), v(sway * 0.2, -52 * S + co + jmp + breathe * 0.5), v(weightShift, hipY),
+    v(-15 * s * S + armIdle * 0.3, -86 * S + bob2 + co + jmp + breathe * 0.4), v(-28 * s * S + armIdle * 0.6, -64 * S + bob2 + co + jmp + armIdle * 0.5), v(-35 * s * S + armIdle, -46 * S + bob2 + co + jmp + armIdle * 0.8),
+    v(15 * s * S - armIdle * 0.2, -86 * S + bob2 + co + jmp + breathe * 0.4), v(28 * s * S - armIdle * 0.4, -64 * S + bob2 + co + jmp - armIdle * 0.3), v(35 * s * S - armIdle * 0.5, -46 * S + bob2 + co + jmp - armIdle * 0.5),
+    v(lHipX + weightShift, hipY), v(lKneeX + weightShift * 0.5, lKneeY + jmp), v(lFootX + weightShift * 0.3, footY),
+    v(rHipX - weightShift, hipY), v(rKneeX - weightShift * 0.5, rKneeY + jmp), v(rFootX - weightShift * 0.3, footY),
   ];
 
   if (f.hitImpact > 0) {
@@ -847,7 +852,7 @@ const RagdollArena = () => {
       const hp = bot.hp / 100, plHp = pl.hp / 100, st = bot.stamina / 100;
       const r = Math.random();
       // Fatality opportunity!
-      if (pl.hp <= 15 && d < 80 && r < 0.6) return 'fatalityAttempt';
+      if (pl.hp <= 35 && d < 80 && r < 0.6) return 'fatalityAttempt';
       const nearbyLimb = g.limbs.some(l => l.grounded && Math.abs(l.pts[0].x - bot.x) < 120);
       if (!bot.heldLimb && nearbyLimb && r < 0.2) return 'pickupLimb';
       if (bot.heldLimb && r < 0.25) return d < 100 ? 'limbAttack' : 'rush';
@@ -857,7 +862,7 @@ const RagdollArena = () => {
       if (d > 200 && r < 0.15) return 'shoot';
       if (d < 80 && r < 0.25) return 'kickCombo';
       if (hp < 0.15) return r < 0.4 ? 'rush' : r < 0.6 ? 'wallRun' : r < 0.8 ? 'shoot' : 'retreat';
-      if (plHp < 0.2) return r < 0.25 ? 'fatalityAttempt' : r < 0.5 ? 'executeCombo' : r < 0.7 ? 'kickCombo' : 'pressure';
+      if (plHp < 0.15) return r < 0.25 ? 'fatalityAttempt' : r < 0.5 ? 'executeCombo' : r < 0.7 ? 'kickCombo' : 'pressure';
       if (st < 0.15) return r < 0.3 ? 'shoot' : 'rest';
       if (m.lastAtkLanded && r < 0.5) return r < 0.15 ? 'shoot' : r < 0.35 ? 'executeCombo' : r < 0.45 ? 'kickCombo' : 'pressure';
       switch (p2.style) {
@@ -1346,7 +1351,7 @@ const RagdollArena = () => {
             spawnSparks((f.x + o.x) / 2, hitPt.y, 15); spawnRing((f.x + o.x) / 2, hitPt.y, 50, '#ff8');
           } else {
             f.combo++; f.comboTimer = 80;
-            let finalDmg = dmg; if (f.combo > 1) finalDmg *= (1 + f.combo * 0.15);
+            let finalDmg = dmg * 0.55; if (f.combo > 1) finalDmg *= (1 + f.combo * 0.08);
             o.hp = Math.max(0, o.hp - finalDmg); o.vx = f.facing * ad.kb.x; o.vy = ad.kb.y;
             if (ad.kb.y < -4) o.grounded = false;
             o.hitDir = vnorm(hitDir2); o.hitImpact = dmg * 0.6;
@@ -1358,10 +1363,10 @@ const RagdollArena = () => {
             if (hitJoint >= 0 && hitJoint < o.rag.pts.length) spawnBlood(o.rag.pts[hitJoint].pos.x, o.rag.pts[hitJoint].pos.y, f.facing, 18, 3);
             if (dmg >= 15) spawnGore(hitPt.x, hitPt.y, Math.round(dmg / 4), f.facing);
             // Dismemberment
-            if (o.hp < 65 && rng(0, 1) < 0.5) {
+            if (o.hp < 100 && rng(0, 1) < 0.35) {
               const parts = ['leftArm', 'rightArm'].filter(p3 => !o.severed.has(p3));
-              if (o.hp < 40) parts.push(...['leftLeg', 'rightLeg'].filter(p3 => !o.severed.has(p3)));
-              if (o.hp < 12) parts.push('head');
+              if (o.hp < 60) parts.push(...['leftLeg', 'rightLeg'].filter(p3 => !o.severed.has(p3)));
+              if (o.hp < 25) parts.push('head');
               if (parts.length > 0) { sever(o, pick(parts), f.facing); if (rng(0, 1) < 0.4) { const rem = ['leftArm', 'rightArm', 'leftLeg', 'rightLeg'].filter(p3 => !o.severed.has(p3)); if (rem.length > 0) sever(o, pick(rem), f.facing); } }
             }
             if (o.hp <= 0) {
@@ -1401,8 +1406,25 @@ const RagdollArena = () => {
       const sky = ctx.createLinearGradient(0, 0, 0, GY);
       sky.addColorStop(0, '#020108'); sky.addColorStop(0.2, '#060318'); sky.addColorStop(0.4, '#0a0520'); sky.addColorStop(0.6, '#10082a'); sky.addColorStop(1, '#141430');
       ctx.fillStyle = sky; ctx.fillRect(0, 0, W, GY);
-      // Stars
-      for (let i = 0; i < 80; i++) { const sx2 = (i * 137 + 30) % W, sy2 = (i * 73 + 10) % (GY * 0.6); const tw = 0.3 + Math.sin(g.bgTime * (1 + i * 0.1) + i) * 0.3; ctx.fillStyle = `rgba(255,255,${200 + (i % 55)},${tw})`; const sz = 0.5 + (i % 3); ctx.fillRect(sx2, sy2, sz, sz); }
+      // Stars - scattered individual twinkling points
+      for (let i = 0; i < 200; i++) {
+        const sx2 = ((i * 197 + 53) * 7.3) % W;
+        const sy2 = ((i * 131 + 17) * 3.7) % (GY * 0.65);
+        const tw = 0.15 + Math.sin(g.bgTime * (0.3 + (i % 7) * 0.15) + i * 2.1) * 0.25 + Math.sin(g.bgTime * 1.7 + i * 0.8) * 0.1;
+        if (tw < 0.05) continue;
+        const hue = 200 + (i * 37) % 60;
+        const sat = 10 + (i % 30);
+        ctx.fillStyle = `hsla(${hue},${sat}%,${85 + (i % 15)}%,${tw})`;
+        const sz = 0.4 + (i % 5) * 0.25;
+        ctx.beginPath(); ctx.arc(sx2, sy2, sz, 0, Math.PI * 2); ctx.fill();
+        // Bright stars get a subtle cross glint
+        if (sz > 1 && tw > 0.3) {
+          ctx.strokeStyle = `hsla(${hue},${sat}%,90%,${tw * 0.3})`;
+          ctx.lineWidth = 0.5;
+          ctx.beginPath(); ctx.moveTo(sx2 - 3, sy2); ctx.lineTo(sx2 + 3, sy2); ctx.stroke();
+          ctx.beginPath(); ctx.moveTo(sx2, sy2 - 3); ctx.lineTo(sx2, sy2 + 3); ctx.stroke();
+        }
+      }
       // Moon
       const moonX = 180, moonY = 100;
       const moonGlow = ctx.createRadialGradient(moonX, moonY, 20, moonX, moonY, 120);
@@ -1422,8 +1444,30 @@ const RagdollArena = () => {
       ctx.fillRect(600, GY - 320, 80, 320);
       ctx.beginPath(); ctx.moveTo(590, GY - 320); ctx.lineTo(640, GY - 390); ctx.lineTo(690, GY - 320); ctx.fill();
       // Castle windows
-      const windowGlow = (wx: number, wy: number) => { const fl = 0.3 + Math.sin(g.bgTime * 3 + wx * 0.1) * 0.15; ctx.fillStyle = `rgba(255,120,30,${fl * 0.3})`; ctx.fillRect(wx, wy, 14, 20); };
-      [510, 570, 630, 690, 750].forEach(wx => { windowGlow(wx, GY - 200); windowGlow(wx, GY - 140); });
+      const windowGlow = (wx: number, wy: number, intensity?: number) => {
+        const base = intensity || 1;
+        const flicker = 0.6 + Math.sin(g.bgTime * 2.5 + wx * 0.13) * 0.2 + Math.sin(g.bgTime * 4.3 + wx * 0.07) * 0.1;
+        const fl = flicker * base;
+        // Warm light spill glow
+        const glow = ctx.createRadialGradient(wx + 7, wy + 10, 2, wx + 7, wy + 10, 45);
+        glow.addColorStop(0, `rgba(255,160,50,${fl * 0.25})`);
+        glow.addColorStop(0.4, `rgba(255,100,20,${fl * 0.1})`);
+        glow.addColorStop(1, 'rgba(255,60,10,0)');
+        ctx.fillStyle = glow; ctx.fillRect(wx - 38, wy - 35, 90, 90);
+        // Window pane
+        ctx.fillStyle = `rgba(255,180,80,${fl * 0.7})`; ctx.fillRect(wx, wy, 14, 20);
+        // Bright inner core
+        ctx.fillStyle = `rgba(255,220,140,${fl * 0.5})`; ctx.fillRect(wx + 2, wy + 2, 10, 16);
+        // Window frame
+        ctx.strokeStyle = `rgba(30,20,10,0.6)`; ctx.lineWidth = 1;
+        ctx.strokeRect(wx, wy, 14, 20);
+        ctx.beginPath(); ctx.moveTo(wx + 7, wy); ctx.lineTo(wx + 7, wy + 20); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(wx, wy + 10); ctx.lineTo(wx + 14, wy + 10); ctx.stroke();
+      };
+      [510, 570, 630, 690, 750].forEach(wx => { windowGlow(wx, GY - 200, 0.9 + (wx % 3) * 0.1); windowGlow(wx, GY - 140, 0.7 + (wx % 5) * 0.1); });
+      // Tower windows
+      windowGlow(475, GY - 280, 1.1); windowGlow(785, GY - 260, 0.8);
+      windowGlow(620, GY - 300, 1.0); windowGlow(650, GY - 300, 1.0);
       // Walls
       ctx.fillStyle = '#0c0a1a'; ctx.fillRect(WALL_L - 8, 80, 12, GY - 80); ctx.fillRect(WALL_R - 4, 80, 12, GY - 80);
       // Torches
