@@ -337,8 +337,13 @@ function updatePhys(b: Bot, dt: number) {
   if (b.comboTimer > 0) { b.comboTimer -= dt; if (b.comboTimer <= 0) { b.combo = 0; b.comboChain = null; b.comboIdx = 0; } }
 
   if (b.ragdoll > 0) {
-    b.ragdoll -= dt; b.vel.x *= 0.92; b.vel.y *= 0.92;
-    if (b.ragdoll <= 0) { b.ragdoll = 0; for (const jv of b.jvel) { jv.x = 0; jv.y = 0; } }
+    b.ragdoll -= dt; b.vel.x *= 0.88; b.vel.y *= 0.88;
+    if (b.ragdoll <= 0) {
+      b.ragdoll = 0;
+      for (const jv of b.jvel) { jv.x = 0; jv.y = 0; }
+      b.vel.x *= 0.45; b.vel.y *= 0.45;
+      snapToUprightPose(b, 1);
+    }
     b.pos.x += b.vel.x * dt; b.pos.y += b.vel.y * dt;
   } else {
     const base = b.sprint ? 170 : 110;
