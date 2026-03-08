@@ -49,7 +49,7 @@ export const CHARACTERS: CharacterDef[] = [
     voicePitch: 0.75, voiceRate: 0.88,
     bodyScale: 1.1, headScale: 1.0,
     armorType: 'heavy', helmetType: 'crown',
-    capeColor: '#600', glowColor: null,
+    capeColor: '#660000', glowColor: null,
     scarCount: 1, eyeColor: '#44aaff', eyeGlow: false,
     tattooColor: null, trailColor: null,
     koWinnerLines: ["By the holy blade you are vanquished!", "Your skull makes a fine trophy!", "Kneel before the holy knight!", "Another soul purified by my blade!", "The light has judged you unworthy!", "I've slain dragons tougher than you!"],
