@@ -788,6 +788,9 @@ interface SpecialEntity {
   targetX: number; targetY: number;
   particles: SpecialParticle[];
   subEntities: { x: number; y: number; vx: number; vy: number; life: number; active: boolean; timer: number }[];
+  phase?: string;
+  fireParticles?: SpecialParticle[];
+  trail?: { x: number; y: number; alpha: number }[];
 }
 
 interface Weapon {
