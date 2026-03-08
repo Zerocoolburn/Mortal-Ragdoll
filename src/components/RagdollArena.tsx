@@ -2317,48 +2317,7 @@ const RagdollArena = () => {
             >
               SETTINGS
             </button>
-
-            <button
-              onClick={() => setShowControls(!showControls)}
-              className="group relative px-10 py-3 text-base font-bold tracking-[0.2em] uppercase transition-all duration-300 hover:scale-105"
-              style={{
-                fontFamily: '"Orbitron", sans-serif',
-                color: '#aaa',
-                background: 'linear-gradient(180deg, rgba(40,40,40,0.8) 0%, rgba(20,20,20,0.9) 100%)',
-                border: '1px solid #444',
-                clipPath: 'polygon(6% 0%, 100% 0%, 94% 100%, 0% 100%)',
-              }}
-            >
-              CONTROLS
-            </button>
           </div>
-
-          {/* Controls panel */}
-          {showControls && (
-            <div className="mt-2 p-4 rounded border max-w-md text-xs" style={{
-              fontFamily: '"Orbitron", sans-serif',
-              background: 'rgba(0,0,0,0.9)',
-              borderColor: '#333',
-              color: '#888',
-            }}>
-              <div className="grid grid-cols-2 gap-x-6 gap-y-1">
-                <span><span className="text-accent">WASD</span> - Move/Jump</span>
-                <span><span className="text-accent">J</span> - Slash</span>
-                <span><span className="text-accent">K</span> - Stab</span>
-                <span><span className="text-accent">L</span> - Heavy</span>
-                <span><span className="text-accent">G</span> - Kick</span>
-                <span><span className="text-accent">H</span> - Head Kick</span>
-                <span><span className="text-accent">N</span> - Knee</span>
-                <span><span className="text-accent">M</span> - Roundhouse</span>
-                <span><span className="text-accent">B</span> - Headbutt</span>
-                <span><span className="text-accent">C</span> - Punch</span>
-                <span><span className="text-accent">F</span> - Shoot</span>
-                <span><span className="text-accent">X</span> - Fatality</span>
-                <span><span className="text-accent">V</span> - Throw Sword</span>
-                <span><span className="text-accent">R</span> - Backflip</span>
-              </div>
-            </div>
-          )}
 
           {/* Footer */}
           <div className="mt-4 text-[10px] tracking-[0.3em] uppercase" style={{
