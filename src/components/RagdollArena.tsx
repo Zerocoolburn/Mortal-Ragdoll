@@ -1388,15 +1388,23 @@ const RagdollArena = () => {
 
         let tipX: number, tipY: number;
         const isKickAtk = ad.isKick || ['kick', 'headKick', 'kneeStrike', 'roundhouse', 'divekick', 'backflipKick', 'wallFlip'].includes(f.state);
+        const isHeadbutt = ad.isHeadbutt || f.state === 'headbutt';
+        const isPunch = ad.isPunch || f.state === 'punch';
         if (f.state === 'limbSmash' && f.heldLimb) {
           const lhand = f.rag.pts[7].pos; tipX = lhand.x + Math.cos(f.limbSwingAng * f.facing) * 45; tipY = lhand.y + Math.sin(f.limbSwingAng * f.facing) * 45;
+        } else if (isHeadbutt) {
+          // Use head position for headbutt
+          tipX = f.rag.pts[0].pos.x + f.facing * 15; tipY = f.rag.pts[0].pos.y;
+        } else if (isPunch) {
+          // Use fist position
+          tipX = f.rag.pts[10].pos.x + f.facing * 10; tipY = f.rag.pts[10].pos.y;
         } else if (isKickAtk) {
-          // Use foot position for kicks
           tipX = f.rag.pts[16].pos.x; tipY = f.rag.pts[16].pos.y;
-          // Head kick specifically aims high
           if (f.state === 'headKick') { tipY = Math.min(tipY, f.y - 100); }
-          // Knee strike uses knee
           if (f.state === 'kneeStrike') { tipX = f.rag.pts[15].pos.x; tipY = f.rag.pts[15].pos.y; }
+        } else if (!f.hasSword) {
+          // Unarmed - use fist
+          tipX = f.rag.pts[10].pos.x + f.facing * 10; tipY = f.rag.pts[10].pos.y;
         } else {
           const hand = f.rag.pts[10].pos; const ang = f.wAngle * f.facing;
           tipX = hand.x + Math.cos(ang) * f.weapon.len * 0.8; tipY = hand.y + Math.sin(ang) * f.weapon.len * 0.8;
