@@ -50,7 +50,7 @@ export const CHARACTERS: CharacterDef[] = [
     bodyScale: 1.1, headScale: 1.0,
     armorType: 'heavy', helmetType: 'crown',
     capeColor: '#600', glowColor: null,
-    scarCount: 1, eyeColor: '#4af', eyeGlow: false,
+    scarCount: 1, eyeColor: '#44aaff', eyeGlow: false,
     tattooColor: null, trailColor: null,
     koWinnerLines: ["By the holy blade you are vanquished!", "Your skull makes a fine trophy!", "Kneel before the holy knight!", "Another soul purified by my blade!", "The light has judged you unworthy!", "I've slain dragons tougher than you!"],
     koLoserLines: ["The light fades from my eyes...", "I have failed my sacred oath...", "This cannot be I am SIEGFRIED!", "My armor shattered like glass...", "Tell the kingdom I fought with honor...", "Even holy knights bleed..."],
