@@ -2324,7 +2324,7 @@ const RagdollArena = () => {
             fontFamily: '"Orbitron", sans-serif',
             color: '#333',
           }}>
-            Press FIGHT to begin
+            AI vs AI • Watch the carnage
           </div>
         </div>
       </div>
