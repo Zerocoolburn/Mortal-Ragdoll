@@ -2112,7 +2112,7 @@ const RagdollArena = () => {
         stepRagdoll(f.rag.pts, f.rag.sticks, spd, 0.3);
         clampRagdollToArena(f);
         if (!f.ragdolling) poseRagdoll(f);
-        if (['slash', 'heavySlash', 'stab', 'overhead', 'jumpAtk', 'uppercut', 'spinSlash', 'dashStab', 'backflipKick', 'execution', 'wallFlip', 'divekick', 'kick', 'headKick', 'roundhouse', 'fatality', 'headbutt', 'punch', 'swordThrow'].includes(f.state) && fc % 3 === 0) spawnAfterimage(f);
+        if (['slash', 'heavySlash', 'stab', 'overhead', 'jumpAtk', 'uppercut', 'spinSlash', 'dashStab', 'backflipKick', 'execution', 'wallFlip', 'divekick', 'kick', 'headKick', 'roundhouse', 'fatality', 'headbutt', 'punch', 'swordThrow', 'skullFire', 'dragonStrike'].includes(f.state) && fc % 3 === 0) spawnAfterimage(f);
       });
 
       // ── FIGHTER-TO-FIGHTER COLLISION ──
