@@ -77,7 +77,7 @@ function stepRagdoll(pts: RPoint[], sticks: RStick[], dt: number, bounce: number
 // ═══════════════════════════════════════════════════════
 // FIGHTER
 // ═══════════════════════════════════════════════════════
-type FState = 'idle' | 'walk' | 'walkBack' | 'jump' | 'crouch' | 'slash' | 'heavySlash' | 'stab' | 'overhead' | 'jumpAtk' | 'limbSmash' | 'block' | 'hit' | 'stagger' | 'ko' | 'ragdoll' | 'dodge' | 'taunt' | 'pickup';
+type FState = 'idle' | 'walk' | 'walkBack' | 'jump' | 'crouch' | 'slash' | 'heavySlash' | 'stab' | 'overhead' | 'jumpAtk' | 'uppercut' | 'spinSlash' | 'dashStab' | 'limbSmash' | 'block' | 'hit' | 'stagger' | 'ko' | 'ragdoll' | 'dodge' | 'taunt' | 'pickup';
 
 interface Weapon {
   name: string; len: number; weight: number;
@@ -87,20 +87,23 @@ interface Weapon {
 }
 
 const WEAPONS: Record<string, Weapon> = {
-  longsword:  { name: 'Longsword',  len: 70,  weight: 1,   slashDmg: 14, stabDmg: 11, heavyDmg: 24, speed: 1,   color: '#888', blade: '#ccd', type: 'sword' },
-  greatsword: { name: 'Greatsword', len: 95,  weight: 1.8, slashDmg: 20, stabDmg: 14, heavyDmg: 38, speed: 0.6, color: '#777', blade: '#aab', type: 'greatsword' },
-  axe:        { name: 'Battle Axe', len: 65,  weight: 1.5, slashDmg: 18, stabDmg: 8,  heavyDmg: 34, speed: 0.7, color: '#654', blade: '#999', type: 'axe' },
-  spear:      { name: 'Spear',      len: 110, weight: 0.8, slashDmg: 9,  stabDmg: 20, heavyDmg: 16, speed: 1.2, color: '#876', blade: '#bbc', type: 'spear' },
+  longsword:  { name: 'Longsword',  len: 70,  weight: 1,   slashDmg: 12, stabDmg: 9,  heavyDmg: 20, speed: 1.3, color: '#888', blade: '#ccd', type: 'sword' },
+  greatsword: { name: 'Greatsword', len: 95,  weight: 1.8, slashDmg: 16, stabDmg: 11, heavyDmg: 30, speed: 0.8, color: '#777', blade: '#aab', type: 'greatsword' },
+  axe:        { name: 'Battle Axe', len: 65,  weight: 1.5, slashDmg: 14, stabDmg: 7,  heavyDmg: 28, speed: 0.9, color: '#654', blade: '#999', type: 'axe' },
+  spear:      { name: 'Spear',      len: 110, weight: 0.8, slashDmg: 7,  stabDmg: 16, heavyDmg: 14, speed: 1.4, color: '#876', blade: '#bbc', type: 'spear' },
 };
 
 interface AtkDef { frames: number; hitStart: number; hitEnd: number; dmgKey: 'slashDmg' | 'stabDmg' | 'heavyDmg'; kb: V; stCost: number; canSever: boolean }
 const ATK: Record<string, AtkDef> = {
-  slash:      { frames: 32, hitStart: 9,  hitEnd: 17, dmgKey: 'slashDmg', kb: v(8, -2),  stCost: 14, canSever: true },
-  heavySlash: { frames: 50, hitStart: 18, hitEnd: 30, dmgKey: 'heavyDmg', kb: v(16, -8), stCost: 28, canSever: true },
-  stab:       { frames: 26, hitStart: 10, hitEnd: 16, dmgKey: 'stabDmg',  kb: v(6, -1),  stCost: 10, canSever: false },
-  overhead:   { frames: 46, hitStart: 20, hitEnd: 28, dmgKey: 'heavyDmg', kb: v(12, -14),stCost: 24, canSever: true },
-  jumpAtk:    { frames: 30, hitStart: 8,  hitEnd: 20, dmgKey: 'heavyDmg', kb: v(10, -10),stCost: 20, canSever: true },
-  limbSmash:  { frames: 36, hitStart: 10, hitEnd: 22, dmgKey: 'heavyDmg', kb: v(14, -12),stCost: 18, canSever: true },
+  slash:      { frames: 18, hitStart: 5,  hitEnd: 11, dmgKey: 'slashDmg', kb: v(5, -1),   stCost: 8,  canSever: true },
+  heavySlash: { frames: 32, hitStart: 12, hitEnd: 22, dmgKey: 'heavyDmg', kb: v(12, -6),  stCost: 18, canSever: true },
+  stab:       { frames: 14, hitStart: 5,  hitEnd: 10, dmgKey: 'stabDmg',  kb: v(4, 0),    stCost: 6,  canSever: false },
+  overhead:   { frames: 30, hitStart: 14, hitEnd: 22, dmgKey: 'heavyDmg', kb: v(8, -10),  stCost: 16, canSever: true },
+  jumpAtk:    { frames: 22, hitStart: 6,  hitEnd: 16, dmgKey: 'heavyDmg', kb: v(8, -8),   stCost: 14, canSever: true },
+  uppercut:   { frames: 20, hitStart: 6,  hitEnd: 14, dmgKey: 'slashDmg', kb: v(3, -16),  stCost: 12, canSever: true },
+  spinSlash:  { frames: 24, hitStart: 6,  hitEnd: 18, dmgKey: 'heavyDmg', kb: v(10, -4),  stCost: 15, canSever: true },
+  dashStab:   { frames: 16, hitStart: 4,  hitEnd: 12, dmgKey: 'stabDmg',  kb: v(14, -2),  stCost: 10, canSever: false },
+  limbSmash:  { frames: 26, hitStart: 8,  hitEnd: 18, dmgKey: 'heavyDmg', kb: v(14, -12), stCost: 14, canSever: true },
 };
 
 interface Blood { x: number; y: number; vx: number; vy: number; life: number; maxLife: number; sz: number; grounded: boolean }
@@ -192,12 +195,26 @@ function poseRagdoll(f: Fighter) {
     for (let i = 0; i < targets.length; i++) { targets[i].y += Math.sin(roll) * 20; targets[i].x += Math.cos(roll) * 5 * s; }
   }
 
-  if (['slash', 'heavySlash', 'stab', 'overhead', 'jumpAtk', 'limbSmash'].includes(f.state)) {
+  if (['slash', 'heavySlash', 'stab', 'overhead', 'jumpAtk', 'uppercut', 'spinSlash', 'dashStab', 'limbSmash'].includes(f.state)) {
     const reach = ap < 0.3 ? -15 : ap < 0.6 ? 28 : 10;
     const lift = ap < 0.3 ? -25 : ap < 0.6 ? 5 : -5;
     targets[9] = v((28 + reach) * s, -64 + lift + bob2 + co + jmp);
     targets[10] = v((35 + reach * 1.3) * s, -46 + lift + bob2 + co + jmp);
-    // For limb smash, also swing left arm wide
+    if (f.state === 'uppercut') {
+      const uLift = ap < 0.25 ? 0 : ap < 0.5 ? -30 : -15;
+      targets[9] = v((20 + reach * 0.6) * s, -74 + uLift + bob2 + jmp);
+      targets[10] = v((25 + reach * 0.8) * s, -56 + uLift + bob2 + jmp);
+    }
+    if (f.state === 'spinSlash') {
+      const spinAng = ap * Math.PI * 2;
+      const sx2 = Math.cos(spinAng) * 30, sy2 = Math.sin(spinAng) * 15;
+      targets[9] = v((28 + sx2) * s, -64 + sy2 + bob2 + jmp);
+      targets[10] = v((35 + sx2 * 1.2) * s, -46 + sy2 + bob2 + jmp);
+    }
+    if (f.state === 'dashStab') {
+      targets[9] = v((30 + reach * 1.5) * s, -70 + bob2 + jmp);
+      targets[10] = v((40 + reach * 1.8) * s, -62 + bob2 + jmp);
+    }
     if (f.state === 'limbSmash' && f.heldLimb) {
       const limbReach = ap < 0.25 ? -20 : ap < 0.55 ? 35 : 5;
       const limbLift = ap < 0.25 ? -35 : ap < 0.55 ? 10 : -10;
@@ -416,7 +433,7 @@ const RagdollArena = () => {
       const tipX = hand.x + Math.cos(ang) * wl;
       const tipY = hand.y + Math.sin(ang) * wl;
 
-      const isAtk = ['slash', 'heavySlash', 'overhead', 'stab', 'jumpAtk', 'limbSmash'].includes(f.state);
+      const isAtk = ['slash', 'heavySlash', 'overhead', 'stab', 'jumpAtk', 'uppercut', 'spinSlash', 'dashStab', 'limbSmash'].includes(f.state);
       const ap2 = f.dur > 0 ? f.frame / f.dur : 0;
       if (isAtk && ap2 > 0.2 && ap2 < 0.7) {
         // Weapon trail glow
@@ -535,7 +552,12 @@ const RagdollArena = () => {
       if (!d || !ca(f) || f.stamina < d.stCost) return false;
       f.stamina -= d.stCost;
       ss(f, t as FState, Math.round(d.frames / f.weapon.speed));
-      // Spawn afterimage on attacks
+      // DashStab lunges forward
+      if (t === 'dashStab') { f.vx = f.facing * 12; }
+      // Uppercut pops up
+      if (t === 'uppercut') { f.vy = -6; f.grounded = false; }
+      // SpinSlash slight forward momentum
+      if (t === 'spinSlash') { f.vx = f.facing * 5; }
       spawnAfterimage(f);
       return true;
     };
@@ -654,9 +676,20 @@ const RagdollArena = () => {
     };
 
     const AI_COMBOS = [
-      ['slash', 'slash', 'stab'], ['stab', 'stab', 'slash'],
-      ['slash', 'heavySlash'], ['stab', 'overhead'],
-      ['slash', 'stab', 'heavySlash'], ['slash', 'slash', 'overhead'],
+      // Long devastating combos
+      ['slash', 'slash', 'stab', 'slash', 'stab', 'stab', 'uppercut', 'jumpAtk', 'overhead', 'heavySlash'],
+      ['stab', 'stab', 'slash', 'stab', 'slash', 'uppercut', 'stab', 'spinSlash'],
+      ['slash', 'stab', 'slash', 'stab', 'slash', 'stab', 'heavySlash'],
+      ['dashStab', 'slash', 'slash', 'uppercut', 'jumpAtk', 'overhead'],
+      ['slash', 'slash', 'slash', 'slash', 'spinSlash', 'heavySlash'],
+      ['stab', 'slash', 'stab', 'uppercut', 'jumpAtk'],
+      ['dashStab', 'stab', 'stab', 'slash', 'slash', 'overhead'],
+      ['spinSlash', 'stab', 'slash', 'stab', 'uppercut', 'heavySlash'],
+      // Short brutal combos
+      ['uppercut', 'jumpAtk', 'overhead'],
+      ['dashStab', 'spinSlash', 'heavySlash'],
+      ['slash', 'slash', 'dashStab', 'uppercut'],
+      ['stab', 'stab', 'stab', 'stab', 'spinSlash'],
     ];
 
     const ai = (bot: Fighter, pl: Fighter, idx: number) => {
@@ -681,14 +714,14 @@ const RagdollArena = () => {
 
       const d = Math.abs(bot.x - pl.x);
       const wr = bot.weapon.len + 25;
-      const isPlAtk = ['slash', 'heavySlash', 'stab', 'overhead', 'jumpAtk', 'limbSmash'].includes(pl.state);
+      const isPlAtk = ['slash', 'heavySlash', 'stab', 'overhead', 'jumpAtk', 'uppercut', 'spinSlash', 'dashStab', 'limbSmash'].includes(pl.state);
       const isPlRecovering = pl.dur > 0 && pl.frame > pl.dur * 0.6;
       const st = bot.stamina / 100;
 
       mem.intentTimer--;
       if (mem.intentTimer <= 0) {
         mem.intent = pickIntent(bot, pl, pers, mem);
-        mem.intentTimer = 12 + Math.floor(rng(0, 30));
+        mem.intentTimer = 5 + Math.floor(rng(0, 12));
       }
 
       // Reactive layer
@@ -696,16 +729,16 @@ const RagdollArena = () => {
         const r = Math.random();
         if (r < 0.12) { ss(bot, 'block'); bot.aiTimer = 4 + rng(0, 5) | 0; mem.consecutiveBlocks++; if (mem.consecutiveBlocks >= 2) { mem.intent = 'punish'; mem.intentTimer = 12; mem.consecutiveBlocks = 0; } return; }
         else if (r < 0.22 && bot.dodgeCool <= 0 && bot.stamina > 12) { doDodge(bot, -bot.facing); bot.aiTimer = 3; mem.intent = 'punish'; mem.intentTimer = 10; return; }
-        else if (r < 0.6 && ca(bot) && st > 0.12) {
-          if (bot.heldLimb && rng(0, 1) < 0.5) { doLimbSmash(bot); } else { doAtk(bot, pick(['slash', 'stab', 'heavySlash', 'overhead'])); }
-          bot.aiTimer = 1 + rng(0, 3) | 0; return;
+        else if (r < 0.7 && ca(bot) && st > 0.06) {
+          if (bot.heldLimb && rng(0, 1) < 0.5) { doLimbSmash(bot); } else { doAtk(bot, pick(['slash', 'stab', 'uppercut', 'dashStab', 'spinSlash'])); }
+          bot.aiTimer = 0; mem.intent = 'executeCombo'; mem.comboSeq = [...pick(AI_COMBOS)]; return;
         }
       }
 
       if (isPlRecovering && d < wr + 25 && ca(bot)) {
         if (bot.heldLimb && rng(0, 1) < 0.4) doLimbSmash(bot);
-        else doAtk(bot, pick(['slash', 'stab', 'heavySlash']));
-        bot.aiTimer = 1 + rng(0, 3) | 0; mem.comboStep = 1; return;
+        else doAtk(bot, pick(['slash', 'stab', 'uppercut', 'dashStab']));
+        bot.aiTimer = 0; mem.comboStep = 1; mem.intent = 'executeCombo'; mem.comboSeq = [...pick(AI_COMBOS)]; return;
       }
 
       switch (mem.intent) {
@@ -746,31 +779,34 @@ const RagdollArena = () => {
         }
         case 'pressure': {
           if (d > wr + 15) {
-            ss(bot, 'walk'); bot.aiTimer = 1 + rng(0, 3) | 0;
-            if (d > 130 && rng(0, 1) < 0.5 && mem.dashCooldown <= 0) { bot.vx = bot.facing * (8 + rng(0, 5)); mem.dashCooldown = 10; }
-          } else if (ca(bot) && st > 0.1) {
+            ss(bot, 'walk'); bot.aiTimer = 1;
+            if (d > 100 && rng(0, 1) < 0.6 && mem.dashCooldown <= 0) { bot.vx = bot.facing * (10 + rng(0, 6)); mem.dashCooldown = 8; }
+          } else if (ca(bot) && st > 0.06) {
             const r = Math.random();
-            if (bot.heldLimb && r < 0.3) doLimbSmash(bot);
-            else if (r < 0.4) doAtk(bot, 'slash');
-            else if (r < 0.55) doAtk(bot, 'stab');
-            else if (r < 0.7 && bot.stamina > 24) doAtk(bot, 'heavySlash');
-            else if (r < 0.85 && bot.stamina > 20) doAtk(bot, 'overhead');
+            if (bot.heldLimb && r < 0.25) doLimbSmash(bot);
+            else if (r < 0.2) doAtk(bot, 'slash');
+            else if (r < 0.35) doAtk(bot, 'stab');
+            else if (r < 0.45) doAtk(bot, 'dashStab');
+            else if (r < 0.55) doAtk(bot, 'uppercut');
+            else if (r < 0.65) doAtk(bot, 'spinSlash');
+            else if (r < 0.75 && bot.stamina > 18) doAtk(bot, 'heavySlash');
+            else if (r < 0.85 && bot.stamina > 16) doAtk(bot, 'overhead');
             else doAtk(bot, pers.preferredAtk);
-            bot.aiTimer = 2 + rng(0, 4) | 0;
+            bot.aiTimer = 1; // Near instant follow-up
             mem.comboStep++;
-            if (mem.comboStep < 4 && rng(0, 1) < pers.comboChance) bot.aiTimer = 1;
+            if (mem.comboStep < 8 && rng(0, 1) < 0.85) bot.aiTimer = 0; // CHAIN ATTACKS
             else mem.comboStep = 0;
-          } else { ss(bot, 'walk'); bot.aiTimer = 1 + rng(0, 3) | 0; }
+          } else { ss(bot, 'walk'); bot.aiTimer = 1; }
           break;
         }
         case 'executeCombo': {
           if (mem.comboSeq.length === 0) mem.comboSeq = [...pick(AI_COMBOS)];
-          if (d > wr + 10) { ss(bot, 'walk'); bot.vx += bot.facing * 4; bot.aiTimer = 1 + rng(0, 2) | 0; }
+          if (d > wr + 10) { ss(bot, 'walk'); bot.vx += bot.facing * 6; bot.aiTimer = 1; }
           else if (ca(bot) && mem.comboSeq.length > 0) {
             const next = mem.comboSeq.shift()!;
-            if (doAtk(bot, next)) { bot.aiTimer = 1 + rng(0, 2) | 0; }
-            else { mem.comboSeq = []; mem.intent = 'retreat'; mem.intentTimer = 20; }
-            if (mem.comboSeq.length === 0) { mem.intent = rng(0, 1) < 0.5 ? 'pressure' : 'circle'; mem.intentTimer = 15; }
+            if (doAtk(bot, next)) { bot.aiTimer = 0; } // INSTANT chain for combos
+            else { mem.comboSeq = []; mem.intent = 'retreat'; mem.intentTimer = 10; }
+            if (mem.comboSeq.length === 0) { mem.intent = rng(0, 1) < 0.7 ? 'pressure' : 'taunt'; mem.intentTimer = 8; }
           }
           break;
         }
@@ -816,11 +852,11 @@ const RagdollArena = () => {
         }
         case 'rush': {
           mem.rushMomentum += 2;
-          if (d > wr) { ss(bot, 'walk'); bot.vx += bot.facing * (6 + Math.min(mem.rushMomentum * 0.5, 8)); bot.aiTimer = 1; }
+          if (d > wr) { ss(bot, 'walk'); bot.vx += bot.facing * (8 + Math.min(mem.rushMomentum * 0.8, 12)); bot.aiTimer = 0; }
           else if (ca(bot)) {
-            doAtk(bot, pick(['slash', 'slash', 'heavySlash', 'overhead']));
-            bot.aiTimer = 1; mem.comboStep = 1;
-            if (mem.rushMomentum > 10) { mem.intent = 'retreat'; mem.intentTimer = 15; mem.rushMomentum = 0; }
+            doAtk(bot, pick(['dashStab', 'slash', 'slash', 'uppercut', 'spinSlash', 'stab']));
+            bot.aiTimer = 0; mem.comboStep = 1;
+            if (mem.rushMomentum > 15) { mem.intent = 'executeCombo'; mem.comboSeq = [...pick(AI_COMBOS)]; mem.intentTimer = 20; mem.rushMomentum = 0; }
           }
           break;
         }
@@ -942,7 +978,7 @@ const RagdollArena = () => {
 
         if (f.ragdolling && f.state === 'ragdoll') { f.ragTimer -= spd; if (f.ragTimer <= 0 && f.hp > 0) { f.ragdolling = false; ss(f, 'idle'); } }
 
-        if (ca(f) || f.state === 'block') f.stamina = Math.min(100, f.stamina + 0.15);
+        if (ca(f) || f.state === 'block') f.stamina = Math.min(100, f.stamina + 0.35);
         f.dodgeCool = Math.max(0, f.dodgeCool - spd);
 
         if (!f.grounded) {
@@ -971,9 +1007,12 @@ const RagdollArena = () => {
         else if (f.state === 'stab') f.wTarget = ap2 < 0.3 ? -0.3 : ap2 < 0.55 ? 0.15 : -0.3;
         else if (f.state === 'overhead') f.wTarget = ap2 < 0.4 ? -2.8 : ap2 < 0.6 ? 2.0 : -0.2;
         else if (f.state === 'jumpAtk') f.wTarget = ap2 < 0.25 ? -2.5 : ap2 < 0.65 ? 2.5 : 0.5;
+        else if (f.state === 'uppercut') f.wTarget = ap2 < 0.3 ? -1.0 : ap2 < 0.5 ? -2.8 : -0.5;
+        else if (f.state === 'spinSlash') { const spin = ap2 * Math.PI * 2; f.wTarget = Math.sin(spin) * 2.5; }
+        else if (f.state === 'dashStab') f.wTarget = ap2 < 0.2 ? -0.2 : ap2 < 0.7 ? 0.1 : -0.3;
         else if (f.state === 'limbSmash') f.wTarget = ap2 < 0.3 ? -2.0 : ap2 < 0.55 ? 1.8 : 0.2;
         else f.wTarget = f.state === 'block' ? -1.3 : -0.5;
-        f.wAngle += (f.wTarget - f.wAngle) * 0.32;
+        f.wAngle += (f.wTarget - f.wAngle) * 0.38;
 
         // Bleed from stumps
         if (f.bleedTimer > 0) {
@@ -989,7 +1028,7 @@ const RagdollArena = () => {
         if (f.comboTimer > 0) { f.comboTimer -= spd; if (f.comboTimer <= 0) f.combo = 0; }
 
         // Afterimage on fast movement
-        if (fc % 4 === 0 && (Math.abs(f.vx) > 5 || ['slash', 'heavySlash', 'jumpAtk', 'limbSmash', 'dodge'].includes(f.state))) {
+        if (fc % 3 === 0 && (Math.abs(f.vx) > 4 || ['slash', 'heavySlash', 'jumpAtk', 'uppercut', 'spinSlash', 'dashStab', 'limbSmash', 'dodge'].includes(f.state))) {
           spawnAfterimage(f);
         }
 
