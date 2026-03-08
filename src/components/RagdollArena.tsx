@@ -1689,7 +1689,8 @@ const RagdollArena = () => {
 
   // ─── GAME LOOP ────────────────────────────────────────
   useEffect(() => {
-    if (gameScreen !== 'fight') return;
+    if (gameScreen !== 'fight' && gameScreen !== 'campaignFight') return;
+    const isCampaign = gameScreen === 'campaignFight';
 
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -1702,10 +1703,28 @@ const RagdollArena = () => {
 
     // Reset for new fight
     const midX = WORLD_W / 2;
-    const char1 = getCharacter(selectedP1);
-    const char2 = getCharacter(selectedP2);
-    g.fighters[0] = mkFighterFromChar(midX - 200, char1, true);
+    let char1: CharacterDef, char2: CharacterDef;
+    let bossData: BossDef | null = null;
+    if (isCampaign) {
+      const cState = campaignRef.current;
+      char1 = getCharacter(cState.playerCharId);
+      bossData = getBoss(cState.level);
+      char2 = bossData;
+    } else {
+      char1 = getCharacter(selectedP1);
+      char2 = getCharacter(selectedP2);
+    }
+    g.fighters[0] = mkFighterFromChar(midX - 200, char1, !isCampaign);
     g.fighters[1] = mkFighterFromChar(midX + 200, char2, true);
+    // Apply boss modifiers
+    if (isCampaign && bossData) {
+      g.fighters[1].hp = MAX_HP * bossData.hpMultiplier;
+      // Scale body for bigger bosses
+      for (const pt of g.fighters[1].rag.pts) {
+        pt.pos.y -= (bossData.bodyScale - 1) * 20;
+        pt.old.y -= (bossData.bodyScale - 1) * 20;
+      }
+    }
     g.blood = []; g.limbs = []; g.pools = []; g.sparks = []; g.gore = [];
     g.afterimages = []; g.rings = []; g.lightnings = []; g.bullets = []; g.muzzleFlashes = []; g.wallSparks = []; g.fatalityTexts = []; g.thrownSwords = []; g.specials = [];
     g.rs = 'intro'; g.introTimer = 100; g.timer = 99 * 60; g.round = 1;
