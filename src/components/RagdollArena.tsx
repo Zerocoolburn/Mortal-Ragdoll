@@ -3153,7 +3153,185 @@ const RagdollArena = () => {
   }
 
   // ═══════════════════════════════════════════════════════
-  // SETTINGS SCREEN
+  // CAMPAIGN CHARACTER SELECT
+  // ═══════════════════════════════════════════════════════
+  if (gameScreen === 'campaignSelect') {
+    return (
+      <div className="relative w-full h-full flex flex-col items-center justify-center bg-black select-none overflow-hidden">
+        <div className="absolute inset-0" style={{ background: 'radial-gradient(ellipse at center, rgba(60,40,0,0.4) 0%, rgba(0,0,0,0.95) 70%)' }} />
+        <div className="relative z-10 mb-4">
+          <h2 className="text-3xl font-bold tracking-[0.3em] uppercase text-center" style={{ fontFamily: '"Orbitron", sans-serif', color: '#fa0', textShadow: '0 0 20px rgba(255,150,0,0.5)' }}>
+            CHOOSE YOUR WARRIOR
+          </h2>
+          <p className="text-center text-sm mt-1" style={{ fontFamily: '"Orbitron", sans-serif', color: '#886' }}>
+            12 bosses await. Each deadlier than the last.
+          </p>
+        </div>
+        <div className="relative z-10 grid grid-cols-6 gap-2 px-4 max-w-5xl">
+          {CHARACTERS.map((char) => {
+            const isSel = campaignChar === char.id;
+            return (
+              <button key={char.id} onClick={() => setCampaignChar(char.id)}
+                className="relative flex flex-col items-center p-2 rounded transition-all duration-200 hover:scale-110"
+                style={{
+                  background: isSel ? 'rgba(255,150,0,0.25)' : 'rgba(30,30,30,0.6)',
+                  border: isSel ? '2px solid #fa0' : '1px solid #333',
+                  boxShadow: isSel ? '0 0 15px rgba(255,150,0,0.3)' : 'none',
+                }}>
+                <canvas ref={(cvs) => { if (cvs) { const ctx2 = cvs.getContext('2d'); if (ctx2) { ctx2.clearRect(0, 0, 80, 100); /* simplified preview */ ctx2.fillStyle = char.color; ctx2.beginPath(); ctx2.arc(40, 50, 20, 0, Math.PI * 2); ctx2.fill(); ctx2.fillStyle = char.skin; ctx2.beginPath(); ctx2.arc(40, 30, 12, 0, Math.PI * 2); ctx2.fill(); } } }} width={80} height={100} className="pointer-events-none" />
+                <span className="text-[9px] font-bold tracking-wider mt-1" style={{ fontFamily: '"Orbitron", sans-serif', color: isSel ? '#fa0' : '#aaa' }}>{char.name}</span>
+                <span className="text-[7px]" style={{ fontFamily: '"Orbitron", sans-serif', color: '#666' }}>{char.title}</span>
+              </button>
+            );
+          })}
+        </div>
+        <div className="relative z-10 flex gap-4 mt-6">
+          <button onClick={() => { const cs = initCampaign(campaignChar); setCampaign(cs); campaignRef.current = cs; setGameScreen('cinematic'); }}
+            className="px-10 py-3 text-lg font-bold tracking-[0.2em] uppercase transition-all hover:scale-105"
+            style={{ fontFamily: '"Orbitron", sans-serif', color: '#fff', background: 'linear-gradient(180deg, rgba(200,120,0,0.8) 0%, rgba(100,50,0,0.9) 100%)', border: '2px solid #da0', clipPath: 'polygon(8% 0%, 100% 0%, 92% 100%, 0% 100%)', textShadow: '0 0 10px #fa0' }}>
+            BEGIN CAMPAIGN
+          </button>
+          <button onClick={() => setGameScreen('menu')}
+            className="px-8 py-3 text-sm font-bold tracking-[0.2em] uppercase transition-all hover:scale-105"
+            style={{ fontFamily: '"Orbitron", sans-serif', color: '#aaa', background: 'rgba(30,30,30,0.8)', border: '1px solid #444', clipPath: 'polygon(6% 0%, 100% 0%, 94% 100%, 0% 100%)' }}>
+            BACK
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // ═══════════════════════════════════════════════════════
+  // CINEMATIC / STORY SCREEN
+  // ═══════════════════════════════════════════════════════
+  if (gameScreen === 'cinematic') {
+    const cState = campaignRef.current;
+    const boss = getBoss(cState.level);
+    const prevBoss = cState.level > 1 ? getBoss(cState.level - 1) : null;
+    const showDefeatText = cState.level > 1 && cState.levelsComplete[cState.level - 2];
+    return (
+      <div className="relative w-full h-full flex items-center justify-center bg-black select-none overflow-hidden">
+        <div className="absolute inset-0" style={{ background: `radial-gradient(ellipse at 50% 80%, ${boss.color}44 0%, #000 70%)` }} />
+        <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(255,255,255,0.02) 3px, rgba(255,255,255,0.02) 4px)' }} />
+        <div className="relative z-10 flex flex-col items-center gap-6 max-w-2xl px-8 text-center">
+          {/* Previous boss defeat text */}
+          {showDefeatText && prevBoss && (
+            <div className="mb-4 p-4 rounded" style={{ background: 'rgba(0,60,0,0.3)', border: '1px solid #0a0' }}>
+              <p className="text-sm italic" style={{ fontFamily: '"Orbitron", sans-serif', color: '#8a8' }}>
+                — {prevBoss.name} —
+              </p>
+              <p className="text-sm mt-2" style={{ fontFamily: 'Georgia, serif', color: '#aaa', lineHeight: '1.6' }}>
+                "{prevBoss.storyDefeat}"
+              </p>
+            </div>
+          )}
+          {/* Level header */}
+          <div>
+            <p className="text-sm tracking-[0.5em] uppercase" style={{ fontFamily: '"Orbitron", sans-serif', color: '#666' }}>
+              Level {cState.level} of 12
+            </p>
+            <h2 className="text-2xl font-bold tracking-[0.2em] mt-1" style={{ fontFamily: '"Press Start 2P", cursive', color: boss.color2, textShadow: `0 0 20px ${boss.color2}88` }}>
+              {boss.arenaName}
+            </h2>
+          </div>
+          {/* Boss intro */}
+          <div className="p-4 rounded" style={{ background: 'rgba(40,0,0,0.4)', border: `1px solid ${boss.color2}44` }}>
+            <p className="text-lg font-bold mb-2" style={{ fontFamily: '"Orbitron", sans-serif', color: boss.color2 }}>
+              {boss.name} — {boss.title}
+            </p>
+            <p className="text-sm" style={{ fontFamily: 'Georgia, serif', color: '#bbb', lineHeight: '1.8' }}>
+              {boss.storyIntro}
+            </p>
+          </div>
+          {/* Boss stats */}
+          <div className="flex gap-6 text-[10px]" style={{ fontFamily: '"Orbitron", sans-serif', color: '#888' }}>
+            <span>HP: {'█'.repeat(Math.ceil(boss.hpMultiplier * 5))}<span style={{ color: '#333' }}>{'█'.repeat(10 - Math.ceil(boss.hpMultiplier * 5))}</span></span>
+            <span>DMG: {'█'.repeat(Math.ceil(boss.dmgMultiplier * 5))}<span style={{ color: '#333' }}>{'█'.repeat(10 - Math.ceil(boss.dmgMultiplier * 5))}</span></span>
+            <span>SPD: {'█'.repeat(Math.ceil(boss.speedMultiplier * 5))}<span style={{ color: '#333' }}>{'█'.repeat(10 - Math.ceil(boss.speedMultiplier * 5))}</span></span>
+          </div>
+          {/* Score so far */}
+          {cState.totalScore > 0 && (
+            <p className="text-[10px]" style={{ fontFamily: '"Orbitron", sans-serif', color: '#555' }}>
+              Total Score: {cState.totalScore}
+            </p>
+          )}
+          <button onClick={() => setGameScreen('campaignFight')}
+            className="px-12 py-4 text-xl font-bold tracking-[0.2em] uppercase transition-all hover:scale-105 mt-2"
+            style={{ fontFamily: '"Orbitron", sans-serif', color: '#fff', background: `linear-gradient(180deg, ${boss.color2}cc 0%, ${boss.color}cc 100%)`, border: `2px solid ${boss.color2}`, clipPath: 'polygon(8% 0%, 100% 0%, 92% 100%, 0% 100%)', textShadow: `0 0 10px ${boss.color2}` }}>
+            FIGHT {boss.name}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // ═══════════════════════════════════════════════════════
+  // VICTORY / END SCREEN
+  // ═══════════════════════════════════════════════════════
+  if (gameScreen === 'victory') {
+    const cState = campaign;
+    const playerChar = getCharacter(cState.playerCharId);
+    return (
+      <div className="relative w-full h-full flex items-center justify-center bg-black select-none overflow-hidden">
+        <div className="absolute inset-0" style={{ background: 'radial-gradient(ellipse at 50% 30%, rgba(200,150,0,0.15) 0%, #000 70%)' }} />
+        <div className="relative z-10 flex flex-col items-center gap-4 max-w-2xl px-8 text-center">
+          <h1 className="text-4xl font-bold tracking-[0.3em]" style={{ fontFamily: '"Press Start 2P", cursive', color: '#fc0', textShadow: '0 0 30px #fa0, 0 0 60px #a60' }}>
+            IMMORTAL
+          </h1>
+          <p className="text-sm tracking-[0.3em] uppercase" style={{ fontFamily: '"Orbitron", sans-serif', color: '#886' }}>
+            {playerChar.name} has conquered all 12 bosses
+          </p>
+          <div className="w-64 h-[2px] my-2" style={{ background: 'linear-gradient(90deg, transparent, #da0, #fc0, #da0, transparent)' }} />
+          {/* Ending story */}
+          <div className="p-6 rounded max-w-lg" style={{ background: 'rgba(40,30,0,0.4)', border: '1px solid #886' }}>
+            <p className="text-sm italic mb-3" style={{ fontFamily: 'Georgia, serif', color: '#dda', lineHeight: '1.8' }}>
+              The God of Death crumbles to ash. The arena, built on blood and suffering for a thousand years, begins to collapse.
+            </p>
+            <p className="text-sm italic mb-3" style={{ fontFamily: 'Georgia, serif', color: '#bba', lineHeight: '1.8' }}>
+              As the walls fall, {playerChar.name} walks out into the sunlight — the first warrior to ever leave the Arena of Carnage alive.
+            </p>
+            <p className="text-sm italic" style={{ fontFamily: 'Georgia, serif', color: '#998', lineHeight: '1.8' }}>
+              The world will remember this day. The day Death itself was defeated. The day a mortal became... immortal.
+            </p>
+          </div>
+          {/* Final Score */}
+          <div className="mt-2 p-4 rounded w-full max-w-md" style={{ background: 'rgba(20,20,20,0.8)', border: '1px solid #444' }}>
+            <h3 className="text-lg font-bold mb-3" style={{ fontFamily: '"Orbitron", sans-serif', color: '#fc0' }}>FINAL SCORE</h3>
+            <div className="grid grid-cols-2 gap-2 text-left text-sm" style={{ fontFamily: '"Orbitron", sans-serif' }}>
+              <span style={{ color: '#888' }}>Total Score:</span><span style={{ color: '#fc0' }}>{cState.totalScore.toLocaleString()}</span>
+              <span style={{ color: '#888' }}>Bosses Defeated:</span><span style={{ color: '#0f0' }}>{cState.levelsComplete.filter(Boolean).length} / 12</span>
+              <span style={{ color: '#888' }}>Best Combo:</span><span style={{ color: '#f80' }}>{cState.bestCombo} hits</span>
+              <span style={{ color: '#888' }}>Total Time:</span><span style={{ color: '#8af' }}>{Math.floor(cState.totalTime / 60)}m {cState.totalTime % 60}s</span>
+            </div>
+            {/* Per-level scores */}
+            <div className="mt-3 pt-3" style={{ borderTop: '1px solid #333' }}>
+              <p className="text-[10px] mb-2" style={{ color: '#666' }}>LEVEL SCORES</p>
+              <div className="flex flex-wrap gap-1 justify-center">
+                {cState.levelScores.map((score, i) => (
+                  <span key={i} className="px-2 py-1 text-[9px] rounded" style={{ background: 'rgba(255,200,0,0.1)', color: '#aa8', border: '1px solid #443' }}>
+                    L{i + 1}: {score}
+                  </span>
+                ))}
+              </div>
+            </div>
+          </div>
+          {/* Rating */}
+          <div className="mt-1">
+            <span className="text-2xl font-bold" style={{ fontFamily: '"Press Start 2P", cursive', color: cState.totalScore > 8000 ? '#fc0' : cState.totalScore > 5000 ? '#aaa' : '#866' }}>
+              {cState.totalScore > 8000 ? '★★★ LEGENDARY ★★★' : cState.totalScore > 5000 ? '★★ CHAMPION ★★' : '★ SURVIVOR ★'}
+            </span>
+          </div>
+          <button onClick={() => setGameScreen('menu')}
+            className="px-10 py-3 mt-2 text-base font-bold tracking-[0.2em] uppercase transition-all hover:scale-105"
+            style={{ fontFamily: '"Orbitron", sans-serif', color: '#fc0', background: 'linear-gradient(180deg, rgba(100,80,0,0.8) 0%, rgba(40,30,0,0.9) 100%)', border: '2px solid #da0', clipPath: 'polygon(8% 0%, 100% 0%, 92% 100%, 0% 100%)' }}>
+            MAIN MENU
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+
   // ═══════════════════════════════════════════════════════
   if (gameScreen === 'settings') {
     return (
