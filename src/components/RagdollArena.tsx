@@ -2056,6 +2056,7 @@ const RagdollArena = () => {
         if (f.ragdolling && f.state === 'ragdoll') { f.ragTimer -= spd; if (f.ragTimer <= 0 && f.hp > 0) { f.ragdolling = false; ss(f, 'idle'); } }
         if (ca(f) || f.state === 'block') f.stamina = Math.min(100, f.stamina + 0.35);
         f.dodgeCool = Math.max(0, f.dodgeCool - spd);
+        if (f.specialCooldown > 0) f.specialCooldown -= spd;
         if (f.gunCooldown > 0) f.gunCooldown -= spd;
         if (f.muzzleFlash > 0) f.muzzleFlash -= spd;
 
