@@ -60,7 +60,7 @@ function stepRagdoll(pts: RPoint[], sticks: RStick[], dt: number, bounce: number
     p.pos = vadd(p.pos, vadd(vscl(vel, 0.97), vscl(p.acc, dt * dt)));
     p.acc = v(0, GRAV * p.mass);
     if (p.pos.y > GY) { p.pos.y = GY; if (vel.y > 0) p.old.y = p.pos.y + vel.y * bounce; p.old.x = p.pos.x - vel.x * 0.7; }
-    p.pos.x = clamp(p.pos.x, 30, W - 30);
+    p.pos.x = clamp(p.pos.x, 30, WORLD_W - 30);
   }
   for (let iter = 0; iter < 6; iter++) {
     for (const s of sticks) {
