@@ -1410,7 +1410,7 @@ const RagdollArena = () => {
             }
           }
         }
-        if (b.y > GY || b.x < 10 || b.x > W - 10) { spawnSparks(b.x, Math.min(b.y, GY), 5); return false; }
+        if (b.y > GY || b.x < 10 || b.x > WORLD_W - 10) { spawnSparks(b.x, Math.min(b.y, GY), 5); return false; }
         return b.life > 0;
       });
 
