@@ -158,16 +158,28 @@ function poseRagdoll(f: Fighter) {
   const wk = f.state === 'walk' || f.state === 'walkBack' ? f.walkCycle : 0;
   const ap = f.dur > 0 ? f.frame / f.dur : 0;
   const jmp = !f.grounded ? -10 : 0;
-  const legSwing = Math.sin(wk) * 8;
-  const legBob = Math.cos(wk) * 2;
+  const legSwing = Math.sin(wk) * 12;
+  const legBend = Math.abs(Math.sin(wk)) * 6;
+
+  // Leg IK: hips stay fixed, knees bend naturally, feet stay on ground
+  const lHipX = -9 * s, rHipX = 9 * s;
+  const hipY = -33 + jmp;
+  const footY = -1; // always on ground plane
+  const lFootX = (lHipX - legSwing * 0.8 * s);
+  const rFootX = (rHipX + legSwing * 0.8 * s);
+  // Knees: midpoint between hip and foot, pushed forward
+  const lKneeX = (lHipX + lFootX) / 2 + s * 4;
+  const lKneeY = (hipY + footY) / 2 - legBend - 4;
+  const rKneeX = (rHipX + rFootX) / 2 + s * 4;
+  const rKneeY = (hipY + footY) / 2 - legBend - 4;
 
   const targets: V[] = [
     v(0, -108 + bob2 + co + jmp), v(0, -93 + bob2 + co + jmp),
-    v(0, -72 + bob2 + co + jmp), v(0, -52 + co + jmp), v(0, -36 + jmp),
+    v(0, -72 + bob2 + co + jmp), v(0, -52 + co + jmp), v(0, hipY),
     v(-15 * s, -86 + bob2 + co + jmp), v(-28 * s, -64 + bob2 + co + jmp), v(-35 * s, -46 + bob2 + co + jmp),
     v(15 * s, -86 + bob2 + co + jmp), v(28 * s, -64 + bob2 + co + jmp), v(35 * s, -46 + bob2 + co + jmp),
-    v(-9 * s, -33 + jmp), v((-11 - legSwing) * s, -16 + legBob + jmp), v((-9 - legSwing * 1.1) * s, -1),
-    v(9 * s, -33 + jmp), v((11 + legSwing) * s, -16 - legBob + jmp), v((9 + legSwing * 1.1) * s, -1),
+    v(lHipX, hipY), v(lKneeX, lKneeY + jmp), v(lFootX, footY),
+    v(rHipX, hipY), v(rKneeX, rKneeY + jmp), v(rFootX, footY),
   ];
 
   if (f.hitImpact > 0) {
