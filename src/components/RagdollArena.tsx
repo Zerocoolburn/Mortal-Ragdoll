@@ -2235,8 +2235,53 @@ const RagdollArena = () => {
         if (ttsEnabled) speakAnnouncer(pick(KO_ANNOUNCER_LINES));
       }
 
-      // Both fighters are AI controlled
-      ai(p1, p2, 0);
+      // ── PLAYER INPUT (campaign mode) ──
+      if (isCampaign && p1.state !== 'ko' && p1.state !== 'ragdoll') {
+        const keys = g.keys;
+        const gpad = readGamepad();
+        const kLeft = keys.has('a') || keys.has('arrowleft') || gpad.left;
+        const kRight = keys.has('d') || keys.has('arrowright') || gpad.right;
+        const kUp = keys.has('w') || keys.has('arrowup') || gpad.up;
+        const kDown = keys.has('s') || keys.has('arrowdown') || gpad.down;
+        const kSlash = keys.has('j') || keys.has('z') || gpad.slash;
+        const kHeavy = keys.has('k') || keys.has('x') || gpad.heavySlash;
+        const kKick = keys.has('l') || keys.has('c') || gpad.kick;
+        const kBlock = keys.has('shift') || gpad.block;
+        const kSpecial = (keys.has('q') && keys.has('e')) || gpad.special;
+        const kDodge = keys.has(' ') || gpad.dodge;
+        const kShoot = keys.has('f') || gpad.shoot;
+        const kGrab = keys.has('g') || gpad.grab;
+
+        if (ca(p1)) {
+          if (kSpecial && p1.specialCooldown <= 0) { doSpecial(p1, 0); }
+          else if (kBlock) { ss(p1, 'block'); }
+          else if (kDodge && p1.dodgeCool <= 0) { doDodge(p1, kLeft ? -1 : kRight ? 1 : -p1.facing); }
+          else if (kSlash && kUp) { doAtk(p1, 'uppercut'); }
+          else if (kSlash && kDown) { doAtk(p1, 'stab'); }
+          else if (kSlash) { doAtk(p1, 'slash'); }
+          else if (kHeavy && kDown) { doAtk(p1, 'overhead'); }
+          else if (kHeavy && kUp) { doAtk(p1, 'spinSlash'); }
+          else if (kHeavy) { doAtk(p1, 'heavySlash'); }
+          else if (kKick && kUp) { doAtk(p1, 'headKick'); }
+          else if (kKick && kDown) { doAtk(p1, 'kneeStrike'); }
+          else if (kKick) { doAtk(p1, pick(['kick', 'roundhouse'])); }
+          else if (kShoot) { doShoot(p1, 0); }
+          else if (kGrab) { if (p1.heldLimb) doLimbSmash(p1); else tryPickupLimb(p1); }
+          else if (kUp && p1.grounded) { p1.vy = -11; p1.grounded = false; ss(p1, 'jump' as FState); }
+          else if (kLeft) { ss(p1, p1.facing < 0 ? 'walk' : 'walkBack'); }
+          else if (kRight) { ss(p1, p1.facing > 0 ? 'walk' : 'walkBack'); }
+          else if (kDown) { ss(p1, 'crouch'); }
+          else { ss(p1, 'idle'); }
+        } else if (p1.state === 'block' && !kBlock) {
+          ss(p1, 'idle');
+        }
+        // Airborne attacks
+        if (!p1.grounded && kSlash && ca(p1)) doAtk(p1, 'jumpAtk');
+        if (!p1.grounded && kKick && ca(p1)) doAtk(p1, 'divekick');
+      } else if (!isCampaign) {
+        // AI vs AI mode
+        ai(p1, p2, 0);
+      }
       ai(p2, p1, 1);
 
       // Update fighters
