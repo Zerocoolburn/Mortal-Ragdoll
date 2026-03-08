@@ -1054,11 +1054,20 @@ const RagdollArena = () => {
         else f.wTarget = f.state === 'block' ? -1.3 : -0.5;
         f.wAngle += (f.wTarget - f.wAngle) * 0.2;
 
-        // Bleed
+        // Bleed - continuous blood spurts from stumps
         if (f.bleedTimer > 0) {
           f.bleedTimer -= spd;
-          f.hp -= 0.015 * spd;
-          if (fc % 10 === 0) spawnBlood(f.x, f.y - 40, f.facing, 1, 0.3);
+          f.hp -= 0.02 * spd;
+          if (fc % 4 === 0) {
+            // Spurt from each severed part
+            for (const part of f.severed) {
+              const idx2 = part === 'leftArm' ? 5 : part === 'rightArm' ? 8 :
+                part === 'leftLeg' ? 11 : part === 'rightLeg' ? 14 : 1;
+              if (f.rag.pts[idx2]) {
+                spawnBlood(f.rag.pts[idx2].pos.x, f.rag.pts[idx2].pos.y, (Math.random() - 0.5) * 2, 3, 2);
+              }
+            }
+          }
         }
 
         // Combo decay
