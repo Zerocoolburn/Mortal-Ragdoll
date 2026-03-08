@@ -2005,12 +2005,13 @@ const RagdollArena = () => {
         if (g.koTimer <= 0) {
           g.round++;
           const midX2 = (p1.x + p2.x) / 2;
-          const f1 = mkFighter(midX2 - 200, p1.name, p1.color, p1.skin, p1.hair, pick(Object.keys(WEAPONS)), true);
-          const f2 = mkFighter(midX2 + 200, p2.name, p2.color, p2.skin, p2.hair, pick(Object.keys(WEAPONS)), true);
+          const c1 = getCharacter(p1.charId); const c2 = getCharacter(p2.charId);
+          const f1 = mkFighterFromChar(midX2 - 200, c1, true);
+          const f2 = mkFighterFromChar(midX2 + 200, c2, true);
           f1.wins = p1.wins; f2.wins = p2.wins;
           g.fighters[0] = f1; g.fighters[1] = f2;
           g.blood = []; g.limbs = []; g.pools = []; g.sparks = []; g.gore = [];
-          g.afterimages = []; g.rings = []; g.lightnings = []; g.bullets = []; g.muzzleFlashes = []; g.wallSparks = []; g.fatalityTexts = []; g.thrownSwords = []; g.skullFires = []; g.dragons = [];
+          g.afterimages = []; g.rings = []; g.lightnings = []; g.bullets = []; g.muzzleFlashes = []; g.wallSparks = []; g.fatalityTexts = []; g.thrownSwords = []; g.specials = [];
           g.rs = 'intro'; g.introTimer = 80; g.timer = 99 * 60;
           aiData[0] = { personality: mkPersonality(), mem: mkAiMem() }; aiData[1] = { personality: mkPersonality(), mem: mkAiMem() };
           playSFX('roundStart', sfxVolume);
