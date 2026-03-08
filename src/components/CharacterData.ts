@@ -244,7 +244,7 @@ export const CHARACTERS: CharacterDef[] = [
     color: '#1a1a1a', color2: '#44ff44',
     skin: '#b8b0a8', hair: '#e8e0d8',
     weaponKey: 'spear', specialType: 'soulHarvest',
-    specialName: 'SOUL HARVEST', specialColor: '#8f8', specialGlow: '#afa',
+    specialName: 'SOUL HARVEST', specialColor: '#88ff88', specialGlow: '#aaffaa',
     aiStyles: ['tactician', 'assassin', 'guardian'],
     voicePitch: 0.68, voiceRate: 0.85,
     bodyScale: 1.0, headScale: 0.9,
