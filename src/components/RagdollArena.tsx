@@ -1496,7 +1496,7 @@ const RagdollArena = () => {
             }
             if (o.hp <= 0) {
               ss(o, 'ko'); startRagdoll(o, vscl(hitDir2, 22), 999);
-              f.wins++; g.rs = 'ko'; g.koTimer = 280; g.slowMo = 0.05; g.slowTimer = 55; g.flash = 15; g.flashColor = '#fff';
+              f.wins++; g.rs = 'ko'; g.koTimer = 340; g.slowMo = 0.05; g.slowTimer = 55; g.flash = 15; g.flashColor = '#fff';
               spawnBlood(hitPt.x, hitPt.y, f.facing, 120, 7); spawnGore(hitPt.x, hitPt.y, 20, f.facing);
               spawnRing(hitPt.x, hitPt.y, 150, '#f00'); spawnRing(hitPt.x, hitPt.y, 200, '#a00');
               spawnLightning(hitPt.x, hitPt.y, hitPt.x + rng(-100, 100), hitPt.y - rng(50, 150));
