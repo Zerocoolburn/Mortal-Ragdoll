@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
+import { CHARACTERS, getCharacter, type CharacterDef } from './CharacterData';
 
 // ═══════════════════════════════════════════════════════
 // MATH
