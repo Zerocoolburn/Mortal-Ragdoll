@@ -779,16 +779,15 @@ const FATALITIES: FatalityDef[] = [
 type FState = 'idle' | 'walk' | 'walkBack' | 'jump' | 'crouch' | 'slash' | 'heavySlash' | 'stab' | 'overhead' | 'jumpAtk' | 'uppercut' | 'spinSlash' | 'dashStab' | 'limbSmash' | 'backflipKick' | 'execution' | 'shoot' | 'wallRun' | 'wallJump' | 'wallFlip' | 'divekick' | 'kick' | 'headKick' | 'kneeStrike' | 'roundhouse' | 'headbutt' | 'swordThrow' | 'punch' | 'fatality' | 'block' | 'hit' | 'stagger' | 'ko' | 'ragdoll' | 'dodge' | 'taunt' | 'pickup' | 'skullFire' | 'dragonStrike';
 
 // ═══════════════════════════════════════════════════════
-// SPECIAL ATTACK ENTITIES
+// SPECIAL ATTACK ENTITIES (unified for all 12 types)
 // ═══════════════════════════════════════════════════════
-interface SkullFireEntity {
-  x: number; y: number; facing: 1 | -1; life: number; maxLife: number;
-  owner: number; phase: 'rise' | 'breathe' | 'fade'; fireParticles: { x: number; y: number; vx: number; vy: number; life: number; sz: number }[];
-}
-interface DragonEntity {
-  x: number; y: number; targetX: number; facing: 1 | -1; life: number; maxLife: number;
-  owner: number; phase: 'swoop' | 'strike' | 'flyAway'; swoopY: number;
-  trail: { x: number; y: number; alpha: number }[];
+interface SpecialParticle { x: number; y: number; vx: number; vy: number; life: number; sz: number; color: string }
+interface SpecialEntity {
+  type: string; x: number; y: number; facing: 1 | -1;
+  life: number; maxLife: number; owner: number;
+  targetX: number; targetY: number;
+  particles: SpecialParticle[];
+  subEntities: { x: number; y: number; vx: number; vy: number; life: number; active: boolean; timer: number }[];
 }
 
 interface Weapon {
