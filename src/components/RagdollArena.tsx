@@ -1781,7 +1781,7 @@ const RagdollArena = () => {
               if (target.hp <= 0) {
                 const shooter = g.fighters[b.owner]; ss(target, 'ko'); startRagdoll(target, vscl(hitDir, 18), 999); shooter.wins++; g.rs = 'ko'; g.koTimer = 340; g.slowMo = 0.05; g.slowTimer = 55; g.flash = 15; g.flashColor = '#fff'; spawnBlood(b.x, b.y, hitDir.x > 0 ? 1 : -1, 80, 6); spawnGore(b.x, b.y, 10, hitDir.x > 0 ? 1 : -1); spawnRing(b.x, b.y, 100, '#f00');
                 playSFX('ko', sfxVolume);
-                if (ttsEnabled) { speakLine(pick(KO_LINES), 0.6, 0.9); setTimeout(() => speakLine(pick(FATALITY_LINES_LOSER), 1.4, 1.2), 2000); }
+                if (ttsEnabled) { speakLine(pick(KO_ANNOUNCER_LINES), 0.5, 0.8); setTimeout(() => speakFighterLine(KO_LOSER_LINES, 1 - b.owner), 2000); setTimeout(() => speakFighterLine(KO_WINNER_LINES, b.owner), 4000); }
               }
               return false;
             }
