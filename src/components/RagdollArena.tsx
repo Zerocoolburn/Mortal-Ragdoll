@@ -1251,8 +1251,9 @@ const RagdollArena = () => {
         }
         if (g.koTimer <= 0) {
           g.round++;
-          const f1 = mkFighter(350, p1.name, p1.color, p1.skin, p1.hair, pick(Object.keys(WEAPONS)), true);
-          const f2 = mkFighter(930, p2.name, p2.color, p2.skin, p2.hair, pick(Object.keys(WEAPONS)), true);
+          const midX = (p1.x + p2.x) / 2;
+          const f1 = mkFighter(midX - 200, p1.name, p1.color, p1.skin, p1.hair, pick(Object.keys(WEAPONS)), true);
+          const f2 = mkFighter(midX + 200, p2.name, p2.color, p2.skin, p2.hair, pick(Object.keys(WEAPONS)), true);
           f1.wins = p1.wins; f2.wins = p2.wins;
           g.fighters[0] = f1; g.fighters[1] = f2;
           g.blood = []; g.limbs = []; g.pools = []; g.sparks = []; g.gore = [];
