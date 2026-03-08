@@ -852,7 +852,7 @@ const RagdollArena = () => {
       const hp = bot.hp / 100, plHp = pl.hp / 100, st = bot.stamina / 100;
       const r = Math.random();
       // Fatality opportunity!
-      if (pl.hp <= 15 && d < 80 && r < 0.6) return 'fatalityAttempt';
+      if (pl.hp <= 35 && d < 80 && r < 0.6) return 'fatalityAttempt';
       const nearbyLimb = g.limbs.some(l => l.grounded && Math.abs(l.pts[0].x - bot.x) < 120);
       if (!bot.heldLimb && nearbyLimb && r < 0.2) return 'pickupLimb';
       if (bot.heldLimb && r < 0.25) return d < 100 ? 'limbAttack' : 'rush';
