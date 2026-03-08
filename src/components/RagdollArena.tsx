@@ -1961,7 +1961,7 @@ const RagdollArena = () => {
               const lp = ['leftArm', 'rightArm', 'leftLeg', 'rightLeg'].filter(p3 => !o.severed.has(p3));
               if (lp.length > 0) sever(o, pick(lp), f.facing);
               playSFX('ko', sfxVolume);
-              if (ttsEnabled) { speakLine(pick(KO_ANNOUNCER_LINES), 0.5, 0.8); setTimeout(() => speakFighterLine(KO_LOSER_LINES, 1 - idx), 2000); setTimeout(() => speakFighterLine(KO_WINNER_LINES, idx), 4000); }
+              if (ttsEnabled) { speakAnnouncer(pick(KO_ANNOUNCER_LINES)); setTimeout(() => speakFighterLine(KO_LOSER_LINES, 1 - idx), 2000); setTimeout(() => speakFighterLine(KO_WINNER_LINES, idx), 4000); }
             }
           }
         }
