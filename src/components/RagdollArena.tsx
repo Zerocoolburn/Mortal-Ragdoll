@@ -110,7 +110,7 @@ const FATALITIES: FatalityDef[] = [
 // ═══════════════════════════════════════════════════════
 // FIGHTER
 // ═══════════════════════════════════════════════════════
-type FState = 'idle' | 'walk' | 'walkBack' | 'jump' | 'crouch' | 'slash' | 'heavySlash' | 'stab' | 'overhead' | 'jumpAtk' | 'uppercut' | 'spinSlash' | 'dashStab' | 'limbSmash' | 'backflipKick' | 'execution' | 'shoot' | 'wallRun' | 'wallJump' | 'wallFlip' | 'divekick' | 'kick' | 'headKick' | 'kneeStrike' | 'roundhouse' | 'fatality' | 'block' | 'hit' | 'stagger' | 'ko' | 'ragdoll' | 'dodge' | 'taunt' | 'pickup';
+type FState = 'idle' | 'walk' | 'walkBack' | 'jump' | 'crouch' | 'slash' | 'heavySlash' | 'stab' | 'overhead' | 'jumpAtk' | 'uppercut' | 'spinSlash' | 'dashStab' | 'limbSmash' | 'backflipKick' | 'execution' | 'shoot' | 'wallRun' | 'wallJump' | 'wallFlip' | 'divekick' | 'kick' | 'headKick' | 'kneeStrike' | 'roundhouse' | 'headbutt' | 'swordThrow' | 'punch' | 'fatality' | 'block' | 'hit' | 'stagger' | 'ko' | 'ragdoll' | 'dodge' | 'taunt' | 'pickup';
 
 interface Weapon {
   name: string; len: number; weight: number;
@@ -126,7 +126,7 @@ const WEAPONS: Record<string, Weapon> = {
   spear:      { name: 'Spear',      len: 110, weight: 0.8, slashDmg: 7,  stabDmg: 16, heavyDmg: 14, speed: 1.4, color: '#876', blade: '#bbc', type: 'spear' },
 };
 
-interface AtkDef { frames: number; hitStart: number; hitEnd: number; dmgKey: 'slashDmg' | 'stabDmg' | 'heavyDmg'; kb: V; stCost: number; canSever: boolean; isKick?: boolean }
+interface AtkDef { frames: number; hitStart: number; hitEnd: number; dmgKey: 'slashDmg' | 'stabDmg' | 'heavyDmg'; kb: V; stCost: number; canSever: boolean; isKick?: boolean; isHeadbutt?: boolean; isPunch?: boolean }
 const ATK: Record<string, AtkDef> = {
   slash:        { frames: 18, hitStart: 5,  hitEnd: 11, dmgKey: 'slashDmg', kb: v(5, -1),   stCost: 8,  canSever: true },
   heavySlash:   { frames: 32, hitStart: 12, hitEnd: 22, dmgKey: 'heavyDmg', kb: v(12, -6),  stCost: 18, canSever: true },
@@ -146,6 +146,9 @@ const ATK: Record<string, AtkDef> = {
   headKick:     { frames: 20, hitStart: 6,  hitEnd: 14, dmgKey: 'heavyDmg', kb: v(6, -12),  stCost: 10, canSever: true, isKick: true },
   kneeStrike:   { frames: 14, hitStart: 3,  hitEnd: 10, dmgKey: 'stabDmg',  kb: v(3, -5),   stCost: 5,  canSever: false, isKick: true },
   roundhouse:   { frames: 22, hitStart: 6,  hitEnd: 16, dmgKey: 'heavyDmg', kb: v(14, -8),  stCost: 14, canSever: true, isKick: true },
+  headbutt:     { frames: 16, hitStart: 4,  hitEnd: 10, dmgKey: 'stabDmg',  kb: v(10, -6),  stCost: 8,  canSever: false, isHeadbutt: true },
+  swordThrow:   { frames: 20, hitStart: 6,  hitEnd: 8,  dmgKey: 'heavyDmg', kb: v(12, -4),  stCost: 5,  canSever: true },
+  punch:        { frames: 12, hitStart: 3,  hitEnd: 8,  dmgKey: 'stabDmg',  kb: v(6, -2),   stCost: 4,  canSever: false, isPunch: true },
   fatality:     { frames: 80, hitStart: 10, hitEnd: 70, dmgKey: 'heavyDmg', kb: v(2, -2),   stCost: 0,  canSever: true },
 };
 
@@ -163,6 +166,8 @@ interface WallSpark { x: number; y: number; vx: number; vy: number; life: number
 interface FatalityText { text: string; life: number; maxLife: number }
 
 let limbIdCounter = 0;
+
+interface ThrownSword { x: number; y: number; vx: number; vy: number; ang: number; angV: number; life: number; dmg: number; owner: number; weapon: Weapon; stuck: boolean }
 
 interface Fighter {
   x: number; y: number; vx: number; vy: number;
@@ -187,9 +192,11 @@ interface Fighter {
   wallSide: -1 | 0 | 1;
   gunCooldown: number;
   muzzleFlash: number;
-  headHits: number; // kicks to the head accumulate
-  shieldHP: number; // shield durability
-  fatalityType: number; // which fatality is playing
+  headHits: number;
+  shieldHP: number;
+  fatalityType: number;
+  hasSword: boolean; // whether fighter still has their sword
+  groundBeatTimer: number; // post-KO beatdown timer
 }
 
 function mkFighter(x: number, name: string, color: string, skin: string, hair: string, wKey: string, isAI: boolean): Fighter {
@@ -206,6 +213,7 @@ function mkFighter(x: number, name: string, color: string, skin: string, hair: s
     heldLimb: null, limbSwingAng: 0,
     wallRunTimer: 0, wallSide: 0, gunCooldown: 0, muzzleFlash: 0,
     headHits: 0, shieldHP: 50, fatalityType: 0,
+    hasSword: true, groundBeatTimer: 0,
   };
 }
 
@@ -307,6 +315,49 @@ function poseRagdoll(f: Fighter) {
     // Support leg
     targets[12] = v(lKneeX, lKneeY + 5);
     targets[13] = v(lFootX, footY);
+  }
+
+  // ── HEADBUTT POSE ──
+  if (f.state === 'headbutt') {
+    const windUp = ap < 0.25 ? ap / 0.25 : 0;
+    const strike = ap < 0.25 ? 0 : ap < 0.5 ? (ap - 0.25) / 0.25 : 1;
+    const recover = ap > 0.6 ? (ap - 0.6) / 0.4 : 0;
+    // Lean back then thrust head forward
+    for (let i = 0; i < 5; i++) {
+      targets[i].x -= s * 12 * windUp;
+      targets[i].x += s * 25 * strike - s * 10 * recover;
+    }
+    // Head lunges forward
+    targets[0] = v(sway + s * 30 * strike - s * 5 * recover, -108 * S + bob2 + 15 * strike);
+    targets[1] = v(sway + s * 15 * strike, -93 * S + bob2 + 8 * strike);
+    // Plant legs firmly
+    targets[12] = v(lKneeX - s * 5 * strike, lKneeY + 5 * strike);
+    targets[15] = v(rKneeX + s * 5 * strike, rKneeY + 5 * strike);
+  }
+
+  // ── PUNCH POSE (unarmed) ──
+  if (f.state === 'punch') {
+    const windUp = ap < 0.2 ? ap / 0.2 : 0;
+    const strike = ap < 0.2 ? 0 : ap < 0.5 ? (ap - 0.2) / 0.3 : 1;
+    const recover = ap > 0.6 ? (ap - 0.6) / 0.4 : 0;
+    // Right arm punches forward
+    targets[8] = v((15 + 20 * strike - 10 * recover) * s * S, (-86 + 10 * windUp) * S + bob2);
+    targets[9] = v((28 + 35 * strike - 15 * recover) * s * S, (-64 + 15 * strike - 5 * recover) * S + bob2);
+    targets[10] = v((35 + 50 * strike - 20 * recover) * s * S, (-55 + 20 * strike - 8 * recover) * S + bob2);
+    // Lean into punch
+    for (let i = 0; i < 5; i++) targets[i].x += s * 8 * strike - s * 3 * recover;
+  }
+
+  // ── SWORD THROW POSE ──
+  if (f.state === 'swordThrow') {
+    const windUp = ap < 0.3 ? ap / 0.3 : 0;
+    const release = ap < 0.3 ? 0 : ap < 0.5 ? (ap - 0.3) / 0.2 : 1;
+    // Wind up - arm goes back
+    targets[8] = v((15 - 25 * windUp + 30 * release) * s * S, (-86 - 15 * windUp + 10 * release) * S);
+    targets[9] = v((28 - 30 * windUp + 40 * release) * s * S, (-64 - 20 * windUp + 15 * release) * S);
+    targets[10] = v((35 - 35 * windUp + 50 * release) * s * S, (-46 - 25 * windUp + 20 * release) * S);
+    // Body twist
+    for (let i = 0; i < 5; i++) targets[i].x += s * (-8 * windUp + 12 * release);
   }
 
   if (f.state === 'fatality') {
@@ -466,12 +517,12 @@ function poseRagdoll(f: Fighter) {
     if (f.y + targets[i].y > GY) targets[i].y = GY - f.y;
   }
 
-  const blend = f.ragdolling ? 0 : 0.45;
+  const blend = f.ragdolling ? 0 : 0.35; // Smoother blending
   for (let i = 0; i < r.pts.length && i < targets.length; i++) {
     const target = vadd(v(f.x, f.y), targets[i]);
-    const b = (i >= 11) ? Math.min(blend * 1.4, 0.6) : blend;
+    const b = (i >= 11) ? Math.min(blend * 1.3, 0.5) : blend;
     r.pts[i].pos = vlerp(r.pts[i].pos, target, b);
-    if (!f.ragdolling) r.pts[i].old = vlerp(r.pts[i].old, target, b * 0.85);
+    if (!f.ragdolling) r.pts[i].old = vlerp(r.pts[i].old, target, b * 0.8);
   }
 }
 
@@ -489,7 +540,7 @@ const RagdollArena = () => {
     limbs: [] as SevLimb[], gore: [] as GoreChunk[], afterimages: [] as Afterimage[],
     rings: [] as ImpactRing[], lightnings: [] as Lightning[],
     bullets: [] as Bullet[], muzzleFlashes: [] as MuzzleFlash[], wallSparks: [] as WallSpark[],
-    fatalityTexts: [] as FatalityText[],
+    fatalityTexts: [] as FatalityText[], thrownSwords: [] as ThrownSword[],
     slowMo: 1, slowTimer: 0, flash: 0, flashColor: '#fff',
     round: 1, timer: 99 * 60,
     rs: 'intro' as 'intro' | 'fight' | 'ko',
@@ -673,7 +724,7 @@ const RagdollArena = () => {
     }
 
     // ── WEAPON ──
-    if (!f.severed.has('rightArm')) {
+    if (!f.severed.has('rightArm') && f.hasSword) {
       const hand = p[10].pos; const ang = f.wAngle * f.facing; const wl = f.weapon.len;
       const tipX = hand.x + Math.cos(ang) * wl, tipY = hand.y + Math.sin(ang) * wl;
       const isAtk = ['slash', 'heavySlash', 'overhead', 'stab', 'jumpAtk', 'uppercut', 'spinSlash', 'dashStab', 'limbSmash', 'backflipKick', 'execution', 'wallFlip', 'divekick', 'fatality'].includes(f.state);
@@ -765,9 +816,13 @@ const RagdollArena = () => {
     };
     const ca = (f: Fighter) => ['idle', 'walk', 'walkBack', 'crouch'].includes(f.state);
     const doAtk = (f: Fighter, t: string) => {
+      // If no sword, redirect sword attacks to punches/kicks
+      if (!f.hasSword && ['slash', 'heavySlash', 'stab', 'overhead', 'spinSlash', 'dashStab', 'execution'].includes(t)) {
+        t = pick(['punch', 'kick', 'headKick', 'kneeStrike', 'headbutt']);
+      }
       const d = ATK[t]; if (!d || !ca(f) || f.stamina < d.stCost) return false;
       f.stamina -= d.stCost;
-      ss(f, t as FState, Math.round(d.frames / f.weapon.speed));
+      ss(f, t as FState, Math.round(d.frames / (f.hasSword ? f.weapon.speed : 1.2)));
       if (t === 'dashStab') f.vx = f.facing * 12;
       if (t === 'uppercut') { f.vy = -6; f.grounded = false; }
       if (t === 'spinSlash') f.vx = f.facing * 5;
@@ -779,7 +834,26 @@ const RagdollArena = () => {
       if (t === 'headKick') { f.vx = f.facing * 3; }
       if (t === 'kneeStrike') f.vx = f.facing * 6;
       if (t === 'roundhouse') { f.vx = f.facing * 3; }
+      if (t === 'headbutt') { f.vx = f.facing * 8; }
+      if (t === 'punch') { f.vx = f.facing * 5; }
+      if (t === 'swordThrow') { f.vx = f.facing * 2; }
       spawnAfterimage(f); return true;
+    };
+    const doSwordThrow = (f: Fighter, idx: number) => {
+      if (!f.hasSword || !ca(f) || f.stamina < 5) return false;
+      f.stamina -= 5;
+      f.hasSword = false;
+      ss(f, 'swordThrow' as FState, 20);
+      const hand = f.rag.pts[10].pos;
+      const target = g.fighters[1 - idx];
+      const ang = Math.atan2(target.y - 60 - hand.y, target.x - hand.x);
+      g.thrownSwords.push({
+        x: hand.x, y: hand.y, vx: Math.cos(ang) * 18, vy: Math.sin(ang) * 18 - 3,
+        ang: ang, angV: f.facing * 0.8, life: 80, dmg: f.weapon.heavyDmg * 1.5,
+        owner: idx, weapon: f.weapon, stuck: false,
+      });
+      spawnAfterimage(f);
+      return true;
     };
     const doFatality = (f: Fighter, o: Fighter) => {
       if (o.hp > 15 || !ca(f)) return false;
@@ -1010,18 +1084,21 @@ const RagdollArena = () => {
           if (d > wr + 15) { ss(bot, 'walk'); bot.aiTimer = 1; if (d > 100 && rng(0, 1) < 0.5 && mem.dashCooldown <= 0) { bot.vx = bot.facing * (10 + rng(0, 6)); mem.dashCooldown = 8; } if (d > 150 && rng(0, 1) < 0.25) doShoot(bot, idx); }
           else if (ca(bot) && st > 0.06) {
             const r = Math.random();
-            if (r < 0.1) doAtk(bot, 'kick');
-            else if (r < 0.18) doAtk(bot, 'headKick');
-            else if (r < 0.24) doAtk(bot, 'kneeStrike');
-            else if (r < 0.3) doAtk(bot, 'roundhouse');
-            else if (r < 0.38) doAtk(bot, 'slash');
-            else if (r < 0.46) doAtk(bot, 'stab');
-            else if (r < 0.52) doAtk(bot, 'dashStab');
+            if (r < 0.08) doAtk(bot, 'kick');
+            else if (r < 0.14) doAtk(bot, 'headKick');
+            else if (r < 0.19) doAtk(bot, 'kneeStrike');
+            else if (r < 0.24) doAtk(bot, 'roundhouse');
+            else if (r < 0.30) doAtk(bot, 'headbutt');
+            else if (r < 0.35) doAtk(bot, 'punch');
+            else if (r < 0.42) doAtk(bot, 'slash');
+            else if (r < 0.48) doAtk(bot, 'stab');
+            else if (r < 0.53) doAtk(bot, 'dashStab');
             else if (r < 0.58) doAtk(bot, 'uppercut');
-            else if (r < 0.64) doAtk(bot, 'spinSlash');
-            else if (r < 0.70) doAtk(bot, 'heavySlash');
-            else if (r < 0.76) doAtk(bot, 'backflipKick');
-            else if (r < 0.82) { doShoot(bot, idx); }
+            else if (r < 0.63) doAtk(bot, 'spinSlash');
+            else if (r < 0.68) doAtk(bot, 'heavySlash');
+            else if (r < 0.73) doAtk(bot, 'backflipKick');
+            else if (r < 0.78) { doShoot(bot, idx); }
+            else if (r < 0.82 && bot.hasSword && d > 120) { doSwordThrow(bot, idx); }
             else doAtk(bot, pers.preferredAtk);
             bot.aiTimer = 1; mem.comboStep++;
             if (mem.comboStep < 8 && rng(0, 1) < 0.85) bot.aiTimer = 0; else mem.comboStep = 0;
@@ -1101,6 +1178,46 @@ const RagdollArena = () => {
 
       if (g.rs === 'ko') {
         g.koTimer -= spd;
+        // Winner continues beating on downed opponent for ~5 seconds (300 frames)
+        const winner = p1.hp > 0 ? p1 : p2.hp > 0 ? p2 : null;
+        const loser = p1.hp <= 0 ? p1 : p2.hp <= 0 ? p2 : null;
+        if (winner && loser && g.koTimer > 0) {
+          winner.groundBeatTimer += spd;
+          winner.stamina = 100; // unlimited stamina during beatdown
+          winner.facing = loser.x > winner.x ? 1 : -1;
+          // Move toward downed opponent
+          const dToLoser = Math.abs(winner.x - loser.rag.pts[4].pos.x);
+          if (dToLoser > 50) {
+            winner.x += winner.facing * 3 * spd;
+            ss(winner, 'walk');
+          } else if (ca(winner) || winner.state === 'idle') {
+            // Randomly attack the downed body
+            const beatAtk = pick(['kick', 'headKick', 'kneeStrike', 'punch', 'headbutt', 'roundhouse', 'stomp']);
+            if (beatAtk === 'stomp') {
+              // Jump stomp
+              winner.vy = -8; winner.grounded = false; ss(winner, 'divekick' as FState, 20);
+            } else {
+              doAtk(winner, beatAtk);
+            }
+            // Apply damage to ragdolled loser
+            const hitPt = loser.rag.pts[Math.floor(rng(0, loser.rag.pts.length))].pos;
+            spawnBlood(hitPt.x, hitPt.y, winner.facing, 20, 3);
+            spawnGore(hitPt.x, hitPt.y, 3, winner.facing);
+            // Jolt the ragdoll
+            for (let i = 0; i < loser.rag.pts.length; i++) {
+              loser.rag.pts[i].old = vsub(loser.rag.pts[i].pos, v(winner.facing * rng(3, 8), -rng(2, 6)));
+            }
+            if (fc % 15 === 0) spawnRing(hitPt.x, hitPt.y, 40, '#f80');
+          }
+          // Step ragdoll physics for both
+          stepRagdoll(winner.rag.pts, winner.rag.sticks, spd, 0.3);
+          if (!winner.ragdolling) poseRagdoll(winner);
+          stepRagdoll(loser.rag.pts, loser.rag.sticks, spd, 0.3);
+          // Update winner position
+          if (!winner.grounded) { winner.vy += GRAV * spd; winner.y += winner.vy * spd; if (winner.y >= GY) { winner.y = GY; winner.vy = 0; winner.grounded = true; } }
+          winner.x += winner.vx * spd; winner.vx *= 0.86;
+          winner.bob += 0.04 * spd;
+        }
         if (g.koTimer <= 0) {
           g.round++;
           const f1 = mkFighter(350, p1.name, p1.color, p1.skin, p1.hair, pick(Object.keys(WEAPONS)), true);
@@ -1108,16 +1225,26 @@ const RagdollArena = () => {
           f1.wins = p1.wins; f2.wins = p2.wins;
           g.fighters[0] = f1; g.fighters[1] = f2;
           g.blood = []; g.limbs = []; g.pools = []; g.sparks = []; g.gore = [];
-          g.afterimages = []; g.rings = []; g.lightnings = []; g.bullets = []; g.muzzleFlashes = []; g.wallSparks = []; g.fatalityTexts = [];
+          g.afterimages = []; g.rings = []; g.lightnings = []; g.bullets = []; g.muzzleFlashes = []; g.wallSparks = []; g.fatalityTexts = []; g.thrownSwords = [];
           g.rs = 'intro'; g.introTimer = 80; g.timer = 99 * 60;
           aiData[0] = { personality: mkPersonality(), mem: mkAiMem() }; aiData[1] = { personality: mkPersonality(), mem: mkAiMem() };
         }
       }
 
-      if (g.rs !== 'fight') {
+      if (g.rs !== 'fight' && g.rs !== 'ko') {
         g.fighters.forEach(f => { if (f.ragdolling) stepRagdoll(f.rag.pts, f.rag.sticks, spd, 0.3); });
         if (fc % 3 === 0) setHud({ p1hp: p1.hp, p2hp: p2.hp, timer: Math.ceil(g.timer / 60), round: g.round, p1st: p1.stamina, p2st: p2.stamina, p1w: p1.wins, p2w: p2.wins, rs: g.rs, n1: p1.name, n2: p2.name, w1: p1.weapon.name, w2: p2.weapon.name, p1limb: !!p1.heldLimb, p2limb: !!p2.heldLimb });
         return;
+      }
+      if (g.rs === 'ko') {
+        // During KO, still update particles
+        g.blood = g.blood.filter(b => { if (b.grounded) { b.life -= spd * 0.15; return b.life > 0; } b.x += b.vx * spd; b.y += b.vy * spd; b.vy += 0.35 * spd; b.vx *= 0.99; b.life -= spd; if (b.y >= GY) { b.grounded = true; b.y = GY; b.vy = 0; b.vx = 0; if (g.pools.length < 180) { const ex = g.pools.find(p3 => Math.abs(p3.x - b.x) < 25); if (ex) ex.r = Math.min(55, ex.r + 1.5); else g.pools.push({ x: b.x, y: GY, r: 3 + rng(0, 7), a: 0.85 }); } } return b.life > 0; });
+        g.sparks = g.sparks.filter(s2 => { s2.x += s2.vx * spd; s2.y += s2.vy * spd; s2.vy += 0.4 * spd; s2.life -= spd; return s2.life > 0; });
+        g.gore = g.gore.filter(gc => { gc.x += gc.vx * spd; gc.y += gc.vy * spd; gc.vy += 0.3 * spd; gc.rot += gc.rotV * spd; if (gc.y >= GY) { gc.y = GY; gc.vy *= -0.3; gc.vx *= 0.6; } gc.life -= spd; return gc.life > 0; });
+        g.afterimages = g.afterimages.filter(a => { a.alpha -= 0.03; return a.alpha > 0; });
+        g.rings = g.rings.filter(r => { r.r += (r.maxR - r.r) * 0.15; r.life -= 0.06; return r.life > 0; });
+        if (fc % 3 === 0) setHud({ p1hp: p1.hp, p2hp: p2.hp, timer: Math.ceil(g.timer / 60), round: g.round, p1st: p1.stamina, p2st: p2.stamina, p1w: p1.wins, p2w: p2.wins, rs: g.rs, n1: p1.name, n2: p2.name, w1: p1.weapon.name, w2: p2.weapon.name, p1limb: !!p1.heldLimb, p2limb: !!p2.heldLimb });
+        if (g.rs === 'ko') return;
       }
 
       g.timer--;
@@ -1141,6 +1268,9 @@ const RagdollArena = () => {
         else if (g.keys.has('h')) { doAtk(p1, 'headKick'); p1HasInput = true; }
         else if (g.keys.has('n')) { doAtk(p1, 'kneeStrike'); p1HasInput = true; }
         else if (g.keys.has('m')) { doAtk(p1, 'roundhouse'); p1HasInput = true; }
+        else if (g.keys.has('b')) { doAtk(p1, 'headbutt'); p1HasInput = true; }
+        else if (g.keys.has('v')) { doSwordThrow(p1, 0); p1HasInput = true; }
+        else if (g.keys.has('c')) { doAtk(p1, 'punch'); p1HasInput = true; }
         else if (g.keys.has('x')) { doFatality(p1, p2); p1HasInput = true; }
         else if (g.keys.has('s') && g.keys.has('shift')) { ss(p1, 'block'); p1HasInput = true; }
         else if (g.keys.has('s')) { ss(p1, 'crouch'); p1HasInput = true; }
@@ -1188,8 +1318,8 @@ const RagdollArena = () => {
           else if (f.x >= WALL_R - 10 && rng(0, 1) < 0.4) startWallRun(f, 1);
         }
 
-        f.x += f.vx * spd; f.vx *= 0.86;
-        if (f.state === 'walk') { f.x += f.facing * 3.2 * spd; f.walkCycle += 0.14 * spd; }
+        f.x += f.vx * spd; f.vx *= 0.88; // Smoother deceleration
+        if (f.state === 'walk') { f.x += f.facing * 3.0 * spd; f.walkCycle += 0.12 * spd; }
         else if (f.state === 'walkBack') { f.x -= f.facing * 2.2 * spd; f.walkCycle += 0.1 * spd; }
         f.x = clamp(f.x, WALL_L, WALL_R); f.bob += 0.04 * spd;
         if (f.hitImpact > 0) f.hitImpact *= 0.84;
@@ -1211,15 +1341,16 @@ const RagdollArena = () => {
         else if (f.state === 'divekick') f.wTarget = 1.0;
         else if (f.state === 'block') f.wTarget = -1.2;
         else if (f.state === 'kick' || f.state === 'headKick' || f.state === 'kneeStrike' || f.state === 'roundhouse') f.wTarget = -0.8;
+        else if (f.state === 'headbutt' || f.state === 'punch' || f.state === 'swordThrow') f.wTarget = -0.5;
         else f.wTarget = -0.5;
-        f.wAngle += (f.wTarget - f.wAngle) * 0.38;
+        f.wAngle += (f.wTarget - f.wAngle) * 0.32; // Smoother weapon angle blending
         if (f.state === 'dodge') f.vx = (f.facing === 1 ? -1 : 1) * 8 * (1 - ap2);
 
         if (f.bleedTimer > 0) { f.bleedTimer -= spd; f.severed.forEach(part => { const pidx = part === 'leftArm' ? 5 : part === 'rightArm' ? 8 : part === 'leftLeg' ? 11 : part === 'rightLeg' ? 14 : 1; if (fc % 4 === 0 && f.rag.pts[pidx]) spawnBlood(f.rag.pts[pidx].pos.x, f.rag.pts[pidx].pos.y, rng(-1, 1), 4, 2.5); }); }
         if (f.comboTimer > 0) { f.comboTimer -= spd; if (f.comboTimer <= 0) f.combo = 0; }
         stepRagdoll(f.rag.pts, f.rag.sticks, spd, 0.3);
         if (!f.ragdolling) poseRagdoll(f);
-        if (['slash', 'heavySlash', 'stab', 'overhead', 'jumpAtk', 'uppercut', 'spinSlash', 'dashStab', 'backflipKick', 'execution', 'wallFlip', 'divekick', 'kick', 'headKick', 'roundhouse', 'fatality'].includes(f.state) && fc % 3 === 0) spawnAfterimage(f);
+        if (['slash', 'heavySlash', 'stab', 'overhead', 'jumpAtk', 'uppercut', 'spinSlash', 'dashStab', 'backflipKick', 'execution', 'wallFlip', 'divekick', 'kick', 'headKick', 'roundhouse', 'fatality', 'headbutt', 'punch', 'swordThrow'].includes(f.state) && fc % 3 === 0) spawnAfterimage(f);
       });
 
       // Bullets
@@ -1242,7 +1373,7 @@ const RagdollArena = () => {
               if (i === 0) target.headHits += 2; // Bullet to the head counts extra
               spawnBlood(b.x, b.y, hitDir.x > 0 ? 1 : -1, 25, 3); spawnSparks(b.x, b.y, 8); spawnRing(b.x, b.y, 30, '#fa0');
               if (b.dmg >= 10) ss(target, 'hit', 12);
-              if (target.hp <= 0) { const shooter = g.fighters[b.owner]; ss(target, 'ko'); startRagdoll(target, vscl(hitDir, 18), 999); shooter.wins++; g.rs = 'ko'; g.koTimer = 280; g.slowMo = 0.05; g.slowTimer = 55; g.flash = 15; g.flashColor = '#fff'; spawnBlood(b.x, b.y, hitDir.x > 0 ? 1 : -1, 80, 6); spawnGore(b.x, b.y, 10, hitDir.x > 0 ? 1 : -1); spawnRing(b.x, b.y, 100, '#f00'); }
+              if (target.hp <= 0) { const shooter = g.fighters[b.owner]; ss(target, 'ko'); startRagdoll(target, vscl(hitDir, 18), 999); shooter.wins++; g.rs = 'ko'; g.koTimer = 340; g.slowMo = 0.05; g.slowTimer = 55; g.flash = 15; g.flashColor = '#fff'; spawnBlood(b.x, b.y, hitDir.x > 0 ? 1 : -1, 80, 6); spawnGore(b.x, b.y, 10, hitDir.x > 0 ? 1 : -1); spawnRing(b.x, b.y, 100, '#f00'); }
               return false;
             }
           }
@@ -1263,15 +1394,23 @@ const RagdollArena = () => {
 
         let tipX: number, tipY: number;
         const isKickAtk = ad.isKick || ['kick', 'headKick', 'kneeStrike', 'roundhouse', 'divekick', 'backflipKick', 'wallFlip'].includes(f.state);
+        const isHeadbutt = ad.isHeadbutt || f.state === 'headbutt';
+        const isPunch = ad.isPunch || f.state === 'punch';
         if (f.state === 'limbSmash' && f.heldLimb) {
           const lhand = f.rag.pts[7].pos; tipX = lhand.x + Math.cos(f.limbSwingAng * f.facing) * 45; tipY = lhand.y + Math.sin(f.limbSwingAng * f.facing) * 45;
+        } else if (isHeadbutt) {
+          // Use head position for headbutt
+          tipX = f.rag.pts[0].pos.x + f.facing * 15; tipY = f.rag.pts[0].pos.y;
+        } else if (isPunch) {
+          // Use fist position
+          tipX = f.rag.pts[10].pos.x + f.facing * 10; tipY = f.rag.pts[10].pos.y;
         } else if (isKickAtk) {
-          // Use foot position for kicks
           tipX = f.rag.pts[16].pos.x; tipY = f.rag.pts[16].pos.y;
-          // Head kick specifically aims high
           if (f.state === 'headKick') { tipY = Math.min(tipY, f.y - 100); }
-          // Knee strike uses knee
           if (f.state === 'kneeStrike') { tipX = f.rag.pts[15].pos.x; tipY = f.rag.pts[15].pos.y; }
+        } else if (!f.hasSword) {
+          // Unarmed - use fist
+          tipX = f.rag.pts[10].pos.x + f.facing * 10; tipY = f.rag.pts[10].pos.y;
         } else {
           const hand = f.rag.pts[10].pos; const ang = f.wAngle * f.facing;
           tipX = hand.x + Math.cos(ang) * f.weapon.len * 0.8; tipY = hand.y + Math.sin(ang) * f.weapon.len * 0.8;
@@ -1341,6 +1480,8 @@ const RagdollArena = () => {
           if (f.state === 'wallFlip') { dmg *= 1.8; spawnRing(hitPt.x, hitPt.y, 90, '#8ff'); g.slowMo = 0.2; g.slowTimer = 18; g.flash = 6; g.flashColor = '#8af'; }
           if (f.state === 'divekick') { dmg *= 1.6; spawnRing(hitPt.x, hitPt.y, 70, '#fa0'); g.slowMo = 0.25; g.slowTimer = 15; g.flash = 5; g.flashColor = '#fa0'; }
           if (f.state === 'roundhouse') { dmg *= 1.4; spawnRing(hitPt.x, hitPt.y, 60, '#f80'); g.slowMo = 0.3; g.slowTimer = 10; }
+          if (f.state === 'headbutt') { dmg *= 1.3; spawnRing(hitPt.x, hitPt.y, 50, '#ff0'); g.slowMo = 0.4; g.slowTimer = 8; o.headHits++; }
+          if (f.state === 'punch' && !f.hasSword) { dmg *= 0.7; } // Punches do less but are fast
 
           const hitDir2 = v(f.facing, -0.3);
           if (aiData[idx]) { aiData[idx].mem.lastAtkLanded = true; aiData[idx].mem.excitement += 2; }
@@ -1371,7 +1512,7 @@ const RagdollArena = () => {
             }
             if (o.hp <= 0) {
               ss(o, 'ko'); startRagdoll(o, vscl(hitDir2, 22), 999);
-              f.wins++; g.rs = 'ko'; g.koTimer = 280; g.slowMo = 0.05; g.slowTimer = 55; g.flash = 15; g.flashColor = '#fff';
+              f.wins++; g.rs = 'ko'; g.koTimer = 340; g.slowMo = 0.05; g.slowTimer = 55; g.flash = 15; g.flashColor = '#fff';
               spawnBlood(hitPt.x, hitPt.y, f.facing, 120, 7); spawnGore(hitPt.x, hitPt.y, 20, f.facing);
               spawnRing(hitPt.x, hitPt.y, 150, '#f00'); spawnRing(hitPt.x, hitPt.y, 200, '#a00');
               spawnLightning(hitPt.x, hitPt.y, hitPt.x + rng(-100, 100), hitPt.y - rng(50, 150));
@@ -1395,6 +1536,36 @@ const RagdollArena = () => {
       g.muzzleFlashes = g.muzzleFlashes.filter(m => { m.life -= spd; return m.life > 0; });
       g.wallSparks = g.wallSparks.filter(ws => { ws.x += ws.vx * spd; ws.y += ws.vy * spd; ws.vy += 0.2 * spd; ws.life -= spd; return ws.life > 0; });
       g.fatalityTexts = g.fatalityTexts.filter(ft => { ft.life -= spd; return ft.life > 0; });
+
+      // Thrown swords
+      g.thrownSwords = g.thrownSwords.filter(ts => {
+        if (ts.stuck) { ts.life -= spd; return ts.life > 0; }
+        ts.x += ts.vx * spd; ts.y += ts.vy * spd; ts.vy += 0.2 * spd; ts.ang += ts.angV * spd; ts.life -= spd;
+        const target = g.fighters[1 - ts.owner];
+        if (target.state !== 'ko' && target.state !== 'dodge') {
+          for (let i = 0; i < target.rag.pts.length; i++) {
+            if (vlen(vsub(v(ts.x, ts.y), target.rag.pts[i].pos)) < 30) {
+              target.hp = Math.max(0, target.hp - ts.dmg);
+              const hd = vnorm(v(ts.vx, ts.vy));
+              target.vx += hd.x * 8; target.hitDir = hd; target.hitImpact = ts.dmg * 0.5;
+              spawnBlood(ts.x, ts.y, hd.x > 0 ? 1 : -1, 40, 4);
+              spawnSparks(ts.x, ts.y, 12); spawnRing(ts.x, ts.y, 50, '#fa0');
+              if (i === 0) target.headHits += 2;
+              ss(target, ts.dmg >= 20 ? 'stagger' : 'hit', ts.dmg >= 20 ? 25 : 14);
+              if (target.hp <= 0) {
+                ss(target, 'ko'); startRagdoll(target, vscl(hd, 20), 999);
+                g.fighters[ts.owner].wins++; g.rs = 'ko'; g.koTimer = 340;
+                g.slowMo = 0.05; g.slowTimer = 40; g.flash = 12; g.flashColor = '#fff';
+              }
+              ts.stuck = true; ts.vx = 0; ts.vy = 0; ts.life = 60;
+              return true;
+            }
+          }
+        }
+        if (ts.y > GY) { ts.stuck = true; ts.y = GY; ts.life = 120; spawnSparks(ts.x, ts.y, 6); }
+        if (ts.x < 10 || ts.x > W - 10) { ts.stuck = true; ts.life = 60; spawnSparks(ts.x, ts.y, 8); }
+        return ts.life > 0;
+      });
 
       if (fc % 3 === 0) setHud({ p1hp: p1.hp, p2hp: p2.hp, timer: Math.ceil(g.timer / 60), round: g.round, p1st: p1.stamina, p2st: p2.stamina, p1w: p1.wins, p2w: p2.wins, rs: g.rs, n1: p1.name, n2: p2.name, w1: p1.weapon.name, w2: p2.weapon.name, p1limb: !!p1.heldLimb, p2limb: !!p2.heldLimb });
     };
@@ -1502,6 +1673,22 @@ const RagdollArena = () => {
       g.gore.forEach(gc => { ctx.save(); ctx.translate(gc.x, gc.y); ctx.rotate(gc.rot); ctx.fillStyle = gc.color; ctx.fillRect(-gc.sz / 2, -gc.sz / 2, gc.sz, gc.sz); ctx.restore(); });
       // Fighters
       g.fighters.forEach(f => drawFighter(ctx, f, fc));
+      // Thrown swords
+      g.thrownSwords.forEach(ts => {
+        ctx.save(); ctx.translate(ts.x, ts.y); ctx.rotate(ts.ang);
+        // Blade
+        ctx.strokeStyle = ts.weapon.blade; ctx.lineWidth = 3; ctx.lineCap = 'round';
+        ctx.beginPath(); ctx.moveTo(-ts.weapon.len * 0.3, 0); ctx.lineTo(ts.weapon.len * 0.3, 0); ctx.stroke();
+        // Handle
+        ctx.strokeStyle = ts.weapon.color; ctx.lineWidth = 4;
+        ctx.beginPath(); ctx.moveTo(-ts.weapon.len * 0.3, 0); ctx.lineTo(-ts.weapon.len * 0.3 - 12, 0); ctx.stroke();
+        // Glow trail
+        if (!ts.stuck) {
+          ctx.strokeStyle = 'rgba(255,200,100,0.3)'; ctx.lineWidth = 6;
+          ctx.beginPath(); ctx.moveTo(-ts.weapon.len * 0.4, 0); ctx.lineTo(-ts.weapon.len * 0.4 - 20, 0); ctx.stroke();
+        }
+        ctx.restore();
+      });
       // Bullets
       g.bullets.forEach(b => { if (b.trail.length > 1) { for (let i = 1; i < b.trail.length; i++) { const a = i / b.trail.length; ctx.strokeStyle = `rgba(255,200,50,${a * 0.5})`; ctx.lineWidth = 2 * a; ctx.beginPath(); ctx.moveTo(b.trail[i - 1].x, b.trail[i - 1].y); ctx.lineTo(b.trail[i].x, b.trail[i].y); ctx.stroke(); } } ctx.fillStyle = '#ff8'; ctx.beginPath(); ctx.arc(b.x, b.y, 2.5, 0, Math.PI * 2); ctx.fill(); });
       // Muzzle flashes
