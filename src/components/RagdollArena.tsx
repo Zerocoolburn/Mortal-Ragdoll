@@ -2196,6 +2196,33 @@ const RagdollArena = () => {
           loser.y = Math.min(loserCenter.y, GY);
         }
         if (g.koTimer <= 0) {
+          // Campaign mode: check win/loss
+          if (isCampaign) {
+            const playerWon = p1.hp > 0;
+            const cState = campaignRef.current;
+            const timeUsed = Math.ceil((99 * 60 - g.timer) / 60);
+            const levelScore = playerWon ? Math.max(100, 1000 - timeUsed * 5 + p1.combo * 50 + (p1.hp / MAX_HP) * 500) : 0;
+            if (playerWon) {
+              cState.levelScores.push(Math.round(levelScore));
+              cState.totalScore += Math.round(levelScore);
+              cState.totalTime += timeUsed;
+              cState.bestCombo = Math.max(cState.bestCombo, p1.combo);
+              cState.levelsComplete[cState.level - 1] = true;
+              if (cState.level >= 12) {
+                setCampaign({ ...cState });
+                setGameScreen('victory');
+              } else {
+                cState.level++;
+                setCampaign({ ...cState });
+                setGameScreen('cinematic');
+              }
+            } else {
+              // Player lost - retry same level
+              setCampaign({ ...cState });
+              setGameScreen('cinematic');
+            }
+            return;
+          }
           g.round++;
           const midX2 = (p1.x + p2.x) / 2;
           const c1 = getCharacter(p1.charId); const c2 = getCharacter(p2.charId);
