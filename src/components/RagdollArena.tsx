@@ -248,7 +248,7 @@ const RagdollArena = () => {
     keys: new Set<string>(),
     bgTime: 0,
     clouds: Array.from({ length: 8 }, () => ({ x: rng(0, W), y: rng(20, 200), w: rng(60, 200), speed: rng(0.1, 0.5), opacity: rng(0.02, 0.08) })),
-    torches: [{ x: 505, y: GY - 240 }, { x: 775, y: GY - 220 }, { x: 120, y: GY - 160 }, { x: 1160, y: GY - 140 }],
+    torches: [{ x: 505, y: GY - 55 }, { x: 775, y: GY - 55 }, { x: 90, y: GY - 45 }, { x: 1190, y: GY - 45 }],
   });
   const [hud, setHud] = useState({
     p1hp: 100, p2hp: 100, timer: 99, round: 1,
