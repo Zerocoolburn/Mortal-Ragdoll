@@ -1968,7 +1968,7 @@ const RagdollArena = () => {
       }
 
       if (g.rs !== 'fight' && g.rs !== 'ko') {
-        g.fighters.forEach(f => { if (f.ragdolling) stepRagdoll(f.rag.pts, f.rag.sticks, spd, 0.3); });
+        g.fighters.forEach(f => { if (f.ragdolling) { stepRagdoll(f.rag.pts, f.rag.sticks, spd, 0.3); clampRagdollToArena(f); } });
         if (fc % 3 === 0) setHud({ p1hp: p1.hp, p2hp: p2.hp, timer: Math.ceil(g.timer / 60), round: g.round, p1st: p1.stamina, p2st: p2.stamina, p1w: p1.wins, p2w: p2.wins, rs: g.rs, n1: p1.name, n2: p2.name, w1: p1.weapon.name, w2: p2.weapon.name, p1limb: !!p1.heldLimb, p2limb: !!p2.heldLimb });
         return;
       }
