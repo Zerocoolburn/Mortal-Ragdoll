@@ -1534,6 +1534,36 @@ const RagdollArena = () => {
       g.wallSparks = g.wallSparks.filter(ws => { ws.x += ws.vx * spd; ws.y += ws.vy * spd; ws.vy += 0.2 * spd; ws.life -= spd; return ws.life > 0; });
       g.fatalityTexts = g.fatalityTexts.filter(ft => { ft.life -= spd; return ft.life > 0; });
 
+      // Thrown swords
+      g.thrownSwords = g.thrownSwords.filter(ts => {
+        if (ts.stuck) { ts.life -= spd; return ts.life > 0; }
+        ts.x += ts.vx * spd; ts.y += ts.vy * spd; ts.vy += 0.2 * spd; ts.ang += ts.angV * spd; ts.life -= spd;
+        const target = g.fighters[1 - ts.owner];
+        if (target.state !== 'ko' && target.state !== 'dodge') {
+          for (let i = 0; i < target.rag.pts.length; i++) {
+            if (vlen(vsub(v(ts.x, ts.y), target.rag.pts[i].pos)) < 30) {
+              target.hp = Math.max(0, target.hp - ts.dmg);
+              const hd = vnorm(v(ts.vx, ts.vy));
+              target.vx += hd.x * 8; target.hitDir = hd; target.hitImpact = ts.dmg * 0.5;
+              spawnBlood(ts.x, ts.y, hd.x > 0 ? 1 : -1, 40, 4);
+              spawnSparks(ts.x, ts.y, 12); spawnRing(ts.x, ts.y, 50, '#fa0');
+              if (i === 0) target.headHits += 2;
+              ss(target, ts.dmg >= 20 ? 'stagger' : 'hit', ts.dmg >= 20 ? 25 : 14);
+              if (target.hp <= 0) {
+                ss(target, 'ko'); startRagdoll(target, vscl(hd, 20), 999);
+                g.fighters[ts.owner].wins++; g.rs = 'ko'; g.koTimer = 340;
+                g.slowMo = 0.05; g.slowTimer = 40; g.flash = 12; g.flashColor = '#fff';
+              }
+              ts.stuck = true; ts.vx = 0; ts.vy = 0; ts.life = 60;
+              return true;
+            }
+          }
+        }
+        if (ts.y > GY) { ts.stuck = true; ts.y = GY; ts.life = 120; spawnSparks(ts.x, ts.y, 6); }
+        if (ts.x < 10 || ts.x > W - 10) { ts.stuck = true; ts.life = 60; spawnSparks(ts.x, ts.y, 8); }
+        return ts.life > 0;
+      });
+
       if (fc % 3 === 0) setHud({ p1hp: p1.hp, p2hp: p2.hp, timer: Math.ceil(g.timer / 60), round: g.round, p1st: p1.stamina, p2st: p2.stamina, p1w: p1.wins, p2w: p2.wins, rs: g.rs, n1: p1.name, n2: p2.name, w1: p1.weapon.name, w2: p2.weapon.name, p1limb: !!p1.heldLimb, p2limb: !!p2.heldLimb });
     };
 
