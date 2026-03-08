@@ -671,9 +671,20 @@ const RagdollArena = () => {
     };
 
     const AI_COMBOS = [
-      ['slash', 'slash', 'stab'], ['stab', 'stab', 'slash'],
-      ['slash', 'heavySlash'], ['stab', 'overhead'],
-      ['slash', 'stab', 'heavySlash'], ['slash', 'slash', 'overhead'],
+      // Long devastating combos
+      ['slash', 'slash', 'stab', 'slash', 'stab', 'stab', 'uppercut', 'jumpAtk', 'overhead', 'heavySlash'],
+      ['stab', 'stab', 'slash', 'stab', 'slash', 'uppercut', 'stab', 'spinSlash'],
+      ['slash', 'stab', 'slash', 'stab', 'slash', 'stab', 'heavySlash'],
+      ['dashStab', 'slash', 'slash', 'uppercut', 'jumpAtk', 'overhead'],
+      ['slash', 'slash', 'slash', 'slash', 'spinSlash', 'heavySlash'],
+      ['stab', 'slash', 'stab', 'uppercut', 'jumpAtk'],
+      ['dashStab', 'stab', 'stab', 'slash', 'slash', 'overhead'],
+      ['spinSlash', 'stab', 'slash', 'stab', 'uppercut', 'heavySlash'],
+      // Short brutal combos
+      ['uppercut', 'jumpAtk', 'overhead'],
+      ['dashStab', 'spinSlash', 'heavySlash'],
+      ['slash', 'slash', 'dashStab', 'uppercut'],
+      ['stab', 'stab', 'stab', 'stab', 'spinSlash'],
     ];
 
     const ai = (bot: Fighter, pl: Fighter, idx: number) => {
