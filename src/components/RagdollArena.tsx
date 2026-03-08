@@ -1603,34 +1603,24 @@ const RagdollArena = () => {
       }
       return true;
     };
-    // ── SPECIAL ATTACKS ──
-    const doSkullFire = (f: Fighter, idx: number) => {
+    // ── UNIFIED SPECIAL ATTACK ──
+    const doSpecial = (f: Fighter, idx: number) => {
       if (f.specialCooldown > 0 || !ca(f) || f.stamina < 40) return false;
+      const charDef = getCharacter(f.charId);
       f.stamina -= 40; f.specialCooldown = 600;
-      ss(f, 'skullFire' as FState, 90);
-      g.skullFires.push({
-        x: f.x + f.facing * 40, y: f.y - 80, facing: f.facing, life: 90, maxLife: 90,
-        owner: idx, phase: 'rise', fireParticles: [],
-      });
-      g.slowMo = 0.5; g.slowTimer = 20; g.flash = 10; g.flashColor = '#f60';
-      spawnRing(f.x, f.y - 60, 120, '#f80');
-      playSFX('heavyHit', sfxVolume * 1.5);
-      if (ttsEnabled) speakFighterLine(["BURN IN HELL!", "TASTE MY SKULL FIRE!", "FEEL THE FLAMES!", "YOUR SOUL IS MINE!"], idx);
-      return true;
-    };
-    const doDragonStrike = (f: Fighter, idx: number) => {
-      if (f.specialCooldown > 0 || !ca(f) || f.stamina < 40) return false;
-      f.stamina -= 40; f.specialCooldown = 600;
-      ss(f, 'dragonStrike' as FState, 80);
+      const specialState = (charDef.specialType === 'dragonStrike' ? 'dragonStrike' : charDef.specialType === 'skullFire' ? 'skullFire' : 'skullFire') as FState;
+      ss(f, specialState, charDef.specialType === 'dragonStrike' ? 80 : 90);
       const target = g.fighters[1 - idx];
-      g.dragons.push({
-        x: f.x - f.facing * 400, y: -100, targetX: target.x, facing: f.facing, life: 80, maxLife: 80,
-        owner: idx, phase: 'swoop', swoopY: 0, trail: [],
+      g.specials.push({
+        type: charDef.specialType, x: f.x + f.facing * 40, y: f.y - 80,
+        facing: f.facing, life: 90, maxLife: 90, owner: idx,
+        targetX: target.x, targetY: target.y - 60,
+        particles: [], subEntities: [],
       });
-      g.slowMo = 0.4; g.slowTimer = 25; g.flash = 12; g.flashColor = '#0af';
-      spawnRing(f.x, f.y - 60, 100, '#08f');
+      g.slowMo = 0.4; g.slowTimer = 25; g.flash = 10; g.flashColor = charDef.specialColor;
+      spawnRing(f.x, f.y - 60, 120, charDef.specialColor);
       playSFX('heavyHit', sfxVolume * 1.5);
-      if (ttsEnabled) speakFighterLine(["DRAGON! DESTROY THEM!", "UNLEASH THE BEAST!", "FLY MY DRAGON!", "FEEL THE WRATH!"], idx);
+      if (ttsEnabled) speakFighterLine(charDef.specialLines, idx);
       return true;
     };
     const doShoot = (f: Fighter, idx: number) => {
