@@ -342,9 +342,6 @@ const RagdollArena = () => {
 };
 
 export default RagdollArena;
-interface V2 { x: number; y: number }
-const v = (x = 0, y = 0): V2 => ({ x, y });
-const vadd = (a: V2, b: V2): V2 => ({ x: a.x + b.x, y: a.y + b.y });
 const vsub = (a: V2, b: V2): V2 => ({ x: a.x - b.x, y: a.y - b.y });
 const vscl = (a: V2, s: number): V2 => ({ x: a.x * s, y: a.y * s });
 const vlen = (a: V2) => Math.sqrt(a.x * a.x + a.y * a.y);
