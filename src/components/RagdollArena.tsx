@@ -1406,8 +1406,25 @@ const RagdollArena = () => {
       const sky = ctx.createLinearGradient(0, 0, 0, GY);
       sky.addColorStop(0, '#020108'); sky.addColorStop(0.2, '#060318'); sky.addColorStop(0.4, '#0a0520'); sky.addColorStop(0.6, '#10082a'); sky.addColorStop(1, '#141430');
       ctx.fillStyle = sky; ctx.fillRect(0, 0, W, GY);
-      // Stars
-      for (let i = 0; i < 80; i++) { const sx2 = (i * 137 + 30) % W, sy2 = (i * 73 + 10) % (GY * 0.6); const tw = 0.3 + Math.sin(g.bgTime * (1 + i * 0.1) + i) * 0.3; ctx.fillStyle = `rgba(255,255,${200 + (i % 55)},${tw})`; const sz = 0.5 + (i % 3); ctx.fillRect(sx2, sy2, sz, sz); }
+      // Stars - scattered individual twinkling points
+      for (let i = 0; i < 200; i++) {
+        const sx2 = ((i * 197 + 53) * 7.3) % W;
+        const sy2 = ((i * 131 + 17) * 3.7) % (GY * 0.65);
+        const tw = 0.15 + Math.sin(g.bgTime * (0.3 + (i % 7) * 0.15) + i * 2.1) * 0.25 + Math.sin(g.bgTime * 1.7 + i * 0.8) * 0.1;
+        if (tw < 0.05) continue;
+        const hue = 200 + (i * 37) % 60;
+        const sat = 10 + (i % 30);
+        ctx.fillStyle = `hsla(${hue},${sat}%,${85 + (i % 15)}%,${tw})`;
+        const sz = 0.4 + (i % 5) * 0.25;
+        ctx.beginPath(); ctx.arc(sx2, sy2, sz, 0, Math.PI * 2); ctx.fill();
+        // Bright stars get a subtle cross glint
+        if (sz > 1 && tw > 0.3) {
+          ctx.strokeStyle = `hsla(${hue},${sat}%,90%,${tw * 0.3})`;
+          ctx.lineWidth = 0.5;
+          ctx.beginPath(); ctx.moveTo(sx2 - 3, sy2); ctx.lineTo(sx2 + 3, sy2); ctx.stroke();
+          ctx.beginPath(); ctx.moveTo(sx2, sy2 - 3); ctx.lineTo(sx2, sy2 + 3); ctx.stroke();
+        }
+      }
       // Moon
       const moonX = 180, moonY = 100;
       const moonGlow = ctx.createRadialGradient(moonX, moonY, 20, moonX, moonY, 120);
