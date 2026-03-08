@@ -121,7 +121,7 @@ export const CHARACTERS: CharacterDef[] = [
   // ── 5. VIPER — Poison Ninja ──
   {
     id: 'viper', name: 'VIPER', title: 'Poison Ninja',
-    color: '#2a5a2a', color2: '#4f4',
+    color: '#2a5a2a', color2: '#44ff44',
     skin: '#b8a878', hair: '#1a3a1a',
     weaponKey: 'longsword', specialType: 'poisonCloud',
     specialName: 'TOXIC MIASMA', specialColor: '#4f4', specialGlow: '#8f8',
