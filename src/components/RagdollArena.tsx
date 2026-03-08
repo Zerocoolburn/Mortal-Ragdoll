@@ -2576,7 +2576,7 @@ const RagdollArena = () => {
       // ── PLAYER INPUT (campaign mode) ──
       if (isCampaign && p1.state !== 'ko' && p1.state !== 'ragdoll') {
         const keys = g.keys;
-        const gpad = readGamepad();
+        const gpad = readGamepad(gamepadDeadzone);
         const kLeft = keys.has('a') || keys.has('arrowleft') || gpad.left;
         const kRight = keys.has('d') || keys.has('arrowright') || gpad.right;
         const kUp = keys.has('w') || keys.has('arrowup') || gpad.up;
@@ -2586,9 +2586,12 @@ const RagdollArena = () => {
         const kKick = keys.has('l') || keys.has('c') || gpad.kick;
         const kBlock = keys.has('shift') || gpad.block;
         const kSpecial = (keys.has('q') && keys.has('e')) || gpad.special;
-        const kDodge = keys.has(' ') || gpad.dodge;
+        const kDodge = keys.has(' ') || (gpad.confirm && (gpad.left || gpad.right));
         const kShoot = keys.has('f') || gpad.shoot;
         const kGrab = keys.has('g') || gpad.grab;
+        // Analog magnitude for proportional movement speed
+        const analogMag = Math.abs(gpad.analogX);
+        const analogSpeedMult = analogMag > 0.15 ? Math.min(analogMag * 1.6, 1.5) : 1.0;
 
         if (ca(p1)) {
           if (kSpecial && p1.specialCooldown <= 0) { doSpecial(p1, 0); }
@@ -2606,8 +2609,8 @@ const RagdollArena = () => {
           else if (kShoot) { doShoot(p1, 0); }
           else if (kGrab) { if (p1.heldLimb) doLimbSmash(p1); else tryPickupLimb(p1); }
           else if (kUp && p1.grounded) { p1.vy = -11; p1.grounded = false; ss(p1, 'jump' as FState); }
-          else if (kLeft) { ss(p1, p1.facing < 0 ? 'walk' : 'walkBack'); }
-          else if (kRight) { ss(p1, p1.facing > 0 ? 'walk' : 'walkBack'); }
+          else if (kLeft) { ss(p1, p1.facing < 0 ? 'walk' : 'walkBack'); p1.vx -= moveSpeed * analogSpeedMult * 2.5; }
+          else if (kRight) { ss(p1, p1.facing > 0 ? 'walk' : 'walkBack'); p1.vx += moveSpeed * analogSpeedMult * 2.5; }
           else if (kDown) { ss(p1, 'crouch'); }
           else { ss(p1, 'idle'); }
         } else if (p1.state === 'block' && !kBlock) {
@@ -2616,6 +2619,8 @@ const RagdollArena = () => {
         // Airborne attacks
         if (!p1.grounded && kSlash && ca(p1)) doAtk(p1, 'jumpAtk');
         if (!p1.grounded && kKick && ca(p1)) doAtk(p1, 'divekick');
+        // Airborne movement with analog
+        if (!p1.grounded) { if (kLeft) p1.vx -= moveSpeed * 1.2; if (kRight) p1.vx += moveSpeed * 1.2; }
       } else if (!isCampaign) {
         // AI vs AI mode
         ai(p1, p2, 0);
