@@ -194,7 +194,7 @@ interface Fighter {
 
 function mkFighter(x: number, name: string, color: string, skin: string, hair: string, wKey: string, isAI: boolean): Fighter {
   return {
-    x, y: GY, vx: 0, vy: 0, hp: 100, stamina: 100,
+    x, y: GY, vx: 0, vy: 0, hp: 250, stamina: 100,
     state: 'idle', frame: 0, dur: 0, facing: 1, grounded: true,
     weapon: WEAPONS[wKey], combo: 0, comboTimer: 0,
     name, color, skin, hair, isAI, wins: 0, aiTimer: 0,
