@@ -801,12 +801,12 @@ const RagdollArena = () => {
         }
         case 'executeCombo': {
           if (mem.comboSeq.length === 0) mem.comboSeq = [...pick(AI_COMBOS)];
-          if (d > wr + 10) { ss(bot, 'walk'); bot.vx += bot.facing * 4; bot.aiTimer = 1 + rng(0, 2) | 0; }
+          if (d > wr + 10) { ss(bot, 'walk'); bot.vx += bot.facing * 6; bot.aiTimer = 1; }
           else if (ca(bot) && mem.comboSeq.length > 0) {
             const next = mem.comboSeq.shift()!;
-            if (doAtk(bot, next)) { bot.aiTimer = 1 + rng(0, 2) | 0; }
-            else { mem.comboSeq = []; mem.intent = 'retreat'; mem.intentTimer = 20; }
-            if (mem.comboSeq.length === 0) { mem.intent = rng(0, 1) < 0.5 ? 'pressure' : 'circle'; mem.intentTimer = 15; }
+            if (doAtk(bot, next)) { bot.aiTimer = 0; } // INSTANT chain for combos
+            else { mem.comboSeq = []; mem.intent = 'retreat'; mem.intentTimer = 10; }
+            if (mem.comboSeq.length === 0) { mem.intent = rng(0, 1) < 0.7 ? 'pressure' : 'taunt'; mem.intentTimer = 8; }
           }
           break;
         }
