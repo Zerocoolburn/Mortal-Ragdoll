@@ -264,7 +264,7 @@ const RagdollArena = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const G = useRef({
     fighters: [
-      mkFighter(350, 'SIEGFRIED', '#8B0000', '#e8b878', '#2a1a0a', 'greatsword', false),
+      mkFighter(350, 'SIEGFRIED', '#8B0000', '#e8b878', '#2a1a0a', 'greatsword', true),
       mkFighter(930, 'NIGHTMARE', '#1a1a4a', '#c4956a', '#111', 'axe', true),
     ],
     blood: [] as Blood[],
@@ -316,15 +316,18 @@ const RagdollArena = () => {
       part === 'leftLeg' ? [11, 12, 13] : part === 'rightLeg' ? [14, 15, 16] : [0];
     indices.forEach(i => { if (f.rag.pts[i]) pts.push({ ...f.rag.pts[i].pos }); });
     g.limbs.push({
-      pts, vel: v(dir * (4 + Math.random() * 8), -(6 + Math.random() * 8)),
-      angV: (Math.random() - 0.5) * 0.4, ang: 0,
+      pts, vel: v(dir * (5 + Math.random() * 12), -(8 + Math.random() * 12)),
+      angV: (Math.random() - 0.5) * 0.6, ang: 0,
       color: part === 'head' ? f.skin : f.color,
-      w: part.includes('Leg') ? 7 : part === 'head' ? 12 : 5,
-      life: 400,
+      w: part.includes('Leg') ? 7 : part === 'head' ? 14 : 5,
+      life: 600,
     });
-    spawnBlood(f.x, f.y - 50, dir, 30, 3);
-    f.bleedTimer = 240;
-    g.shake = 15; g.slowMo = 0.2; g.slowTimer = 25;
+    // Massive blood fountain from severed point
+    spawnBlood(f.x, f.y - 50, dir, 60, 4);
+    spawnBlood(f.x, f.y - 60, -dir * 0.5, 30, 3.5);
+    spawnBlood(f.x, f.y - 55, 0, 20, 3);
+    f.bleedTimer = 400;
+    g.shake = 20; g.slowMo = 0.15; g.slowTimer = 30;
   }, [spawnBlood]);
 
   // ─── DRAW FIGHTER (from ragdoll points) ───────────────
@@ -401,14 +404,31 @@ const RagdollArena = () => {
       if (!f.severed.has(part)) return;
       const idx = part === 'leftArm' ? 5 : part === 'rightArm' ? 8 :
         part === 'leftLeg' ? 11 : part === 'rightLeg' ? 14 : 1;
-      ctx.fillStyle = '#600'; ctx.beginPath();
-      ctx.arc(p[idx].pos.x, p[idx].pos.y, 4, 0, Math.PI * 2); ctx.fill();
-      // Drip
-      if (f.bleedTimer > 0 && t % 6 === 0) {
-        ctx.fillStyle = `rgba(100,0,0,${f.bleedTimer / 240})`;
+      ctx.fillStyle = '#800'; ctx.beginPath();
+      ctx.arc(p[idx].pos.x, p[idx].pos.y, 6, 0, Math.PI * 2); ctx.fill();
+      // Gushing blood effect
+      if (f.bleedTimer > 0) {
+        const spurts = 3 + Math.floor(Math.random() * 3);
+        for (let s = 0; s < spurts; s++) {
+          const sx2 = p[idx].pos.x + (Math.random() - 0.5) * 10;
+          const sy2 = p[idx].pos.y - Math.random() * 15;
+          ctx.fillStyle = `rgba(200,0,0,${0.5 + Math.random() * 0.4})`;
+          ctx.beginPath();
+          ctx.arc(sx2, sy2, 1.5 + Math.random() * 3, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        // Blood stream
+        ctx.strokeStyle = `rgba(180,0,0,${Math.min(1, f.bleedTimer / 200)})`;
+        ctx.lineWidth = 2 + Math.random() * 2;
         ctx.beginPath();
-        ctx.arc(p[idx].pos.x + (Math.random() - 0.5) * 6, p[idx].pos.y + Math.random() * 8, 2, 0, Math.PI * 2);
-        ctx.fill();
+        ctx.moveTo(p[idx].pos.x, p[idx].pos.y);
+        ctx.quadraticCurveTo(
+          p[idx].pos.x + (Math.random() - 0.5) * 20, 
+          p[idx].pos.y + 10 + Math.random() * 15,
+          p[idx].pos.x + (Math.random() - 0.5) * 30, 
+          p[idx].pos.y + 20 + Math.random() * 20
+        );
+        ctx.stroke();
       }
     });
 
@@ -571,20 +591,18 @@ const RagdollArena = () => {
     type AIStyle = 'aggressive' | 'defensive' | 'counter' | 'wild' | 'calculated';
     type AIIntent = 'pressure' | 'retreat' | 'circle' | 'feint' | 'punish' | 'bait' | 'rush' | 'rest';
 
-    // Per-round AI personality - randomized each round
-    const aiPersonality = {
+    const mkPersonality = () => ({
       style: (['aggressive', 'defensive', 'counter', 'wild', 'calculated'] as AIStyle[])[Math.floor(Math.random() * 5)],
-      aggression: 0.3 + Math.random() * 0.7, // 0.3-1.0
+      aggression: 0.4 + Math.random() * 0.6,
       patience: 0.2 + Math.random() * 0.8,
-      riskTaking: 0.1 + Math.random() * 0.9,
+      riskTaking: 0.2 + Math.random() * 0.8,
       adaptSpeed: 0.3 + Math.random() * 0.7,
       preferredAtk: (['slash', 'stab', 'heavySlash', 'overhead'] as const)[Math.floor(Math.random() * 4)],
-      comboChance: 0.2 + Math.random() * 0.5,
+      comboChance: 0.3 + Math.random() * 0.5,
       feintChance: 0.1 + Math.random() * 0.3,
-    };
+    });
 
-    // AI memory - tracks fight state
-    const aiMem = {
+    const mkAiMem = () => ({
       intent: 'pressure' as AIIntent,
       intentTimer: 0,
       lastHitBy: '',
@@ -594,37 +612,37 @@ const RagdollArena = () => {
       lastAtk: '',
       lastAtkTime: 0,
       circleDir: Math.random() > 0.5 ? 1 : -1,
-      styleShiftTimer: 300 + Math.random() * 400,
+      styleShiftTimer: 120 + Math.random() * 200,
       dashCooldown: 0,
       feinting: false,
       feintTimer: 0,
       comboStep: 0,
       retreatTimer: 0,
       rushMomentum: 0,
-    };
+    });
 
-    const pickNewIntent = (bot: Fighter, pl: Fighter): AIIntent => {
+    // Each fighter gets their own personality and memory
+    const aiData = [
+      { personality: mkPersonality(), mem: mkAiMem() },
+      { personality: mkPersonality(), mem: mkAiMem() },
+    ];
+
+    const pickNewIntent = (bot: Fighter, pl: Fighter, personality: ReturnType<typeof mkPersonality>, mem: ReturnType<typeof mkAiMem>): AIIntent => {
       const d = Math.abs(bot.x - pl.x);
       const hpRatio = bot.hp / 100;
       const plHpRatio = pl.hp / 100;
       const stRatio = bot.stamina / 100;
       const r = Math.random();
 
-      // Desperate mode when low HP
       if (hpRatio < 0.2) {
-        return r < 0.4 * aiPersonality.riskTaking ? 'rush' : r < 0.7 ? 'retreat' : 'punish';
+        return r < 0.4 * personality.riskTaking ? 'rush' : r < 0.7 ? 'retreat' : 'punish';
       }
-
-      // Smell blood when opponent is low
       if (plHpRatio < 0.25) {
-        return r < 0.6 * aiPersonality.aggression ? 'rush' : 'pressure';
+        return r < 0.6 * personality.aggression ? 'rush' : 'pressure';
       }
-
-      // Need stamina
       if (stRatio < 0.2) return 'rest';
 
-      // Style-based intent selection
-      switch (aiPersonality.style) {
+      switch (personality.style) {
         case 'aggressive':
           if (r < 0.35) return 'pressure';
           if (r < 0.55) return 'rush';
@@ -644,16 +662,18 @@ const RagdollArena = () => {
           const choices: AIIntent[] = ['rush', 'pressure', 'feint', 'retreat', 'circle', 'punish', 'bait'];
           return choices[Math.floor(Math.random() * choices.length)];
         case 'calculated':
-          if (aiMem.timesHit > 3) return 'retreat';
+          if (mem.timesHit > 3) return 'retreat';
           if (d < 100) return r < 0.5 ? 'punish' : 'circle';
           return r < 0.4 ? 'pressure' : r < 0.7 ? 'feint' : 'bait';
         default: return 'pressure';
       }
     };
 
-    const ai = (bot: Fighter, pl: Fighter) => {
+    const ai = (bot: Fighter, pl: Fighter, idx: number) => {
       if (bot.state === 'ko' || bot.state === 'ragdoll') return;
-      // Can still think during hit/stagger but can't act until ca() is true
+      
+      const aiPersonality = aiData[idx].personality;
+      const aiMem = aiData[idx].mem;
       
       bot.aiTimer--;
       aiMem.dashCooldown = Math.max(0, aiMem.dashCooldown - 1);
@@ -686,7 +706,7 @@ const RagdollArena = () => {
       // Pick new intent
       aiMem.intentTimer--;
       if (aiMem.intentTimer <= 0) {
-        aiMem.intent = pickNewIntent(bot, pl);
+        aiMem.intent = pickNewIntent(bot, pl, aiPersonality, aiMem);
         aiMem.intentTimer = 20 + Math.floor(Math.random() * 40);
       }
 
@@ -922,7 +942,7 @@ const RagdollArena = () => {
             }
           }
           if (stRatio > 0.5) {
-            aiMem.intent = pickNewIntent(bot, pl);
+            aiMem.intent = pickNewIntent(bot, pl, aiPersonality, aiMem);
             aiMem.intentTimer = 30;
           }
           break;
@@ -981,21 +1001,23 @@ const RagdollArena = () => {
         g.rs = 'ko'; g.koTimer = 180;
       }
 
-      // Player input
+      // Player input (can override AI for p1 if keys pressed)
+      let p1HasInput = false;
       if (ca(p1) || p1.state === 'block') {
-        if (g.keys.has('j')) doAtk(p1, 'slash');
-        else if (g.keys.has('k')) doAtk(p1, 'stab');
-        else if (g.keys.has('l')) doAtk(p1, 'heavySlash');
-        else if (g.keys.has('u')) doAtk(p1, 'overhead');
-        else if (g.keys.has('s') && g.keys.has('shift')) ss(p1, 'block');
-        else if (g.keys.has('s')) ss(p1, 'crouch');
-        else if (g.keys.has('w') && p1.grounded) { p1.vy = -11; p1.grounded = false; ss(p1, 'jump'); }
-        else if (g.keys.has('a')) { p1.vx = -3.5; if (p1.grounded) ss(p1, p1.facing === -1 ? 'walk' : 'walkBack'); }
-        else if (g.keys.has('d')) { p1.vx = 3.5; if (p1.grounded) ss(p1, p1.facing === 1 ? 'walk' : 'walkBack'); }
-        else if (p1.grounded) ss(p1, 'idle');
+        if (g.keys.has('j')) { doAtk(p1, 'slash'); p1HasInput = true; }
+        else if (g.keys.has('k')) { doAtk(p1, 'stab'); p1HasInput = true; }
+        else if (g.keys.has('l')) { doAtk(p1, 'heavySlash'); p1HasInput = true; }
+        else if (g.keys.has('u')) { doAtk(p1, 'overhead'); p1HasInput = true; }
+        else if (g.keys.has('s') && g.keys.has('shift')) { ss(p1, 'block'); p1HasInput = true; }
+        else if (g.keys.has('s')) { ss(p1, 'crouch'); p1HasInput = true; }
+        else if (g.keys.has('w') && p1.grounded) { p1.vy = -11; p1.grounded = false; ss(p1, 'jump'); p1HasInput = true; }
+        else if (g.keys.has('a')) { p1.vx = -3.5; if (p1.grounded) ss(p1, p1.facing === -1 ? 'walk' : 'walkBack'); p1HasInput = true; }
+        else if (g.keys.has('d')) { p1.vx = 3.5; if (p1.grounded) ss(p1, p1.facing === 1 ? 'walk' : 'walkBack'); p1HasInput = true; }
       }
 
-      ai(p2, p1);
+      // Both fighters use AI (p1 only when no keyboard input)
+      if (!p1HasInput) ai(p1, p2, 0);
+      ai(p2, p1, 1);
 
       // Update fighters
       g.fighters.forEach((f, idx) => {
@@ -1049,11 +1071,20 @@ const RagdollArena = () => {
         else f.wTarget = f.state === 'block' ? -1.3 : -0.5;
         f.wAngle += (f.wTarget - f.wAngle) * 0.2;
 
-        // Bleed
+        // Bleed - continuous blood spurts from stumps
         if (f.bleedTimer > 0) {
           f.bleedTimer -= spd;
-          f.hp -= 0.015 * spd;
-          if (fc % 10 === 0) spawnBlood(f.x, f.y - 40, f.facing, 1, 0.3);
+          f.hp -= 0.02 * spd;
+          if (fc % 4 === 0) {
+            // Spurt from each severed part
+            for (const part of f.severed) {
+              const idx2 = part === 'leftArm' ? 5 : part === 'rightArm' ? 8 :
+                part === 'leftLeg' ? 11 : part === 'rightLeg' ? 14 : 1;
+              if (f.rag.pts[idx2]) {
+                spawnBlood(f.rag.pts[idx2].pos.x, f.rag.pts[idx2].pos.y, (Math.random() - 0.5) * 2, 3, 2);
+              }
+            }
+          }
         }
 
         // Combo decay
@@ -1188,35 +1219,41 @@ const RagdollArena = () => {
               spawnBlood(o.rag.pts[hitJoint].pos.x, o.rag.pts[hitJoint].pos.y - 5, 0, 6, 1.8);
             }
 
-            // Dismemberment - much more frequent
-            if (ad.canSever && o.hp < 45 && Math.random() < 0.65) {
+            // Dismemberment - very frequent and exaggerated
+            if (o.hp < 60 && Math.random() < 0.5) {
               const parts = ['leftArm', 'rightArm'].filter(p => !o.severed.has(p));
-              if (o.hp < 30) parts.push(...['leftLeg', 'rightLeg'].filter(p => !o.severed.has(p)));
-              if (o.hp <= 0) parts.push('head');
+              if (o.hp < 40) parts.push(...['leftLeg', 'rightLeg'].filter(p => !o.severed.has(p)));
+              if (o.hp < 15) parts.push('head');
               if (parts.length > 0) {
                 sever(o, parts[Math.floor(Math.random() * parts.length)], f.facing);
-                if (o.hp <= 0 && parts.length > 1 && Math.random() < 0.5) {
-                  const remaining = parts.filter(p => !o.severed.has(p));
+                // Multiple severing
+                if (Math.random() < 0.4) {
+                  const remaining = ['leftArm', 'rightArm', 'leftLeg', 'rightLeg'].filter(p => !o.severed.has(p));
                   if (remaining.length > 0) sever(o, remaining[Math.floor(Math.random() * remaining.length)], f.facing);
                 }
               }
             }
-            if (!ad.canSever && o.hp < 10 && Math.random() < 0.3) {
-              const parts = ['leftArm', 'rightArm'].filter(p => !o.severed.has(p));
-              if (parts.length > 0) sever(o, parts[Math.floor(Math.random() * parts.length)], f.facing);
-            }
 
-            // KO
+            // KO - ALWAYS sever head + massive blood fountain
             if (o.hp <= 0) {
               ss(o, 'ko');
-              startRagdoll(o, vscl(hitDir2, 18), 999);
-              f.wins++; g.rs = 'ko'; g.koTimer = 200;
-              g.shake = 22; g.slowMo = 0.12; g.slowTimer = 35;
-              spawnBlood(hitPt.x, hitPt.y, f.facing, 50, 4);
-              spawnBlood(hitPt.x, hitPt.y - 20, -f.facing, 25, 3);
-              if (!o.severed.has('head') && Math.random() < 0.4) sever(o, 'head', f.facing);
+              startRagdoll(o, vscl(hitDir2, 20), 999);
+              f.wins++; g.rs = 'ko'; g.koTimer = 250;
+              g.shake = 30; g.slowMo = 0.08; g.slowTimer = 45;
+              // Massive blood explosion
+              spawnBlood(hitPt.x, hitPt.y, f.facing, 80, 5);
+              spawnBlood(hitPt.x, hitPt.y - 20, -f.facing, 40, 4);
+              spawnBlood(hitPt.x, hitPt.y - 40, 0, 30, 3.5);
+              spawnBlood(hitPt.x + f.facing * 20, hitPt.y - 30, f.facing * 0.5, 25, 4);
+              // ALWAYS sever head on KO
+              if (!o.severed.has('head')) sever(o, 'head', f.facing);
+              // Sever 1-2 more limbs
               const limbParts = ['leftArm', 'rightArm', 'leftLeg', 'rightLeg'].filter(p => !o.severed.has(p));
-              if (limbParts.length > 0 && Math.random() < 0.6) sever(o, limbParts[Math.floor(Math.random() * limbParts.length)], f.facing);
+              if (limbParts.length > 0) sever(o, limbParts[Math.floor(Math.random() * limbParts.length)], f.facing);
+              if (limbParts.length > 1 && Math.random() < 0.6) {
+                const remaining = limbParts.filter(p => !o.severed.has(p));
+                if (remaining.length > 0) sever(o, remaining[Math.floor(Math.random() * remaining.length)], f.facing);
+              }
             }
           }
         }
