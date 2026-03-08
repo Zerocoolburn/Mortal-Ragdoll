@@ -164,7 +164,7 @@ export const CHARACTERS: CharacterDef[] = [
     color: '#2a1a3a', color2: '#aa00ff',
     skin: '#9a8a9a', hair: '#1a0a2a',
     weaponKey: 'longsword', specialType: 'shadowClone',
-    specialName: 'PHANTOM SLASH', specialColor: '#a0f', specialGlow: '#c4f',
+    specialName: 'PHANTOM SLASH', specialColor: '#aa00ff', specialGlow: '#cc44ff',
     aiStyles: ['assassin', 'acrobat', 'tactician'],
     voicePitch: 1.05, voiceRate: 1.08,
     bodyScale: 0.9, headScale: 0.95,
