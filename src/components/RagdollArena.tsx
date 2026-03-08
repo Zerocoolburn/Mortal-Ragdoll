@@ -1335,15 +1335,16 @@ const RagdollArena = () => {
         else if (f.state === 'divekick') f.wTarget = 1.0;
         else if (f.state === 'block') f.wTarget = -1.2;
         else if (f.state === 'kick' || f.state === 'headKick' || f.state === 'kneeStrike' || f.state === 'roundhouse') f.wTarget = -0.8;
+        else if (f.state === 'headbutt' || f.state === 'punch' || f.state === 'swordThrow') f.wTarget = -0.5;
         else f.wTarget = -0.5;
-        f.wAngle += (f.wTarget - f.wAngle) * 0.38;
+        f.wAngle += (f.wTarget - f.wAngle) * 0.32; // Smoother weapon angle blending
         if (f.state === 'dodge') f.vx = (f.facing === 1 ? -1 : 1) * 8 * (1 - ap2);
 
         if (f.bleedTimer > 0) { f.bleedTimer -= spd; f.severed.forEach(part => { const pidx = part === 'leftArm' ? 5 : part === 'rightArm' ? 8 : part === 'leftLeg' ? 11 : part === 'rightLeg' ? 14 : 1; if (fc % 4 === 0 && f.rag.pts[pidx]) spawnBlood(f.rag.pts[pidx].pos.x, f.rag.pts[pidx].pos.y, rng(-1, 1), 4, 2.5); }); }
         if (f.comboTimer > 0) { f.comboTimer -= spd; if (f.comboTimer <= 0) f.combo = 0; }
         stepRagdoll(f.rag.pts, f.rag.sticks, spd, 0.3);
         if (!f.ragdolling) poseRagdoll(f);
-        if (['slash', 'heavySlash', 'stab', 'overhead', 'jumpAtk', 'uppercut', 'spinSlash', 'dashStab', 'backflipKick', 'execution', 'wallFlip', 'divekick', 'kick', 'headKick', 'roundhouse', 'fatality'].includes(f.state) && fc % 3 === 0) spawnAfterimage(f);
+        if (['slash', 'heavySlash', 'stab', 'overhead', 'jumpAtk', 'uppercut', 'spinSlash', 'dashStab', 'backflipKick', 'execution', 'wallFlip', 'divekick', 'kick', 'headKick', 'roundhouse', 'fatality', 'headbutt', 'punch', 'swordThrow'].includes(f.state) && fc % 3 === 0) spawnAfterimage(f);
       });
 
       // Bullets
