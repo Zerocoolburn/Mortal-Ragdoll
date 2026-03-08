@@ -724,7 +724,7 @@ const RagdollArena = () => {
     }
 
     // ── WEAPON ──
-    if (!f.severed.has('rightArm')) {
+    if (!f.severed.has('rightArm') && f.hasSword) {
       const hand = p[10].pos; const ang = f.wAngle * f.facing; const wl = f.weapon.len;
       const tipX = hand.x + Math.cos(ang) * wl, tipY = hand.y + Math.sin(ang) * wl;
       const isAtk = ['slash', 'heavySlash', 'overhead', 'stab', 'jumpAtk', 'uppercut', 'spinSlash', 'dashStab', 'limbSmash', 'backflipKick', 'execution', 'wallFlip', 'divekick', 'fatality'].includes(f.state);
