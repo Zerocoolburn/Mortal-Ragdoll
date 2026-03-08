@@ -1042,6 +1042,8 @@ const RagdollArena = () => {
         else if (f.state === 'spinSlash') { const spin = ap2 * Math.PI * 2; f.wTarget = Math.sin(spin) * 2.5; }
         else if (f.state === 'dashStab') f.wTarget = ap2 < 0.2 ? -0.2 : ap2 < 0.7 ? 0.1 : -0.3;
         else if (f.state === 'limbSmash') f.wTarget = ap2 < 0.3 ? -2.0 : ap2 < 0.55 ? 1.8 : 0.2;
+        else if (f.state === 'backflipKick') f.wTarget = ap2 < 0.3 ? -1.5 : ap2 < 0.6 ? 2.0 : 0.5;
+        else if (f.state === 'execution') { const subP = (ap2 * 5) % 1; f.wTarget = subP < 0.4 ? -2.5 : subP < 0.6 ? 2.5 : -0.5; }
         else f.wTarget = f.state === 'block' ? -1.3 : -0.5;
         f.wAngle += (f.wTarget - f.wAngle) * 0.38;
 
