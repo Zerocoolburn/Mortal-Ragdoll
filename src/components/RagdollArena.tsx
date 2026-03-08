@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { CHARACTERS, getCharacter, type CharacterDef } from './CharacterData';
+import { CHARACTERS, getCharacter, type CharacterDef, BOSSES, getBoss, type BossDef } from './CharacterData';
 
 // ═══════════════════════════════════════════════════════
 // MATH
@@ -1208,7 +1208,66 @@ function poseRagdoll(f: Fighter) {
 // ═══════════════════════════════════════════════════════
 // COMPONENT
 // ═══════════════════════════════════════════════════════
-type GameScreen = 'menu' | 'settings' | 'fight' | 'charSelect';
+type GameScreen = 'menu' | 'settings' | 'fight' | 'charSelect' | 'campaignSelect' | 'cinematic' | 'campaignFight' | 'victory';
+
+// ═══════════════════════════════════════════════════════
+// GAMEPAD SUPPORT (PS4/generic)
+// ═══════════════════════════════════════════════════════
+const GAMEPAD_BUTTONS = {
+  cross: 0, circle: 1, square: 2, triangle: 3,
+  L1: 4, R1: 5, L2: 6, R2: 7,
+  share: 8, options: 9,
+  L3: 10, R3: 11,
+  up: 12, down: 13, left: 14, right: 15,
+};
+
+interface GamepadState {
+  left: boolean; right: boolean; up: boolean; down: boolean;
+  slash: boolean; heavySlash: boolean; kick: boolean; block: boolean;
+  special: boolean; dodge: boolean; shoot: boolean; grab: boolean;
+}
+
+function readGamepad(): GamepadState {
+  const gp = navigator.getGamepads?.()[0];
+  if (!gp) return { left: false, right: false, up: false, down: false, slash: false, heavySlash: false, kick: false, block: false, special: false, dodge: false, shoot: false, grab: false };
+  const ax0 = gp.axes[0] ?? 0;
+  const ax1 = gp.axes[1] ?? 0;
+  return {
+    left: ax0 < -0.3 || gp.buttons[GAMEPAD_BUTTONS.left]?.pressed,
+    right: ax0 > 0.3 || gp.buttons[GAMEPAD_BUTTONS.right]?.pressed,
+    up: ax1 < -0.3 || gp.buttons[GAMEPAD_BUTTONS.up]?.pressed,
+    down: ax1 > 0.3 || gp.buttons[GAMEPAD_BUTTONS.down]?.pressed,
+    slash: gp.buttons[GAMEPAD_BUTTONS.square]?.pressed,
+    heavySlash: gp.buttons[GAMEPAD_BUTTONS.triangle]?.pressed,
+    kick: gp.buttons[GAMEPAD_BUTTONS.circle]?.pressed,
+    block: gp.buttons[GAMEPAD_BUTTONS.L1]?.pressed,
+    special: gp.buttons[GAMEPAD_BUTTONS.R1]?.pressed && gp.buttons[GAMEPAD_BUTTONS.R2]?.pressed,
+    dodge: gp.buttons[GAMEPAD_BUTTONS.cross]?.pressed && (ax0 < -0.3 || ax0 > 0.3),
+    shoot: gp.buttons[GAMEPAD_BUTTONS.R2]?.pressed,
+    grab: gp.buttons[GAMEPAD_BUTTONS.L2]?.pressed,
+  };
+}
+
+// ═══════════════════════════════════════════════════════
+// CAMPAIGN STATE
+// ═══════════════════════════════════════════════════════
+interface CampaignState {
+  level: number;
+  playerCharId: string;
+  totalScore: number;
+  levelScores: number[];
+  totalDamageDealt: number;
+  totalCombos: number;
+  bestCombo: number;
+  totalTime: number;
+  levelsComplete: boolean[];
+}
+
+const initCampaign = (charId: string): CampaignState => ({
+  level: 1, playerCharId: charId, totalScore: 0,
+  levelScores: [], totalDamageDealt: 0, totalCombos: 0,
+  bestCombo: 0, totalTime: 0, levelsComplete: Array(12).fill(false),
+});
 
 const RagdollArena = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -1218,6 +1277,9 @@ const RagdollArena = () => {
   const [selectedP1, setSelectedP1] = useState<string>('siegfried');
   const [selectedP2, setSelectedP2] = useState<string>('nightmare');
   const [selectingFor, setSelectingFor] = useState<1 | 2>(1);
+  const [campaign, setCampaign] = useState<CampaignState>(initCampaign('siegfried'));
+  const [campaignChar, setCampaignChar] = useState<string>('siegfried');
+  const campaignRef = useRef<CampaignState>(initCampaign('siegfried'));
 
   const G = useRef({
     fighters: [
@@ -1627,7 +1689,8 @@ const RagdollArena = () => {
 
   // ─── GAME LOOP ────────────────────────────────────────
   useEffect(() => {
-    if (gameScreen !== 'fight') return;
+    if (gameScreen !== 'fight' && gameScreen !== 'campaignFight') return;
+    const isCampaign = gameScreen === 'campaignFight';
 
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -1640,10 +1703,28 @@ const RagdollArena = () => {
 
     // Reset for new fight
     const midX = WORLD_W / 2;
-    const char1 = getCharacter(selectedP1);
-    const char2 = getCharacter(selectedP2);
-    g.fighters[0] = mkFighterFromChar(midX - 200, char1, true);
+    let char1: CharacterDef, char2: CharacterDef;
+    let bossData: BossDef | null = null;
+    if (isCampaign) {
+      const cState = campaignRef.current;
+      char1 = getCharacter(cState.playerCharId);
+      bossData = getBoss(cState.level);
+      char2 = bossData;
+    } else {
+      char1 = getCharacter(selectedP1);
+      char2 = getCharacter(selectedP2);
+    }
+    g.fighters[0] = mkFighterFromChar(midX - 200, char1, !isCampaign);
     g.fighters[1] = mkFighterFromChar(midX + 200, char2, true);
+    // Apply boss modifiers
+    if (isCampaign && bossData) {
+      g.fighters[1].hp = MAX_HP * bossData.hpMultiplier;
+      // Scale body for bigger bosses
+      for (const pt of g.fighters[1].rag.pts) {
+        pt.pos.y -= (bossData.bodyScale - 1) * 20;
+        pt.old.y -= (bossData.bodyScale - 1) * 20;
+      }
+    }
     g.blood = []; g.limbs = []; g.pools = []; g.sparks = []; g.gore = [];
     g.afterimages = []; g.rings = []; g.lightnings = []; g.bullets = []; g.muzzleFlashes = []; g.wallSparks = []; g.fatalityTexts = []; g.thrownSwords = []; g.specials = [];
     g.rs = 'intro'; g.introTimer = 100; g.timer = 99 * 60; g.round = 1;
@@ -2115,6 +2196,33 @@ const RagdollArena = () => {
           loser.y = Math.min(loserCenter.y, GY);
         }
         if (g.koTimer <= 0) {
+          // Campaign mode: check win/loss
+          if (isCampaign) {
+            const playerWon = p1.hp > 0;
+            const cState = campaignRef.current;
+            const timeUsed = Math.ceil((99 * 60 - g.timer) / 60);
+            const levelScore = playerWon ? Math.max(100, 1000 - timeUsed * 5 + p1.combo * 50 + (p1.hp / MAX_HP) * 500) : 0;
+            if (playerWon) {
+              cState.levelScores.push(Math.round(levelScore));
+              cState.totalScore += Math.round(levelScore);
+              cState.totalTime += timeUsed;
+              cState.bestCombo = Math.max(cState.bestCombo, p1.combo);
+              cState.levelsComplete[cState.level - 1] = true;
+              if (cState.level >= 12) {
+                setCampaign({ ...cState });
+                setGameScreen('victory');
+              } else {
+                cState.level++;
+                setCampaign({ ...cState });
+                setGameScreen('cinematic');
+              }
+            } else {
+              // Player lost - retry same level
+              setCampaign({ ...cState });
+              setGameScreen('cinematic');
+            }
+            return;
+          }
           g.round++;
           const midX2 = (p1.x + p2.x) / 2;
           const c1 = getCharacter(p1.charId); const c2 = getCharacter(p2.charId);
@@ -2154,8 +2262,53 @@ const RagdollArena = () => {
         if (ttsEnabled) speakAnnouncer(pick(KO_ANNOUNCER_LINES));
       }
 
-      // Both fighters are AI controlled
-      ai(p1, p2, 0);
+      // ── PLAYER INPUT (campaign mode) ──
+      if (isCampaign && p1.state !== 'ko' && p1.state !== 'ragdoll') {
+        const keys = g.keys;
+        const gpad = readGamepad();
+        const kLeft = keys.has('a') || keys.has('arrowleft') || gpad.left;
+        const kRight = keys.has('d') || keys.has('arrowright') || gpad.right;
+        const kUp = keys.has('w') || keys.has('arrowup') || gpad.up;
+        const kDown = keys.has('s') || keys.has('arrowdown') || gpad.down;
+        const kSlash = keys.has('j') || keys.has('z') || gpad.slash;
+        const kHeavy = keys.has('k') || keys.has('x') || gpad.heavySlash;
+        const kKick = keys.has('l') || keys.has('c') || gpad.kick;
+        const kBlock = keys.has('shift') || gpad.block;
+        const kSpecial = (keys.has('q') && keys.has('e')) || gpad.special;
+        const kDodge = keys.has(' ') || gpad.dodge;
+        const kShoot = keys.has('f') || gpad.shoot;
+        const kGrab = keys.has('g') || gpad.grab;
+
+        if (ca(p1)) {
+          if (kSpecial && p1.specialCooldown <= 0) { doSpecial(p1, 0); }
+          else if (kBlock) { ss(p1, 'block'); }
+          else if (kDodge && p1.dodgeCool <= 0) { doDodge(p1, kLeft ? -1 : kRight ? 1 : -p1.facing); }
+          else if (kSlash && kUp) { doAtk(p1, 'uppercut'); }
+          else if (kSlash && kDown) { doAtk(p1, 'stab'); }
+          else if (kSlash) { doAtk(p1, 'slash'); }
+          else if (kHeavy && kDown) { doAtk(p1, 'overhead'); }
+          else if (kHeavy && kUp) { doAtk(p1, 'spinSlash'); }
+          else if (kHeavy) { doAtk(p1, 'heavySlash'); }
+          else if (kKick && kUp) { doAtk(p1, 'headKick'); }
+          else if (kKick && kDown) { doAtk(p1, 'kneeStrike'); }
+          else if (kKick) { doAtk(p1, pick(['kick', 'roundhouse'])); }
+          else if (kShoot) { doShoot(p1, 0); }
+          else if (kGrab) { if (p1.heldLimb) doLimbSmash(p1); else tryPickupLimb(p1); }
+          else if (kUp && p1.grounded) { p1.vy = -11; p1.grounded = false; ss(p1, 'jump' as FState); }
+          else if (kLeft) { ss(p1, p1.facing < 0 ? 'walk' : 'walkBack'); }
+          else if (kRight) { ss(p1, p1.facing > 0 ? 'walk' : 'walkBack'); }
+          else if (kDown) { ss(p1, 'crouch'); }
+          else { ss(p1, 'idle'); }
+        } else if (p1.state === 'block' && !kBlock) {
+          ss(p1, 'idle');
+        }
+        // Airborne attacks
+        if (!p1.grounded && kSlash && ca(p1)) doAtk(p1, 'jumpAtk');
+        if (!p1.grounded && kKick && ca(p1)) doAtk(p1, 'divekick');
+      } else if (!isCampaign) {
+        // AI vs AI mode
+        ai(p1, p2, 0);
+      }
       ai(p2, p1, 1);
 
       // Update fighters
@@ -2886,7 +3039,7 @@ const RagdollArena = () => {
     };
     aid = requestAnimationFrame(render);
     return () => { cancelAnimationFrame(aid); window.removeEventListener('keydown', kd); window.removeEventListener('keyup', ku); };
-  }, [gameScreen, drawFighter, spawnBlood, spawnSparks, sever, spawnGore, spawnAfterimage, spawnRing, spawnLightning, spawnBullet, spawnWallSparks, sfxVolume, ttsEnabled]);
+  }, [gameScreen, drawFighter, spawnBlood, spawnSparks, sever, spawnGore, spawnAfterimage, spawnRing, spawnLightning, spawnBullet, spawnWallSparks, sfxVolume, ttsEnabled, selectedP1, selectedP2]);
 
   // ═══════════════════════════════════════════════════════
   // MAIN MENU
@@ -2937,6 +3090,24 @@ const RagdollArena = () => {
           {/* Menu buttons */}
           <div className="flex flex-col gap-4 items-center">
             <button
+              onClick={() => setGameScreen('campaignSelect')}
+              className="group relative px-12 py-4 text-xl font-bold tracking-[0.2em] uppercase transition-all duration-300 hover:scale-105"
+              style={{
+                fontFamily: '"Orbitron", sans-serif',
+                color: '#fff',
+                background: 'linear-gradient(180deg, rgba(200,120,0,0.8) 0%, rgba(100,50,0,0.9) 100%)',
+                border: '2px solid #da0',
+                clipPath: 'polygon(8% 0%, 100% 0%, 92% 100%, 0% 100%)',
+                textShadow: '0 0 10px #fa0',
+              }}
+            >
+              <span className="relative z-10">⚔ CAMPAIGN</span>
+              <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity" style={{
+                background: 'linear-gradient(180deg, rgba(255,150,0,0.3) 0%, rgba(180,80,0,0.4) 100%)',
+              }} />
+            </button>
+
+            <button
               onClick={() => setGameScreen('charSelect')}
               className="group relative px-12 py-4 text-xl font-bold tracking-[0.2em] uppercase transition-all duration-300 hover:scale-105"
               style={{
@@ -2948,7 +3119,7 @@ const RagdollArena = () => {
                 textShadow: '0 0 10px #f00',
               }}
             >
-              <span className="relative z-10">FIGHT</span>
+              <span className="relative z-10">AI vs AI</span>
               <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity" style={{
                 background: 'linear-gradient(180deg, rgba(255,0,0,0.3) 0%, rgba(180,0,0,0.4) 100%)',
               }} />
@@ -2969,12 +3140,12 @@ const RagdollArena = () => {
             </button>
           </div>
 
-          {/* Footer */}
-          <div className="mt-4 text-[10px] tracking-[0.3em] uppercase" style={{
-            fontFamily: '"Orbitron", sans-serif',
-            color: '#333',
-          }}>
-            AI vs AI • Watch the carnage
+          {/* Controls hint */}
+          <div className="mt-2 text-[9px] tracking-[0.2em] uppercase text-center" style={{ fontFamily: '"Orbitron", sans-serif', color: '#444' }}>
+            Campaign: WASD/Arrows move • J/Z slash • K/X heavy • L/C kick • Shift block • Space dodge • F shoot • Q+E special
+          </div>
+          <div className="text-[9px] tracking-[0.2em] uppercase text-center" style={{ fontFamily: '"Orbitron", sans-serif', color: '#333' }}>
+            PS4 Controller supported • □ slash • △ heavy • ○ kick • L1 block • R1+R2 special
           </div>
         </div>
       </div>
@@ -2982,7 +3153,185 @@ const RagdollArena = () => {
   }
 
   // ═══════════════════════════════════════════════════════
-  // SETTINGS SCREEN
+  // CAMPAIGN CHARACTER SELECT
+  // ═══════════════════════════════════════════════════════
+  if (gameScreen === 'campaignSelect') {
+    return (
+      <div className="relative w-full h-full flex flex-col items-center justify-center bg-black select-none overflow-hidden">
+        <div className="absolute inset-0" style={{ background: 'radial-gradient(ellipse at center, rgba(60,40,0,0.4) 0%, rgba(0,0,0,0.95) 70%)' }} />
+        <div className="relative z-10 mb-4">
+          <h2 className="text-3xl font-bold tracking-[0.3em] uppercase text-center" style={{ fontFamily: '"Orbitron", sans-serif', color: '#fa0', textShadow: '0 0 20px rgba(255,150,0,0.5)' }}>
+            CHOOSE YOUR WARRIOR
+          </h2>
+          <p className="text-center text-sm mt-1" style={{ fontFamily: '"Orbitron", sans-serif', color: '#886' }}>
+            12 bosses await. Each deadlier than the last.
+          </p>
+        </div>
+        <div className="relative z-10 grid grid-cols-6 gap-2 px-4 max-w-5xl">
+          {CHARACTERS.map((char) => {
+            const isSel = campaignChar === char.id;
+            return (
+              <button key={char.id} onClick={() => setCampaignChar(char.id)}
+                className="relative flex flex-col items-center p-2 rounded transition-all duration-200 hover:scale-110"
+                style={{
+                  background: isSel ? 'rgba(255,150,0,0.25)' : 'rgba(30,30,30,0.6)',
+                  border: isSel ? '2px solid #fa0' : '1px solid #333',
+                  boxShadow: isSel ? '0 0 15px rgba(255,150,0,0.3)' : 'none',
+                }}>
+                <canvas ref={(cvs) => { if (cvs) { const ctx2 = cvs.getContext('2d'); if (ctx2) { ctx2.clearRect(0, 0, 80, 100); /* simplified preview */ ctx2.fillStyle = char.color; ctx2.beginPath(); ctx2.arc(40, 50, 20, 0, Math.PI * 2); ctx2.fill(); ctx2.fillStyle = char.skin; ctx2.beginPath(); ctx2.arc(40, 30, 12, 0, Math.PI * 2); ctx2.fill(); } } }} width={80} height={100} className="pointer-events-none" />
+                <span className="text-[9px] font-bold tracking-wider mt-1" style={{ fontFamily: '"Orbitron", sans-serif', color: isSel ? '#fa0' : '#aaa' }}>{char.name}</span>
+                <span className="text-[7px]" style={{ fontFamily: '"Orbitron", sans-serif', color: '#666' }}>{char.title}</span>
+              </button>
+            );
+          })}
+        </div>
+        <div className="relative z-10 flex gap-4 mt-6">
+          <button onClick={() => { const cs = initCampaign(campaignChar); setCampaign(cs); campaignRef.current = cs; setGameScreen('cinematic'); }}
+            className="px-10 py-3 text-lg font-bold tracking-[0.2em] uppercase transition-all hover:scale-105"
+            style={{ fontFamily: '"Orbitron", sans-serif', color: '#fff', background: 'linear-gradient(180deg, rgba(200,120,0,0.8) 0%, rgba(100,50,0,0.9) 100%)', border: '2px solid #da0', clipPath: 'polygon(8% 0%, 100% 0%, 92% 100%, 0% 100%)', textShadow: '0 0 10px #fa0' }}>
+            BEGIN CAMPAIGN
+          </button>
+          <button onClick={() => setGameScreen('menu')}
+            className="px-8 py-3 text-sm font-bold tracking-[0.2em] uppercase transition-all hover:scale-105"
+            style={{ fontFamily: '"Orbitron", sans-serif', color: '#aaa', background: 'rgba(30,30,30,0.8)', border: '1px solid #444', clipPath: 'polygon(6% 0%, 100% 0%, 94% 100%, 0% 100%)' }}>
+            BACK
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // ═══════════════════════════════════════════════════════
+  // CINEMATIC / STORY SCREEN
+  // ═══════════════════════════════════════════════════════
+  if (gameScreen === 'cinematic') {
+    const cState = campaignRef.current;
+    const boss = getBoss(cState.level);
+    const prevBoss = cState.level > 1 ? getBoss(cState.level - 1) : null;
+    const showDefeatText = cState.level > 1 && cState.levelsComplete[cState.level - 2];
+    return (
+      <div className="relative w-full h-full flex items-center justify-center bg-black select-none overflow-hidden">
+        <div className="absolute inset-0" style={{ background: `radial-gradient(ellipse at 50% 80%, ${boss.color}44 0%, #000 70%)` }} />
+        <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(255,255,255,0.02) 3px, rgba(255,255,255,0.02) 4px)' }} />
+        <div className="relative z-10 flex flex-col items-center gap-6 max-w-2xl px-8 text-center">
+          {/* Previous boss defeat text */}
+          {showDefeatText && prevBoss && (
+            <div className="mb-4 p-4 rounded" style={{ background: 'rgba(0,60,0,0.3)', border: '1px solid #0a0' }}>
+              <p className="text-sm italic" style={{ fontFamily: '"Orbitron", sans-serif', color: '#8a8' }}>
+                — {prevBoss.name} —
+              </p>
+              <p className="text-sm mt-2" style={{ fontFamily: 'Georgia, serif', color: '#aaa', lineHeight: '1.6' }}>
+                "{prevBoss.storyDefeat}"
+              </p>
+            </div>
+          )}
+          {/* Level header */}
+          <div>
+            <p className="text-sm tracking-[0.5em] uppercase" style={{ fontFamily: '"Orbitron", sans-serif', color: '#666' }}>
+              Level {cState.level} of 12
+            </p>
+            <h2 className="text-2xl font-bold tracking-[0.2em] mt-1" style={{ fontFamily: '"Press Start 2P", cursive', color: boss.color2, textShadow: `0 0 20px ${boss.color2}88` }}>
+              {boss.arenaName}
+            </h2>
+          </div>
+          {/* Boss intro */}
+          <div className="p-4 rounded" style={{ background: 'rgba(40,0,0,0.4)', border: `1px solid ${boss.color2}44` }}>
+            <p className="text-lg font-bold mb-2" style={{ fontFamily: '"Orbitron", sans-serif', color: boss.color2 }}>
+              {boss.name} — {boss.title}
+            </p>
+            <p className="text-sm" style={{ fontFamily: 'Georgia, serif', color: '#bbb', lineHeight: '1.8' }}>
+              {boss.storyIntro}
+            </p>
+          </div>
+          {/* Boss stats */}
+          <div className="flex gap-6 text-[10px]" style={{ fontFamily: '"Orbitron", sans-serif', color: '#888' }}>
+            <span>HP: {'█'.repeat(Math.ceil(boss.hpMultiplier * 5))}<span style={{ color: '#333' }}>{'█'.repeat(10 - Math.ceil(boss.hpMultiplier * 5))}</span></span>
+            <span>DMG: {'█'.repeat(Math.ceil(boss.dmgMultiplier * 5))}<span style={{ color: '#333' }}>{'█'.repeat(10 - Math.ceil(boss.dmgMultiplier * 5))}</span></span>
+            <span>SPD: {'█'.repeat(Math.ceil(boss.speedMultiplier * 5))}<span style={{ color: '#333' }}>{'█'.repeat(10 - Math.ceil(boss.speedMultiplier * 5))}</span></span>
+          </div>
+          {/* Score so far */}
+          {cState.totalScore > 0 && (
+            <p className="text-[10px]" style={{ fontFamily: '"Orbitron", sans-serif', color: '#555' }}>
+              Total Score: {cState.totalScore}
+            </p>
+          )}
+          <button onClick={() => setGameScreen('campaignFight')}
+            className="px-12 py-4 text-xl font-bold tracking-[0.2em] uppercase transition-all hover:scale-105 mt-2"
+            style={{ fontFamily: '"Orbitron", sans-serif', color: '#fff', background: `linear-gradient(180deg, ${boss.color2}cc 0%, ${boss.color}cc 100%)`, border: `2px solid ${boss.color2}`, clipPath: 'polygon(8% 0%, 100% 0%, 92% 100%, 0% 100%)', textShadow: `0 0 10px ${boss.color2}` }}>
+            FIGHT {boss.name}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // ═══════════════════════════════════════════════════════
+  // VICTORY / END SCREEN
+  // ═══════════════════════════════════════════════════════
+  if (gameScreen === 'victory') {
+    const cState = campaign;
+    const playerChar = getCharacter(cState.playerCharId);
+    return (
+      <div className="relative w-full h-full flex items-center justify-center bg-black select-none overflow-hidden">
+        <div className="absolute inset-0" style={{ background: 'radial-gradient(ellipse at 50% 30%, rgba(200,150,0,0.15) 0%, #000 70%)' }} />
+        <div className="relative z-10 flex flex-col items-center gap-4 max-w-2xl px-8 text-center">
+          <h1 className="text-4xl font-bold tracking-[0.3em]" style={{ fontFamily: '"Press Start 2P", cursive', color: '#fc0', textShadow: '0 0 30px #fa0, 0 0 60px #a60' }}>
+            IMMORTAL
+          </h1>
+          <p className="text-sm tracking-[0.3em] uppercase" style={{ fontFamily: '"Orbitron", sans-serif', color: '#886' }}>
+            {playerChar.name} has conquered all 12 bosses
+          </p>
+          <div className="w-64 h-[2px] my-2" style={{ background: 'linear-gradient(90deg, transparent, #da0, #fc0, #da0, transparent)' }} />
+          {/* Ending story */}
+          <div className="p-6 rounded max-w-lg" style={{ background: 'rgba(40,30,0,0.4)', border: '1px solid #886' }}>
+            <p className="text-sm italic mb-3" style={{ fontFamily: 'Georgia, serif', color: '#dda', lineHeight: '1.8' }}>
+              The God of Death crumbles to ash. The arena, built on blood and suffering for a thousand years, begins to collapse.
+            </p>
+            <p className="text-sm italic mb-3" style={{ fontFamily: 'Georgia, serif', color: '#bba', lineHeight: '1.8' }}>
+              As the walls fall, {playerChar.name} walks out into the sunlight — the first warrior to ever leave the Arena of Carnage alive.
+            </p>
+            <p className="text-sm italic" style={{ fontFamily: 'Georgia, serif', color: '#998', lineHeight: '1.8' }}>
+              The world will remember this day. The day Death itself was defeated. The day a mortal became... immortal.
+            </p>
+          </div>
+          {/* Final Score */}
+          <div className="mt-2 p-4 rounded w-full max-w-md" style={{ background: 'rgba(20,20,20,0.8)', border: '1px solid #444' }}>
+            <h3 className="text-lg font-bold mb-3" style={{ fontFamily: '"Orbitron", sans-serif', color: '#fc0' }}>FINAL SCORE</h3>
+            <div className="grid grid-cols-2 gap-2 text-left text-sm" style={{ fontFamily: '"Orbitron", sans-serif' }}>
+              <span style={{ color: '#888' }}>Total Score:</span><span style={{ color: '#fc0' }}>{cState.totalScore.toLocaleString()}</span>
+              <span style={{ color: '#888' }}>Bosses Defeated:</span><span style={{ color: '#0f0' }}>{cState.levelsComplete.filter(Boolean).length} / 12</span>
+              <span style={{ color: '#888' }}>Best Combo:</span><span style={{ color: '#f80' }}>{cState.bestCombo} hits</span>
+              <span style={{ color: '#888' }}>Total Time:</span><span style={{ color: '#8af' }}>{Math.floor(cState.totalTime / 60)}m {cState.totalTime % 60}s</span>
+            </div>
+            {/* Per-level scores */}
+            <div className="mt-3 pt-3" style={{ borderTop: '1px solid #333' }}>
+              <p className="text-[10px] mb-2" style={{ color: '#666' }}>LEVEL SCORES</p>
+              <div className="flex flex-wrap gap-1 justify-center">
+                {cState.levelScores.map((score, i) => (
+                  <span key={i} className="px-2 py-1 text-[9px] rounded" style={{ background: 'rgba(255,200,0,0.1)', color: '#aa8', border: '1px solid #443' }}>
+                    L{i + 1}: {score}
+                  </span>
+                ))}
+              </div>
+            </div>
+          </div>
+          {/* Rating */}
+          <div className="mt-1">
+            <span className="text-2xl font-bold" style={{ fontFamily: '"Press Start 2P", cursive', color: cState.totalScore > 8000 ? '#fc0' : cState.totalScore > 5000 ? '#aaa' : '#866' }}>
+              {cState.totalScore > 8000 ? '★★★ LEGENDARY ★★★' : cState.totalScore > 5000 ? '★★ CHAMPION ★★' : '★ SURVIVOR ★'}
+            </span>
+          </div>
+          <button onClick={() => setGameScreen('menu')}
+            className="px-10 py-3 mt-2 text-base font-bold tracking-[0.2em] uppercase transition-all hover:scale-105"
+            style={{ fontFamily: '"Orbitron", sans-serif', color: '#fc0', background: 'linear-gradient(180deg, rgba(100,80,0,0.8) 0%, rgba(40,30,0,0.9) 100%)', border: '2px solid #da0', clipPath: 'polygon(8% 0%, 100% 0%, 92% 100%, 0% 100%)' }}>
+            MAIN MENU
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+
   // ═══════════════════════════════════════════════════════
   if (gameScreen === 'settings') {
     return (
