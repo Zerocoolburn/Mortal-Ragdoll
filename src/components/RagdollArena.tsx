@@ -585,8 +585,13 @@ function applyHit(s: GameState, atk: Bot, def: Bot) {
   const dd = Math.sqrt(dx * dx + dy * dy) || 1;
   def.vel.x += (dx / dd) * a.kb * w.kb; def.vel.y += (dy / dd) * a.kb * w.kb;
   if (dmg > 15 || atk.atkType === 'overhead' || atk.atkType === 'spin') {
-    def.ragdoll = clamp(0.25 + dmg * 0.018, 0.2, 1.2); def.stun = def.ragdoll * 0.7;
-    for (const jv of def.jvel) { jv.x += (dx / dd) * a.kb * w.kb * rng(0.3, 0.7); jv.y += (dy / dd) * a.kb * w.kb * rng(0.3, 0.7); }
+    // Short knockdown/stagger only; keep fighters upright and mobile
+    def.ragdoll = Math.max(def.ragdoll, clamp(0.06 + dmg * 0.002, 0.06, 0.18));
+    def.stun = clamp(0.1 + dmg * 0.006, 0.12, 0.32);
+    for (const jv of def.jvel) {
+      jv.x += (dx / dd) * a.kb * w.kb * rng(0.12, 0.28);
+      jv.y += (dy / dd) * a.kb * w.kb * rng(0.12, 0.28);
+    }
   } else def.stun = 0.08;
 
   const hx = (atk.tipPos.x + def.pos.x) / 2, hy = (atk.tipPos.y + def.pos.y) / 2;
