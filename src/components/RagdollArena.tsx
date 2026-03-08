@@ -304,13 +304,12 @@ function animBot(b: Bot, dt: number) {
       }
     }
 
-    // Ragdoll
-    if (b.ragdoll > 0) {
+    // Ragdoll (dead bodies only)
+    if (!b.alive && b.ragdoll > 0) {
       const w = clamp(b.ragdoll * 5, 0, 1);
       b.joints[i].x += b.jvel[i].x * dt;
       b.joints[i].y += b.jvel[i].y * dt;
       b.jvel[i].x *= 0.9; b.jvel[i].y *= 0.9;
-      // Always pull back toward standing pose so knockdowns recover naturally
       b.joints[i].x = lerp(tx, b.joints[i].x, w);
       b.joints[i].y = lerp(ty, b.joints[i].y, w);
     } else {
