@@ -552,7 +552,12 @@ const RagdollArena = () => {
       if (!d || !ca(f) || f.stamina < d.stCost) return false;
       f.stamina -= d.stCost;
       ss(f, t as FState, Math.round(d.frames / f.weapon.speed));
-      // Spawn afterimage on attacks
+      // DashStab lunges forward
+      if (t === 'dashStab') { f.vx = f.facing * 12; }
+      // Uppercut pops up
+      if (t === 'uppercut') { f.vy = -6; f.grounded = false; }
+      // SpinSlash slight forward momentum
+      if (t === 'spinSlash') { f.vx = f.facing * 5; }
       spawnAfterimage(f);
       return true;
     };
