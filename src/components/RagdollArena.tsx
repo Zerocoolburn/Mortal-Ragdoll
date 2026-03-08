@@ -1322,11 +1322,17 @@ const RagdollArena = () => {
       // Blood
       g.blood.forEach(b => {
         if (b.grounded) {
-          ctx.fillStyle = `rgba(100,0,0,${(b.life / b.maxLife) * 0.3})`;
-          ctx.beginPath(); ctx.ellipse(b.x, b.y + 1, b.sz, b.sz * 0.3, 0, 0, Math.PI * 2); ctx.fill();
+          ctx.fillStyle = `rgba(150,0,0,${(b.life / b.maxLife) * 0.5})`;
+          ctx.beginPath(); ctx.ellipse(b.x, b.y + 1, b.sz * 1.2, b.sz * 0.4, 0, 0, Math.PI * 2); ctx.fill();
         } else {
-          ctx.fillStyle = `rgba(140,0,0,${b.life / b.maxLife * 0.8})`;
-          ctx.beginPath(); ctx.arc(b.x, b.y, b.sz * (0.5 + (b.life / b.maxLife) * 0.5), 0, Math.PI * 2); ctx.fill();
+          const a = b.life / b.maxLife;
+          ctx.fillStyle = `rgba(200,10,10,${a * 0.9})`;
+          ctx.beginPath(); ctx.arc(b.x, b.y, b.sz * (0.6 + a * 0.4), 0, Math.PI * 2); ctx.fill();
+          // Bright core
+          if (b.sz > 2) {
+            ctx.fillStyle = `rgba(255,50,30,${a * 0.4})`;
+            ctx.beginPath(); ctx.arc(b.x, b.y, b.sz * 0.3, 0, Math.PI * 2); ctx.fill();
+          }
         }
       });
 
