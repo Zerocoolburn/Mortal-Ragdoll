@@ -2449,7 +2449,7 @@ const RagdollArena = () => {
       {/* MK-STYLE HUD OVERLAY */}
       <div className="absolute top-0 left-0 right-0 pointer-events-none" style={{ maxWidth: W, margin: '0 auto' }}>
         {/* Top bar background */}
-        <div className="relative" style={{ height: 72, background: 'linear-gradient(180deg, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.4) 80%, transparent 100%)' }}>
+        <div className="relative" style={{ height: 80, paddingTop: 8, background: 'linear-gradient(180deg, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.4) 80%, transparent 100%)' }}>
 
           {/* Timer center */}
           <div className="absolute left-1/2 -translate-x-1/2 top-1 z-10">
