@@ -1925,7 +1925,7 @@ const RagdollArena = () => {
         case 'taunt': { if (ca(bot)) { ss(bot, 'taunt', 30); bot.aiTimer = 15; mem.intent = 'pressure'; } break; }
         case 'specialAttack': {
           if (bot.specialCooldown > 0) { mem.intent = 'pressure'; break; }
-          if (idx === 0) { doSkullFire(bot, idx); } else { doDragonStrike(bot, idx); }
+          doSpecial(bot, idx);
           bot.aiTimer = 30; mem.intent = 'pressure'; mem.intentTimer = 30;
           break;
         }
