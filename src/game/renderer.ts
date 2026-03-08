@@ -270,7 +270,11 @@ function renderDeadRagdoll(ctx: CanvasRenderingContext2D, ragdoll: Ragdoll) {
 
 function renderParticle(ctx: CanvasRenderingContext2D, p: Particle) {
   ctx.save();
-  ctx.globalAlpha = p.alpha * (p.life / p.maxLife);
+  const lifeRatio = Math.max(0, p.life / p.maxLife);
+  ctx.globalAlpha = p.alpha * lifeRatio;
+  if (ctx.globalAlpha <= 0.01) { ctx.restore(); return; }
+  
+  const r = (v: number) => Math.max(0.1, v);
   
   switch (p.type) {
     case 'spark':
@@ -278,34 +282,34 @@ function renderParticle(ctx: CanvasRenderingContext2D, p: Particle) {
       ctx.shadowColor = p.color;
       ctx.shadowBlur = 8;
       ctx.beginPath();
-      ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+      ctx.arc(p.x, p.y, r(p.size), 0, Math.PI * 2);
       ctx.fill();
       break;
     case 'blood':
       ctx.fillStyle = p.color;
       ctx.beginPath();
-      ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+      ctx.arc(p.x, p.y, r(p.size), 0, Math.PI * 2);
       ctx.fill();
       break;
     case 'dust':
       ctx.fillStyle = p.color;
       ctx.beginPath();
-      ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+      ctx.arc(p.x, p.y, r(p.size), 0, Math.PI * 2);
       ctx.fill();
       break;
     case 'shockwave':
       ctx.strokeStyle = p.color;
-      ctx.lineWidth = Math.max(0.5, 3 * (p.life / p.maxLife));
+      ctx.lineWidth = Math.max(0.5, 3 * lifeRatio);
       ctx.shadowColor = p.color;
       ctx.shadowBlur = 10;
       ctx.beginPath();
-      ctx.arc(p.x, p.y, p.size * (1 - p.life / p.maxLife) * 40, 0, Math.PI * 2);
+      ctx.arc(p.x, p.y, r(p.size * (1 - lifeRatio) * 40), 0, Math.PI * 2);
       ctx.stroke();
       break;
     case 'trail':
       ctx.fillStyle = p.color;
       ctx.beginPath();
-      ctx.arc(p.x, p.y, p.size * (p.life / p.maxLife), 0, Math.PI * 2);
+      ctx.arc(p.x, p.y, r(p.size * lifeRatio), 0, Math.PI * 2);
       ctx.fill();
       break;
     case 'fire':
@@ -313,12 +317,12 @@ function renderParticle(ctx: CanvasRenderingContext2D, p: Particle) {
       ctx.shadowColor = p.color;
       ctx.shadowBlur = 12;
       ctx.beginPath();
-      ctx.arc(p.x, p.y, p.size * (p.life / p.maxLife), 0, Math.PI * 2);
+      ctx.arc(p.x, p.y, r(p.size * lifeRatio), 0, Math.PI * 2);
       ctx.fill();
       break;
     case 'lightning':
       ctx.strokeStyle = p.color;
-      ctx.lineWidth = p.size;
+      ctx.lineWidth = Math.max(0.5, p.size);
       ctx.shadowColor = '#fff';
       ctx.shadowBlur = 15;
       ctx.beginPath();
