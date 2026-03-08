@@ -120,19 +120,25 @@ const RagdollArena = () => {
       if(bot.state==='ko'||bot.state==='hit')return;
       bot.aiTimer--;if(bot.aiTimer>0)return;
       const d=Math.abs(bot.x-pl.x),fp=(pl.x>bot.x&&bot.facing===1)||(pl.x<bot.x&&bot.facing===-1);
+      // React to player attacks
       if(['punch','kick','heavy','uppercut'].includes(pl.state)&&d<120&&Math.random()>0.35){
-        if(Math.random()>0.5){ss(bot,'block');bot.aiTimer=20+Math.random()*15|0;return;}
-        bot.vx=-bot.facing*8;bot.aiTimer=15;return;
+        if(Math.random()>0.5){ss(bot,'block');bot.aiTimer=15+Math.random()*10|0;return;}
+        bot.vx=-bot.facing*8;bot.aiTimer=12;return;
       }
-      if(d<80&&fp&&ca(bot)){
+      if(d<100&&ca(bot)){
+        // Close range - always attack
         const r=Math.random();
-        if(r<0.3)doAtk(bot,'punch');else if(r<0.55)doAtk(bot,'kick');else if(r<0.75)doAtk(bot,'heavy');else if(r<0.85)doAtk(bot,'uppercut');else ss(bot,'block');
-        bot.aiTimer=8+Math.random()*12|0;
-      }else if(d<200){
-        if(Math.random()>0.3&&fp)ss(bot,'walk');
-        else if(bot.grounded&&Math.random()>0.5){bot.vy=JUMP_FORCE;bot.grounded=false;bot.vx=bot.facing*4;}
-        bot.aiTimer=10+Math.random()*20|0;
-      }else{ss(bot,'walk');bot.aiTimer=15+Math.random()*25|0;}
+        if(r<0.35)doAtk(bot,'punch');else if(r<0.6)doAtk(bot,'kick');else if(r<0.8)doAtk(bot,'heavy');else doAtk(bot,'uppercut');
+        bot.aiTimer=5+Math.random()*10|0;
+      }else if(d<250){
+        // Mid range - approach or jump
+        if(Math.random()>0.2&&fp){ss(bot,'walk');bot.aiTimer=8+Math.random()*12|0;}
+        else if(bot.grounded&&Math.random()>0.6){bot.vy=JUMP_FORCE;bot.grounded=false;bot.vx=bot.facing*5;bot.aiTimer=15;}
+        else{bot.aiTimer=5+Math.random()*8|0;}
+      }else{
+        // Far - close distance
+        ss(bot,'walk');bot.aiTimer=10+Math.random()*15|0;
+      }
     };
 
     const tick=()=>{
@@ -173,6 +179,21 @@ const RagdollArena = () => {
         if(f.state==='walk'){f.x+=f.facing*WALK_SPEED;f.walkCycle+=0.15;}
         else if(f.state==='walkBack'){f.x-=f.facing*WALK_SPEED*0.7;f.walkCycle+=0.12;}
         f.x=Math.max(40,Math.min(W-40,f.x));f.idleBob+=0.06;
+      });
+      // Body collision - push fighters apart
+      const minDist=60;
+      const dx=s.fighters[1].x-s.fighters[0].x;
+      const dist=Math.abs(dx);
+      if(dist<minDist){
+        const push=(minDist-dist)/2;
+        const dir=dx>0?1:dx<0?-1:1;
+        s.fighters[0].x-=push*dir;
+        s.fighters[1].x+=push*dir;
+        s.fighters[0].x=Math.max(40,Math.min(W-40,s.fighters[0].x));
+        s.fighters[1].x=Math.max(40,Math.min(W-40,s.fighters[1].x));
+      }
+      s.fighters.forEach((f,idx)=>{
+        const o=s.fighters[1-idx];
         if(f.comboTimer>0){f.comboTimer--;if(f.comboTimer<=0)f.combo=0;}
         const ad=ATTACKS[f.state];
         if(ad&&f.frame===ad.hitFrame){
