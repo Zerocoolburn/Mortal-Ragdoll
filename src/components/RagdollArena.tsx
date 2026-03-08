@@ -1262,6 +1262,221 @@ interface CampaignState {
   totalTime: number;
   levelsComplete: boolean[];
 }
+// ═══════════════════════════════════════════════════════
+// SHARED CHARACTER PREVIEW RENDERER
+// ═══════════════════════════════════════════════════════
+const drawCharPreview = (ctx2d: CanvasRenderingContext2D, charDef: CharacterDef, cx: number, cy: number, scale: number, selected: boolean) => {
+  const s = scale;
+  ctx2d.save();
+  ctx2d.translate(cx, cy);
+
+  // Ground shadow
+  ctx2d.fillStyle = 'rgba(0,0,0,0.3)';
+  ctx2d.beginPath(); ctx2d.ellipse(0, 38 * s, 22 * s, 6 * s, 0, 0, Math.PI * 2); ctx2d.fill();
+
+  // Aura glow
+  if (charDef.glowColor) {
+    const aGlow = ctx2d.createRadialGradient(0, -20 * s, 5 * s, 0, -20 * s, 50 * s);
+    aGlow.addColorStop(0, charDef.glowColor + '40');
+    aGlow.addColorStop(1, 'transparent');
+    ctx2d.fillStyle = aGlow;
+    ctx2d.beginPath(); ctx2d.arc(0, -20 * s, 50 * s, 0, Math.PI * 2); ctx2d.fill();
+  }
+
+  // Cape
+  if (charDef.capeColor) {
+    ctx2d.fillStyle = charDef.capeColor;
+    ctx2d.beginPath();
+    ctx2d.moveTo(-8 * s, -40 * s);
+    ctx2d.quadraticCurveTo(-15 * s, 10 * s, -10 * s, 30 * s);
+    ctx2d.lineTo(10 * s, 30 * s);
+    ctx2d.quadraticCurveTo(15 * s, 10 * s, 8 * s, -40 * s);
+    ctx2d.fill();
+  }
+
+  // Legs
+  ctx2d.strokeStyle = charDef.color; ctx2d.lineWidth = 7 * s; ctx2d.lineCap = 'round';
+  ctx2d.beginPath(); ctx2d.moveTo(0, 0); ctx2d.lineTo(-10 * s, 35 * s); ctx2d.stroke();
+  ctx2d.beginPath(); ctx2d.moveTo(0, 0); ctx2d.lineTo(10 * s, 35 * s); ctx2d.stroke();
+  // Boots
+  ctx2d.fillStyle = '#333';
+  ctx2d.beginPath(); ctx2d.ellipse(-10 * s, 37 * s, 8 * s, 4 * s, 0, 0, Math.PI * 2); ctx2d.fill();
+  ctx2d.beginPath(); ctx2d.ellipse(10 * s, 37 * s, 8 * s, 4 * s, 0, 0, Math.PI * 2); ctx2d.fill();
+
+  // Torso
+  ctx2d.strokeStyle = charDef.color; ctx2d.lineWidth = 10 * s;
+  ctx2d.beginPath(); ctx2d.moveTo(0, 0); ctx2d.lineTo(0, -35 * s); ctx2d.stroke();
+
+  // Armor detail
+  if (charDef.armorType === 'heavy') {
+    ctx2d.strokeStyle = charDef.color2; ctx2d.lineWidth = 12 * s;
+    ctx2d.beginPath(); ctx2d.moveTo(-12 * s, -30 * s); ctx2d.lineTo(12 * s, -30 * s); ctx2d.stroke();
+    ctx2d.fillStyle = charDef.color2;
+    ctx2d.fillRect(-6 * s, -28 * s, 12 * s, 20 * s);
+  } else if (charDef.armorType === 'medium') {
+    ctx2d.strokeStyle = charDef.color2; ctx2d.lineWidth = 2 * s;
+    ctx2d.beginPath(); ctx2d.moveTo(-8 * s, -32 * s); ctx2d.lineTo(8 * s, -32 * s); ctx2d.stroke();
+    ctx2d.beginPath(); ctx2d.moveTo(-6 * s, -22 * s); ctx2d.lineTo(6 * s, -22 * s); ctx2d.stroke();
+  } else if (charDef.armorType === 'robe') {
+    ctx2d.fillStyle = charDef.color + 'cc';
+    ctx2d.beginPath();
+    ctx2d.moveTo(-12 * s, -35 * s); ctx2d.lineTo(-16 * s, 30 * s);
+    ctx2d.lineTo(16 * s, 30 * s); ctx2d.lineTo(12 * s, -35 * s);
+    ctx2d.fill();
+  }
+
+  // Tattoos
+  if (charDef.tattooColor) {
+    ctx2d.strokeStyle = charDef.tattooColor + '80'; ctx2d.lineWidth = 1.5 * s;
+    ctx2d.beginPath(); ctx2d.arc(0, -18 * s, 6 * s, 0, Math.PI); ctx2d.stroke();
+    ctx2d.beginPath(); ctx2d.moveTo(-4 * s, -15 * s); ctx2d.lineTo(-8 * s, -8 * s); ctx2d.stroke();
+    ctx2d.beginPath(); ctx2d.moveTo(4 * s, -15 * s); ctx2d.lineTo(8 * s, -8 * s); ctx2d.stroke();
+  }
+
+  // Arms
+  ctx2d.strokeStyle = charDef.skin; ctx2d.lineWidth = 5 * s; ctx2d.lineCap = 'round';
+  ctx2d.beginPath(); ctx2d.moveTo(-12 * s, -30 * s); ctx2d.lineTo(-20 * s, -10 * s); ctx2d.stroke();
+  ctx2d.beginPath(); ctx2d.moveTo(12 * s, -30 * s); ctx2d.lineTo(20 * s, -15 * s); ctx2d.stroke();
+
+  // Weapon in right hand
+  const wep = charDef.weaponKey;
+  ctx2d.strokeStyle = '#aaa'; ctx2d.lineWidth = 3 * s;
+  if (wep === 'greatsword') {
+    ctx2d.strokeStyle = '#bbc'; ctx2d.lineWidth = 4 * s;
+    ctx2d.beginPath(); ctx2d.moveTo(20 * s, -15 * s); ctx2d.lineTo(28 * s, -55 * s); ctx2d.stroke();
+    ctx2d.strokeStyle = charDef.color2; ctx2d.lineWidth = 2 * s;
+    ctx2d.beginPath(); ctx2d.moveTo(16 * s, -15 * s); ctx2d.lineTo(24 * s, -15 * s); ctx2d.stroke();
+  } else if (wep === 'axe') {
+    ctx2d.beginPath(); ctx2d.moveTo(20 * s, -15 * s); ctx2d.lineTo(26 * s, -50 * s); ctx2d.stroke();
+    ctx2d.fillStyle = '#888';
+    ctx2d.beginPath(); ctx2d.moveTo(22 * s, -48 * s); ctx2d.lineTo(32 * s, -55 * s); ctx2d.lineTo(32 * s, -42 * s); ctx2d.closePath(); ctx2d.fill();
+  } else if (wep === 'spear') {
+    ctx2d.lineWidth = 2.5 * s;
+    ctx2d.beginPath(); ctx2d.moveTo(20 * s, -15 * s); ctx2d.lineTo(24 * s, -60 * s); ctx2d.stroke();
+    ctx2d.fillStyle = '#ccd';
+    ctx2d.beginPath(); ctx2d.moveTo(24 * s, -60 * s); ctx2d.lineTo(21 * s, -52 * s); ctx2d.lineTo(27 * s, -52 * s); ctx2d.closePath(); ctx2d.fill();
+  } else if (wep === 'dagger') {
+    ctx2d.lineWidth = 2 * s;
+    ctx2d.beginPath(); ctx2d.moveTo(20 * s, -15 * s); ctx2d.lineTo(25 * s, -35 * s); ctx2d.stroke();
+    // Second dagger in left hand
+    ctx2d.beginPath(); ctx2d.moveTo(-20 * s, -10 * s); ctx2d.lineTo(-25 * s, -30 * s); ctx2d.stroke();
+  } else if (wep === 'hammer') {
+    ctx2d.lineWidth = 3.5 * s;
+    ctx2d.beginPath(); ctx2d.moveTo(20 * s, -15 * s); ctx2d.lineTo(26 * s, -50 * s); ctx2d.stroke();
+    ctx2d.fillStyle = '#777';
+    ctx2d.fillRect(20 * s, -56 * s, 14 * s, 10 * s);
+  } else if (wep === 'scythe') {
+    ctx2d.lineWidth = 2.5 * s;
+    ctx2d.beginPath(); ctx2d.moveTo(20 * s, -15 * s); ctx2d.lineTo(22 * s, -55 * s); ctx2d.stroke();
+    ctx2d.strokeStyle = '#aab'; ctx2d.lineWidth = 2 * s;
+    ctx2d.beginPath(); ctx2d.moveTo(22 * s, -55 * s); ctx2d.quadraticCurveTo(35 * s, -55 * s, 30 * s, -40 * s); ctx2d.stroke();
+  } else if (wep === 'staff') {
+    ctx2d.strokeStyle = '#886644'; ctx2d.lineWidth = 3 * s;
+    ctx2d.beginPath(); ctx2d.moveTo(20 * s, -15 * s); ctx2d.lineTo(22 * s, -60 * s); ctx2d.stroke();
+    // Orb on top
+    const orbGlow = ctx2d.createRadialGradient(22 * s, -62 * s, 2, 22 * s, -62 * s, 8 * s);
+    orbGlow.addColorStop(0, charDef.specialColor); orbGlow.addColorStop(1, 'transparent');
+    ctx2d.fillStyle = orbGlow; ctx2d.beginPath(); ctx2d.arc(22 * s, -62 * s, 8 * s, 0, Math.PI * 2); ctx2d.fill();
+    ctx2d.fillStyle = charDef.specialColor; ctx2d.beginPath(); ctx2d.arc(22 * s, -62 * s, 3 * s, 0, Math.PI * 2); ctx2d.fill();
+  } else {
+    ctx2d.beginPath(); ctx2d.moveTo(20 * s, -15 * s); ctx2d.lineTo(26 * s, -48 * s); ctx2d.stroke();
+  }
+
+  // Head
+  const hs = charDef.headScale;
+  ctx2d.fillStyle = charDef.hair;
+  ctx2d.beginPath(); ctx2d.arc(0, -45 * s, 14 * s * hs, Math.PI * 1.1, -0.1 * Math.PI); ctx2d.fill();
+  ctx2d.fillStyle = charDef.skin;
+  ctx2d.beginPath(); ctx2d.arc(0, -45 * s, 12 * s * hs, 0, Math.PI * 2); ctx2d.fill();
+
+  // Helmet/headgear
+  if (charDef.helmetType === 'crown') {
+    ctx2d.fillStyle = '#daa520';
+    ctx2d.fillRect(-10 * s * hs, -58 * s, 20 * s * hs, 5 * s);
+    for (let i = -2; i <= 2; i++) ctx2d.fillRect((i * 4 - 1) * s * hs, -62 * s, 3 * s * hs, 4 * s);
+  } else if (charDef.helmetType === 'horns') {
+    ctx2d.strokeStyle = '#888'; ctx2d.lineWidth = 3 * s;
+    ctx2d.beginPath(); ctx2d.moveTo(-10 * s * hs, -52 * s); ctx2d.quadraticCurveTo(-18 * s * hs, -70 * s, -12 * s * hs, -72 * s); ctx2d.stroke();
+    ctx2d.beginPath(); ctx2d.moveTo(10 * s * hs, -52 * s); ctx2d.quadraticCurveTo(18 * s * hs, -70 * s, 12 * s * hs, -72 * s); ctx2d.stroke();
+  } else if (charDef.helmetType === 'hood') {
+    ctx2d.fillStyle = charDef.color;
+    ctx2d.beginPath(); ctx2d.arc(0, -45 * s, 16 * s * hs, Math.PI * 0.8, Math.PI * 0.2, true); ctx2d.lineTo(14 * s * hs, -35 * s); ctx2d.lineTo(-14 * s * hs, -35 * s); ctx2d.fill();
+  } else if (charDef.helmetType === 'mask') {
+    ctx2d.fillStyle = '#333';
+    ctx2d.beginPath(); ctx2d.ellipse(0, -43 * s, 10 * s * hs, 8 * s * hs, 0, 0, Math.PI); ctx2d.fill();
+  } else if (charDef.helmetType === 'visor') {
+    ctx2d.fillStyle = '#555';
+    ctx2d.fillRect(-11 * s * hs, -49 * s, 22 * s * hs, 6 * s);
+  } else if (charDef.helmetType === 'bandana') {
+    ctx2d.fillStyle = charDef.color;
+    ctx2d.fillRect(-13 * s * hs, -52 * s, 26 * s * hs, 5 * s);
+    ctx2d.beginPath(); ctx2d.moveTo(13 * s * hs, -52 * s); ctx2d.lineTo(22 * s * hs, -46 * s); ctx2d.lineTo(13 * s * hs, -47 * s); ctx2d.fill();
+  } else if (charDef.helmetType === 'mohawk') {
+    ctx2d.fillStyle = charDef.hair;
+    for (let i = 0; i < 6; i++) ctx2d.fillRect((-4 + i * 0) * s * hs, (-60 - i * 2) * s, 4 * s * hs, (8 + i * 2) * s);
+    ctx2d.fillRect(-2 * s * hs, -68 * s, 4 * s * hs, 16 * s);
+  } else if (charDef.helmetType === 'spikes') {
+    ctx2d.fillStyle = '#666';
+    for (let i = -2; i <= 2; i++) {
+      ctx2d.beginPath(); ctx2d.moveTo((i * 5 - 2) * s * hs, -55 * s); ctx2d.lineTo(i * 5 * s * hs, -66 * s); ctx2d.lineTo((i * 5 + 2) * s * hs, -55 * s); ctx2d.fill();
+    }
+  } else if (charDef.helmetType === 'halo') {
+    ctx2d.strokeStyle = '#fc0'; ctx2d.lineWidth = 2 * s;
+    ctx2d.beginPath(); ctx2d.ellipse(0, -60 * s, 14 * s * hs, 4 * s * hs, 0, 0, Math.PI * 2); ctx2d.stroke();
+    const haloGlow = ctx2d.createRadialGradient(0, -60 * s, 8 * s, 0, -60 * s, 18 * s);
+    haloGlow.addColorStop(0, 'rgba(255,200,0,0.2)'); haloGlow.addColorStop(1, 'transparent');
+    ctx2d.fillStyle = haloGlow; ctx2d.beginPath(); ctx2d.arc(0, -60 * s, 18 * s, 0, Math.PI * 2); ctx2d.fill();
+  } else if (charDef.helmetType === 'skull') {
+    ctx2d.fillStyle = '#ddd';
+    ctx2d.beginPath(); ctx2d.arc(0, -45 * s, 13 * s * hs, 0, Math.PI * 2); ctx2d.fill();
+    ctx2d.fillStyle = '#111';
+    ctx2d.beginPath(); ctx2d.ellipse(-4 * s * hs, -47 * s, 3 * s, 4 * s, 0, 0, Math.PI * 2); ctx2d.fill();
+    ctx2d.beginPath(); ctx2d.ellipse(4 * s * hs, -47 * s, 3 * s, 4 * s, 0, 0, Math.PI * 2); ctx2d.fill();
+    ctx2d.fillStyle = '#333';
+    ctx2d.beginPath(); ctx2d.moveTo(-2 * s, -42 * s); ctx2d.lineTo(2 * s, -42 * s); ctx2d.lineTo(0, -39 * s); ctx2d.fill();
+    for (let t = -3; t <= 3; t++) ctx2d.fillRect(t * 2.5 * s * hs - 1, -38 * s, 2, 4 * s);
+  } else if (charDef.helmetType === 'flame') {
+    for (let i = 0; i < 8; i++) {
+      const fx = (Math.random() - 0.5) * 16 * s * hs;
+      const fh = 10 + Math.random() * 20;
+      const fg = ctx2d.createRadialGradient(fx, -55 * s - fh * 0.5, 1, fx, -55 * s - fh * 0.5, fh * s * 0.5);
+      fg.addColorStop(0, 'rgba(255,180,0,0.6)'); fg.addColorStop(0.5, 'rgba(255,80,0,0.3)'); fg.addColorStop(1, 'transparent');
+      ctx2d.fillStyle = fg; ctx2d.beginPath(); ctx2d.arc(fx, -55 * s - fh * 0.5, fh * s * 0.5, 0, Math.PI * 2); ctx2d.fill();
+    }
+  }
+
+  // Eyes
+  if (charDef.eyeGlow) {
+    const eg = ctx2d.createRadialGradient(-4 * s * hs, -46 * s, 1, -4 * s * hs, -46 * s, 5 * s);
+    eg.addColorStop(0, charDef.eyeColor); eg.addColorStop(1, 'transparent');
+    ctx2d.fillStyle = eg; ctx2d.beginPath(); ctx2d.arc(-4 * s * hs, -46 * s, 5 * s, 0, Math.PI * 2); ctx2d.fill();
+    const eg2 = ctx2d.createRadialGradient(4 * s * hs, -46 * s, 1, 4 * s * hs, -46 * s, 5 * s);
+    eg2.addColorStop(0, charDef.eyeColor); eg2.addColorStop(1, 'transparent');
+    ctx2d.fillStyle = eg2; ctx2d.beginPath(); ctx2d.arc(4 * s * hs, -46 * s, 5 * s, 0, Math.PI * 2); ctx2d.fill();
+  } else {
+    ctx2d.fillStyle = '#111';
+    ctx2d.fillRect(-6 * s * hs, -48 * s, 3 * s, 3 * s);
+    ctx2d.fillRect(3 * s * hs, -48 * s, 3 * s, 3 * s);
+  }
+
+  // Scars
+  if (charDef.scarCount > 0) {
+    ctx2d.strokeStyle = 'rgba(150,50,50,0.5)'; ctx2d.lineWidth = 1.5 * s;
+    if (charDef.scarCount >= 1) { ctx2d.beginPath(); ctx2d.moveTo(3 * s, -50 * s); ctx2d.lineTo(8 * s, -40 * s); ctx2d.stroke(); }
+    if (charDef.scarCount >= 2) { ctx2d.beginPath(); ctx2d.moveTo(-6 * s, -48 * s); ctx2d.lineTo(-2 * s, -38 * s); ctx2d.stroke(); }
+    if (charDef.scarCount >= 3) { ctx2d.beginPath(); ctx2d.moveTo(-3 * s, -44 * s); ctx2d.lineTo(5 * s, -44 * s); ctx2d.stroke(); }
+  }
+
+  // Selection indicator
+  if (selected) {
+    ctx2d.strokeStyle = '#fff'; ctx2d.lineWidth = 2;
+    ctx2d.setLineDash([4, 4]);
+    ctx2d.beginPath(); ctx2d.arc(0, -10 * s, 45 * s, 0, Math.PI * 2); ctx2d.stroke();
+    ctx2d.setLineDash([]);
+  }
+
+  ctx2d.restore();
+};
 
 const initCampaign = (charId: string): CampaignState => ({
   level: 1, playerCharId: charId, totalScore: 0,
@@ -3156,36 +3371,93 @@ const RagdollArena = () => {
   // CAMPAIGN CHARACTER SELECT
   // ═══════════════════════════════════════════════════════
   if (gameScreen === 'campaignSelect') {
+    const selChar = getCharacter(campaignChar);
+    const weaponLabels: Record<string, string> = {
+      greatsword: '⚔ Greatsword', axe: '🪓 Battle Axe', longsword: '🗡 Longsword', spear: '🔱 Spear',
+      dagger: '🗡 Twin Daggers', hammer: '🔨 War Hammer', scythe: '⚰ Scythe', staff: '✨ Arcane Staff',
+      katana: '⚔ Katana', claws: '🐾 Claws', flail: '⛓ Flail', fists: '👊 Fists',
+    };
     return (
       <div className="relative w-full h-full flex flex-col items-center justify-center bg-black select-none overflow-hidden">
         <div className="absolute inset-0" style={{ background: 'radial-gradient(ellipse at center, rgba(60,40,0,0.4) 0%, rgba(0,0,0,0.95) 70%)' }} />
-        <div className="relative z-10 mb-4">
-          <h2 className="text-3xl font-bold tracking-[0.3em] uppercase text-center" style={{ fontFamily: '"Orbitron", sans-serif', color: '#fa0', textShadow: '0 0 20px rgba(255,150,0,0.5)' }}>
+        {/* Animated background particles */}
+        <div className="absolute inset-0 overflow-hidden opacity-20">
+          {Array.from({ length: 20 }).map((_, i) => (
+            <div key={i} className="absolute rounded-full animate-pulse" style={{
+              width: 2 + Math.random() * 4, height: 2 + Math.random() * 4,
+              left: `${Math.random() * 100}%`, top: `${Math.random() * 100}%`,
+              background: '#fa0', animationDelay: `${Math.random() * 3}s`, animationDuration: `${2 + Math.random() * 3}s`,
+            }} />
+          ))}
+        </div>
+        <div className="relative z-10 mb-2">
+          <h2 className="text-2xl font-bold tracking-[0.3em] uppercase text-center" style={{ fontFamily: '"Press Start 2P", cursive', color: '#fa0', textShadow: '0 0 20px rgba(255,150,0,0.5), 0 0 40px rgba(255,100,0,0.2)' }}>
             CHOOSE YOUR WARRIOR
           </h2>
-          <p className="text-center text-sm mt-1" style={{ fontFamily: '"Orbitron", sans-serif', color: '#886' }}>
+          <p className="text-center text-xs mt-1" style={{ fontFamily: '"Orbitron", sans-serif', color: '#886' }}>
             12 bosses await. Each deadlier than the last.
           </p>
         </div>
-        <div className="relative z-10 grid grid-cols-6 gap-2 px-4 max-w-5xl">
-          {CHARACTERS.map((char) => {
-            const isSel = campaignChar === char.id;
-            return (
-              <button key={char.id} onClick={() => setCampaignChar(char.id)}
-                className="relative flex flex-col items-center p-2 rounded transition-all duration-200 hover:scale-110"
-                style={{
-                  background: isSel ? 'rgba(255,150,0,0.25)' : 'rgba(30,30,30,0.6)',
-                  border: isSel ? '2px solid #fa0' : '1px solid #333',
-                  boxShadow: isSel ? '0 0 15px rgba(255,150,0,0.3)' : 'none',
-                }}>
-                <canvas ref={(cvs) => { if (cvs) { const ctx2 = cvs.getContext('2d'); if (ctx2) { ctx2.clearRect(0, 0, 80, 100); /* simplified preview */ ctx2.fillStyle = char.color; ctx2.beginPath(); ctx2.arc(40, 50, 20, 0, Math.PI * 2); ctx2.fill(); ctx2.fillStyle = char.skin; ctx2.beginPath(); ctx2.arc(40, 30, 12, 0, Math.PI * 2); ctx2.fill(); } } }} width={80} height={100} className="pointer-events-none" />
-                <span className="text-[9px] font-bold tracking-wider mt-1" style={{ fontFamily: '"Orbitron", sans-serif', color: isSel ? '#fa0' : '#aaa' }}>{char.name}</span>
-                <span className="text-[7px]" style={{ fontFamily: '"Orbitron", sans-serif', color: '#666' }}>{char.title}</span>
-              </button>
-            );
-          })}
+
+        <div className="relative z-10 flex gap-6 w-full max-w-6xl px-4">
+          {/* Character Grid - left side */}
+          <div className="grid grid-cols-4 gap-2 flex-shrink-0" style={{ width: '55%' }}>
+            {CHARACTERS.map((char) => {
+              const isSel = campaignChar === char.id;
+              return (
+                <button key={char.id} onClick={() => setCampaignChar(char.id)}
+                  className="relative flex flex-col items-center p-1.5 rounded transition-all duration-200 hover:scale-105"
+                  style={{
+                    background: isSel ? 'rgba(255,150,0,0.3)' : 'rgba(20,20,20,0.7)',
+                    border: isSel ? '2px solid #fa0' : '1px solid #333',
+                    boxShadow: isSel ? '0 0 20px rgba(255,150,0,0.4), inset 0 0 15px rgba(255,150,0,0.1)' : 'none',
+                  }}>
+                  <canvas ref={(cvs) => { if (cvs) { const ctx2 = cvs.getContext('2d'); if (ctx2) { ctx2.clearRect(0, 0, 100, 120); drawCharPreview(ctx2, char, 50, 95, 0.85, false); } } }} width={100} height={120} className="pointer-events-none" />
+                  <span className="text-[8px] font-bold tracking-wider" style={{ fontFamily: '"Orbitron", sans-serif', color: isSel ? '#fa0' : '#aaa' }}>{char.name}</span>
+                  <span className="text-[6px]" style={{ fontFamily: '"Orbitron", sans-serif', color: '#555' }}>{char.title}</span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Selected Character Detail Panel - right side */}
+          <div className="flex flex-col items-center gap-3 flex-1 p-4 rounded-lg" style={{ background: 'rgba(30,25,10,0.6)', border: '1px solid #553300', boxShadow: '0 0 30px rgba(255,150,0,0.1)' }}>
+            <canvas ref={(cvs) => { if (cvs) { const ctx2 = cvs.getContext('2d'); if (ctx2) { ctx2.clearRect(0, 0, 200, 240); drawCharPreview(ctx2, selChar, 100, 190, 1.7, true); } } }} width={200} height={240} className="pointer-events-none" />
+            <h3 className="text-lg font-bold tracking-[0.2em]" style={{ fontFamily: '"Press Start 2P", cursive', color: selChar.color2, textShadow: `0 0 15px ${selChar.color2}66` }}>
+              {selChar.name}
+            </h3>
+            <p className="text-xs italic" style={{ fontFamily: '"Orbitron", sans-serif', color: '#aa8' }}>{selChar.title}</p>
+            {/* Weapon */}
+            <div className="text-xs px-3 py-1 rounded" style={{ background: 'rgba(255,200,100,0.1)', border: '1px solid #553', fontFamily: '"Orbitron", sans-serif', color: '#ca8' }}>
+              {weaponLabels[selChar.weaponKey] || selChar.weaponKey}
+            </div>
+            {/* Special */}
+            <div className="text-[10px] text-center" style={{ fontFamily: '"Orbitron", sans-serif', color: selChar.specialColor }}>
+              ★ {selChar.specialName}
+            </div>
+            {/* Stats */}
+            <div className="w-full space-y-1 mt-1">
+              {[
+                { label: 'BODY', val: selChar.bodyScale, color: '#f84' },
+                { label: 'HEAD', val: selChar.headScale, color: '#8af' },
+                { label: 'ARMOR', val: selChar.armorType === 'heavy' ? 1.0 : selChar.armorType === 'medium' ? 0.7 : selChar.armorType === 'light' ? 0.4 : selChar.armorType === 'robe' ? 0.3 : 0.1, color: '#8f8' },
+              ].map(stat => (
+                <div key={stat.label} className="flex items-center gap-2 text-[9px]" style={{ fontFamily: '"Orbitron", sans-serif' }}>
+                  <span style={{ color: '#666', width: 44 }}>{stat.label}</span>
+                  <div className="flex-1 h-2 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.05)' }}>
+                    <div className="h-full rounded-full" style={{ width: `${Math.min(stat.val * 75, 100)}%`, background: stat.color, boxShadow: `0 0 6px ${stat.color}88` }} />
+                  </div>
+                </div>
+              ))}
+            </div>
+            {/* Taunt line */}
+            <p className="text-[9px] italic text-center mt-1" style={{ fontFamily: 'Georgia, serif', color: '#776' }}>
+              "{selChar.tauntLines[0]}"
+            </p>
+          </div>
         </div>
-        <div className="relative z-10 flex gap-4 mt-6">
+
+        <div className="relative z-10 flex gap-4 mt-4">
           <button onClick={() => { const cs = initCampaign(campaignChar); setCampaign(cs); campaignRef.current = cs; setGameScreen('cinematic'); }}
             className="px-10 py-3 text-lg font-bold tracking-[0.2em] uppercase transition-all hover:scale-105"
             style={{ fontFamily: '"Orbitron", sans-serif', color: '#fff', background: 'linear-gradient(180deg, rgba(200,120,0,0.8) 0%, rgba(100,50,0,0.9) 100%)', border: '2px solid #da0', clipPath: 'polygon(8% 0%, 100% 0%, 92% 100%, 0% 100%)', textShadow: '0 0 10px #fa0' }}>
@@ -3207,56 +3479,93 @@ const RagdollArena = () => {
   if (gameScreen === 'cinematic') {
     const cState = campaignRef.current;
     const boss = getBoss(cState.level);
+    const playerChar = getCharacter(cState.playerCharId);
     const prevBoss = cState.level > 1 ? getBoss(cState.level - 1) : null;
     const showDefeatText = cState.level > 1 && cState.levelsComplete[cState.level - 2];
     return (
       <div className="relative w-full h-full flex items-center justify-center bg-black select-none overflow-hidden">
         <div className="absolute inset-0" style={{ background: `radial-gradient(ellipse at 50% 80%, ${boss.color}44 0%, #000 70%)` }} />
         <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(255,255,255,0.02) 3px, rgba(255,255,255,0.02) 4px)' }} />
-        <div className="relative z-10 flex flex-col items-center gap-6 max-w-2xl px-8 text-center">
+        
+        <div className="relative z-10 flex flex-col items-center gap-4 max-w-4xl px-8 text-center">
           {/* Previous boss defeat text */}
           {showDefeatText && prevBoss && (
-            <div className="mb-4 p-4 rounded" style={{ background: 'rgba(0,60,0,0.3)', border: '1px solid #0a0' }}>
-              <p className="text-sm italic" style={{ fontFamily: '"Orbitron", sans-serif', color: '#8a8' }}>
-                — {prevBoss.name} —
-              </p>
-              <p className="text-sm mt-2" style={{ fontFamily: 'Georgia, serif', color: '#aaa', lineHeight: '1.6' }}>
-                "{prevBoss.storyDefeat}"
-              </p>
+            <div className="mb-2 p-3 rounded" style={{ background: 'rgba(0,60,0,0.3)', border: '1px solid #0a0' }}>
+              <p className="text-xs italic" style={{ fontFamily: '"Orbitron", sans-serif', color: '#8a8' }}>— {prevBoss.name} Defeated —</p>
+              <p className="text-xs mt-1" style={{ fontFamily: 'Georgia, serif', color: '#aaa', lineHeight: '1.6' }}>"{prevBoss.storyDefeat}"</p>
             </div>
           )}
           {/* Level header */}
           <div>
-            <p className="text-sm tracking-[0.5em] uppercase" style={{ fontFamily: '"Orbitron", sans-serif', color: '#666' }}>
+            <p className="text-xs tracking-[0.5em] uppercase" style={{ fontFamily: '"Orbitron", sans-serif', color: '#666' }}>
               Level {cState.level} of 12
             </p>
-            <h2 className="text-2xl font-bold tracking-[0.2em] mt-1" style={{ fontFamily: '"Press Start 2P", cursive', color: boss.color2, textShadow: `0 0 20px ${boss.color2}88` }}>
+            <h2 className="text-xl font-bold tracking-[0.2em] mt-1" style={{ fontFamily: '"Press Start 2P", cursive', color: boss.color2, textShadow: `0 0 20px ${boss.color2}88` }}>
               {boss.arenaName}
             </h2>
           </div>
-          {/* Boss intro */}
-          <div className="p-4 rounded" style={{ background: 'rgba(40,0,0,0.4)', border: `1px solid ${boss.color2}44` }}>
-            <p className="text-lg font-bold mb-2" style={{ fontFamily: '"Orbitron", sans-serif', color: boss.color2 }}>
-              {boss.name} — {boss.title}
-            </p>
-            <p className="text-sm" style={{ fontFamily: 'Georgia, serif', color: '#bbb', lineHeight: '1.8' }}>
+
+          {/* VS Layout: Player vs Boss with canvases */}
+          <div className="flex items-center gap-6 my-2">
+            {/* Player character preview */}
+            <div className="flex flex-col items-center">
+              <canvas ref={(cvs) => { if (cvs) { const ctx2 = cvs.getContext('2d'); if (ctx2) { ctx2.clearRect(0, 0, 140, 180); drawCharPreview(ctx2, playerChar, 70, 145, 1.2, false); } } }} width={140} height={180} className="pointer-events-none" />
+              <p className="text-xs font-bold mt-1" style={{ fontFamily: '"Orbitron", sans-serif', color: '#fa0' }}>{playerChar.name}</p>
+              <p className="text-[8px]" style={{ fontFamily: '"Orbitron", sans-serif', color: '#886' }}>{playerChar.title}</p>
+            </div>
+
+            {/* VS badge */}
+            <div className="flex flex-col items-center gap-1">
+              <span className="text-3xl font-black" style={{ fontFamily: '"Press Start 2P", cursive', color: '#fff', textShadow: '0 0 20px rgba(255,0,0,0.5), 0 0 40px rgba(255,100,0,0.3)' }}>VS</span>
+              <div className="w-16 h-[1px]" style={{ background: 'linear-gradient(90deg, transparent, #f44, transparent)' }} />
+            </div>
+
+            {/* Boss preview - bigger and more menacing */}
+            <div className="flex flex-col items-center">
+              <div className="relative">
+                {/* Boss aura backdrop */}
+                <div className="absolute inset-0 rounded-full animate-pulse" style={{ background: `radial-gradient(circle, ${boss.color}33 0%, transparent 70%)`, transform: 'scale(1.5)', animationDuration: '2s' }} />
+                <canvas ref={(cvs) => { if (cvs) { const ctx2 = cvs.getContext('2d'); if (ctx2) {
+                  ctx2.clearRect(0, 0, 180, 220);
+                  const bossScale = 1.4 * (boss.bodyScale || 1);
+                  drawCharPreview(ctx2, boss, 90, 175, bossScale, false);
+                } } }} width={180} height={220} className="pointer-events-none relative z-10" />
+              </div>
+              <p className="text-sm font-bold mt-1" style={{ fontFamily: '"Orbitron", sans-serif', color: boss.color2, textShadow: `0 0 10px ${boss.color2}88` }}>{boss.name}</p>
+              <p className="text-[9px]" style={{ fontFamily: '"Orbitron", sans-serif', color: '#a88' }}>{boss.title}</p>
+            </div>
+          </div>
+
+          {/* Boss story intro */}
+          <div className="p-3 rounded max-w-lg" style={{ background: 'rgba(40,0,0,0.4)', border: `1px solid ${boss.color2}33` }}>
+            <p className="text-xs" style={{ fontFamily: 'Georgia, serif', color: '#bbb', lineHeight: '1.8', fontStyle: 'italic' }}>
               {boss.storyIntro}
             </p>
           </div>
+
           {/* Boss stats */}
-          <div className="flex gap-6 text-[10px]" style={{ fontFamily: '"Orbitron", sans-serif', color: '#888' }}>
-            <span>HP: {'█'.repeat(Math.ceil(boss.hpMultiplier * 5))}<span style={{ color: '#333' }}>{'█'.repeat(10 - Math.ceil(boss.hpMultiplier * 5))}</span></span>
-            <span>DMG: {'█'.repeat(Math.ceil(boss.dmgMultiplier * 5))}<span style={{ color: '#333' }}>{'█'.repeat(10 - Math.ceil(boss.dmgMultiplier * 5))}</span></span>
-            <span>SPD: {'█'.repeat(Math.ceil(boss.speedMultiplier * 5))}<span style={{ color: '#333' }}>{'█'.repeat(10 - Math.ceil(boss.speedMultiplier * 5))}</span></span>
+          <div className="flex gap-4 text-[10px]" style={{ fontFamily: '"Orbitron", sans-serif' }}>
+            {[
+              { label: 'HP', val: boss.hpMultiplier, max: 2, color: '#f44' },
+              { label: 'DMG', val: boss.dmgMultiplier, max: 2, color: '#f84' },
+              { label: 'SPD', val: boss.speedMultiplier, max: 2, color: '#4af' },
+            ].map(stat => (
+              <div key={stat.label} className="flex items-center gap-1">
+                <span style={{ color: '#666' }}>{stat.label}</span>
+                <div className="w-16 h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.05)' }}>
+                  <div className="h-full rounded-full" style={{ width: `${(stat.val / stat.max) * 100}%`, background: stat.color, boxShadow: `0 0 4px ${stat.color}88` }} />
+                </div>
+              </div>
+            ))}
           </div>
-          {/* Score so far */}
+
+          {/* Score */}
           {cState.totalScore > 0 && (
-            <p className="text-[10px]" style={{ fontFamily: '"Orbitron", sans-serif', color: '#555' }}>
-              Total Score: {cState.totalScore}
-            </p>
+            <p className="text-[10px]" style={{ fontFamily: '"Orbitron", sans-serif', color: '#555' }}>Total Score: {cState.totalScore}</p>
           )}
+
           <button onClick={() => setGameScreen('campaignFight')}
-            className="px-12 py-4 text-xl font-bold tracking-[0.2em] uppercase transition-all hover:scale-105 mt-2"
+            className="px-12 py-3 text-lg font-bold tracking-[0.2em] uppercase transition-all hover:scale-105 mt-1"
             style={{ fontFamily: '"Orbitron", sans-serif', color: '#fff', background: `linear-gradient(180deg, ${boss.color2}cc 0%, ${boss.color}cc 100%)`, border: `2px solid ${boss.color2}`, clipPath: 'polygon(8% 0%, 100% 0%, 92% 100%, 0% 100%)', textShadow: `0 0 10px ${boss.color2}` }}>
             FIGHT {boss.name}
           </button>
@@ -3405,195 +3714,7 @@ const RagdollArena = () => {
   // CHARACTER SELECT SCREEN
   // ═══════════════════════════════════════════════════════
   if (gameScreen === 'charSelect') {
-    const drawCharPreview = (ctx2d: CanvasRenderingContext2D, charDef: CharacterDef, cx: number, cy: number, scale: number, selected: boolean) => {
-      const s = scale;
-      ctx2d.save();
-      ctx2d.translate(cx, cy);
-
-      // Aura glow
-      if (charDef.glowColor) {
-        const aGlow = ctx2d.createRadialGradient(0, -20 * s, 5 * s, 0, -20 * s, 50 * s);
-        aGlow.addColorStop(0, charDef.glowColor + '40');
-        aGlow.addColorStop(1, 'transparent');
-        ctx2d.fillStyle = aGlow;
-        ctx2d.beginPath(); ctx2d.arc(0, -20 * s, 50 * s, 0, Math.PI * 2); ctx2d.fill();
-      }
-
-      // Cape
-      if (charDef.capeColor) {
-        ctx2d.fillStyle = charDef.capeColor;
-        ctx2d.beginPath();
-        ctx2d.moveTo(-8 * s, -40 * s);
-        ctx2d.quadraticCurveTo(-15 * s, 10 * s, -10 * s, 30 * s);
-        ctx2d.lineTo(10 * s, 30 * s);
-        ctx2d.quadraticCurveTo(15 * s, 10 * s, 8 * s, -40 * s);
-        ctx2d.fill();
-      }
-
-      // Legs
-      ctx2d.strokeStyle = charDef.color; ctx2d.lineWidth = 7 * s; ctx2d.lineCap = 'round';
-      ctx2d.beginPath(); ctx2d.moveTo(0, 0); ctx2d.lineTo(-10 * s, 35 * s); ctx2d.stroke();
-      ctx2d.beginPath(); ctx2d.moveTo(0, 0); ctx2d.lineTo(10 * s, 35 * s); ctx2d.stroke();
-      // Boots
-      ctx2d.fillStyle = '#333';
-      ctx2d.beginPath(); ctx2d.ellipse(-10 * s, 37 * s, 8 * s, 4 * s, 0, 0, Math.PI * 2); ctx2d.fill();
-      ctx2d.beginPath(); ctx2d.ellipse(10 * s, 37 * s, 8 * s, 4 * s, 0, 0, Math.PI * 2); ctx2d.fill();
-
-      // Torso
-      ctx2d.strokeStyle = charDef.color; ctx2d.lineWidth = 10 * s;
-      ctx2d.beginPath(); ctx2d.moveTo(0, 0); ctx2d.lineTo(0, -35 * s); ctx2d.stroke();
-
-      // Armor detail
-      if (charDef.armorType === 'heavy') {
-        ctx2d.strokeStyle = charDef.color2; ctx2d.lineWidth = 12 * s;
-        ctx2d.beginPath(); ctx2d.moveTo(-12 * s, -30 * s); ctx2d.lineTo(12 * s, -30 * s); ctx2d.stroke();
-        ctx2d.fillStyle = charDef.color2;
-        ctx2d.fillRect(-6 * s, -28 * s, 12 * s, 20 * s);
-      } else if (charDef.armorType === 'medium') {
-        ctx2d.strokeStyle = charDef.color2; ctx2d.lineWidth = 2 * s;
-        ctx2d.beginPath(); ctx2d.moveTo(-8 * s, -32 * s); ctx2d.lineTo(8 * s, -32 * s); ctx2d.stroke();
-        ctx2d.beginPath(); ctx2d.moveTo(-6 * s, -22 * s); ctx2d.lineTo(6 * s, -22 * s); ctx2d.stroke();
-      } else if (charDef.armorType === 'robe') {
-        ctx2d.fillStyle = charDef.color + 'cc';
-        ctx2d.beginPath();
-        ctx2d.moveTo(-12 * s, -35 * s); ctx2d.lineTo(-16 * s, 30 * s);
-        ctx2d.lineTo(16 * s, 30 * s); ctx2d.lineTo(12 * s, -35 * s);
-        ctx2d.fill();
-      }
-
-      // Tattoos
-      if (charDef.tattooColor) {
-        ctx2d.strokeStyle = charDef.tattooColor + '80'; ctx2d.lineWidth = 1.5 * s;
-        ctx2d.beginPath(); ctx2d.arc(0, -18 * s, 6 * s, 0, Math.PI); ctx2d.stroke();
-        ctx2d.beginPath(); ctx2d.moveTo(-4 * s, -15 * s); ctx2d.lineTo(-8 * s, -8 * s); ctx2d.stroke();
-        ctx2d.beginPath(); ctx2d.moveTo(4 * s, -15 * s); ctx2d.lineTo(8 * s, -8 * s); ctx2d.stroke();
-      }
-
-      // Arms
-      ctx2d.strokeStyle = charDef.skin; ctx2d.lineWidth = 5 * s; ctx2d.lineCap = 'round';
-      ctx2d.beginPath(); ctx2d.moveTo(-12 * s, -30 * s); ctx2d.lineTo(-20 * s, -10 * s); ctx2d.stroke();
-      ctx2d.beginPath(); ctx2d.moveTo(12 * s, -30 * s); ctx2d.lineTo(20 * s, -15 * s); ctx2d.stroke();
-
-      // Weapon in right hand
-      const wep = charDef.weaponKey;
-      ctx2d.strokeStyle = '#aaa'; ctx2d.lineWidth = 3 * s;
-      if (wep === 'greatsword') {
-        ctx2d.strokeStyle = '#bbc'; ctx2d.lineWidth = 4 * s;
-        ctx2d.beginPath(); ctx2d.moveTo(20 * s, -15 * s); ctx2d.lineTo(28 * s, -55 * s); ctx2d.stroke();
-        ctx2d.strokeStyle = charDef.color2; ctx2d.lineWidth = 2 * s;
-        ctx2d.beginPath(); ctx2d.moveTo(16 * s, -15 * s); ctx2d.lineTo(24 * s, -15 * s); ctx2d.stroke();
-      } else if (wep === 'axe') {
-        ctx2d.beginPath(); ctx2d.moveTo(20 * s, -15 * s); ctx2d.lineTo(26 * s, -50 * s); ctx2d.stroke();
-        ctx2d.fillStyle = '#888';
-        ctx2d.beginPath(); ctx2d.moveTo(22 * s, -48 * s); ctx2d.lineTo(32 * s, -55 * s); ctx2d.lineTo(32 * s, -42 * s); ctx2d.closePath(); ctx2d.fill();
-      } else if (wep === 'spear') {
-        ctx2d.lineWidth = 2.5 * s;
-        ctx2d.beginPath(); ctx2d.moveTo(20 * s, -15 * s); ctx2d.lineTo(24 * s, -60 * s); ctx2d.stroke();
-        ctx2d.fillStyle = '#ccd';
-        ctx2d.beginPath(); ctx2d.moveTo(24 * s, -60 * s); ctx2d.lineTo(21 * s, -52 * s); ctx2d.lineTo(27 * s, -52 * s); ctx2d.closePath(); ctx2d.fill();
-      } else {
-        ctx2d.beginPath(); ctx2d.moveTo(20 * s, -15 * s); ctx2d.lineTo(26 * s, -48 * s); ctx2d.stroke();
-      }
-
-      // Head
-      const hs = charDef.headScale;
-      ctx2d.fillStyle = charDef.hair;
-      ctx2d.beginPath(); ctx2d.arc(0, -45 * s, 14 * s * hs, Math.PI * 1.1, -0.1 * Math.PI); ctx2d.fill();
-      ctx2d.fillStyle = charDef.skin;
-      ctx2d.beginPath(); ctx2d.arc(0, -45 * s, 12 * s * hs, 0, Math.PI * 2); ctx2d.fill();
-
-      // Helmet/headgear
-      if (charDef.helmetType === 'crown') {
-        ctx2d.fillStyle = '#daa520';
-        ctx2d.fillRect(-10 * s * hs, -58 * s, 20 * s * hs, 5 * s);
-        for (let i = -2; i <= 2; i++) {
-          ctx2d.fillRect((i * 4 - 1) * s * hs, -62 * s, 3 * s * hs, 4 * s);
-        }
-      } else if (charDef.helmetType === 'horns') {
-        ctx2d.strokeStyle = '#888'; ctx2d.lineWidth = 3 * s;
-        ctx2d.beginPath(); ctx2d.moveTo(-10 * s * hs, -52 * s); ctx2d.quadraticCurveTo(-18 * s * hs, -70 * s, -12 * s * hs, -72 * s); ctx2d.stroke();
-        ctx2d.beginPath(); ctx2d.moveTo(10 * s * hs, -52 * s); ctx2d.quadraticCurveTo(18 * s * hs, -70 * s, 12 * s * hs, -72 * s); ctx2d.stroke();
-      } else if (charDef.helmetType === 'hood') {
-        ctx2d.fillStyle = charDef.color;
-        ctx2d.beginPath(); ctx2d.arc(0, -45 * s, 16 * s * hs, Math.PI * 0.8, Math.PI * 0.2, true); ctx2d.lineTo(14 * s * hs, -35 * s); ctx2d.lineTo(-14 * s * hs, -35 * s); ctx2d.fill();
-      } else if (charDef.helmetType === 'mask') {
-        ctx2d.fillStyle = '#333';
-        ctx2d.beginPath(); ctx2d.ellipse(0, -43 * s, 10 * s * hs, 8 * s * hs, 0, 0, Math.PI); ctx2d.fill();
-      } else if (charDef.helmetType === 'visor') {
-        ctx2d.fillStyle = '#555';
-        ctx2d.fillRect(-11 * s * hs, -49 * s, 22 * s * hs, 6 * s);
-      } else if (charDef.helmetType === 'bandana') {
-        ctx2d.fillStyle = charDef.color;
-        ctx2d.fillRect(-13 * s * hs, -52 * s, 26 * s * hs, 5 * s);
-        ctx2d.beginPath(); ctx2d.moveTo(13 * s * hs, -52 * s); ctx2d.lineTo(22 * s * hs, -46 * s); ctx2d.lineTo(13 * s * hs, -47 * s); ctx2d.fill();
-      } else if (charDef.helmetType === 'mohawk') {
-        ctx2d.fillStyle = charDef.hair;
-        for (let i = 0; i < 6; i++) {
-          ctx2d.fillRect((-4 + i * 0) * s * hs, (-60 - i * 2) * s, 4 * s * hs, (8 + i * 2) * s);
-        }
-        ctx2d.fillRect(-2 * s * hs, -68 * s, 4 * s * hs, 16 * s);
-      } else if (charDef.helmetType === 'spikes') {
-        ctx2d.fillStyle = '#666';
-        for (let i = -2; i <= 2; i++) {
-          ctx2d.beginPath(); ctx2d.moveTo((i * 5 - 2) * s * hs, -55 * s); ctx2d.lineTo(i * 5 * s * hs, -66 * s); ctx2d.lineTo((i * 5 + 2) * s * hs, -55 * s); ctx2d.fill();
-        }
-      } else if (charDef.helmetType === 'halo') {
-        ctx2d.strokeStyle = '#fc0'; ctx2d.lineWidth = 2 * s;
-        ctx2d.beginPath(); ctx2d.ellipse(0, -60 * s, 14 * s * hs, 4 * s * hs, 0, 0, Math.PI * 2); ctx2d.stroke();
-        const haloGlow = ctx2d.createRadialGradient(0, -60 * s, 8 * s, 0, -60 * s, 18 * s);
-        haloGlow.addColorStop(0, 'rgba(255,200,0,0.2)'); haloGlow.addColorStop(1, 'transparent');
-        ctx2d.fillStyle = haloGlow; ctx2d.beginPath(); ctx2d.arc(0, -60 * s, 18 * s, 0, Math.PI * 2); ctx2d.fill();
-      } else if (charDef.helmetType === 'skull') {
-        ctx2d.fillStyle = '#ddd';
-        ctx2d.beginPath(); ctx2d.arc(0, -45 * s, 13 * s * hs, 0, Math.PI * 2); ctx2d.fill();
-        ctx2d.fillStyle = '#111';
-        ctx2d.beginPath(); ctx2d.ellipse(-4 * s * hs, -47 * s, 3 * s, 4 * s, 0, 0, Math.PI * 2); ctx2d.fill();
-        ctx2d.beginPath(); ctx2d.ellipse(4 * s * hs, -47 * s, 3 * s, 4 * s, 0, 0, Math.PI * 2); ctx2d.fill();
-        ctx2d.fillStyle = '#333';
-        ctx2d.beginPath(); ctx2d.moveTo(-2 * s, -42 * s); ctx2d.lineTo(2 * s, -42 * s); ctx2d.lineTo(0, -39 * s); ctx2d.fill();
-        for (let t = -3; t <= 3; t++) ctx2d.fillRect(t * 2.5 * s * hs - 1, -38 * s, 2, 4 * s);
-      } else if (charDef.helmetType === 'flame') {
-        for (let i = 0; i < 8; i++) {
-          const fx = (Math.random() - 0.5) * 16 * s * hs;
-          const fh = 10 + Math.random() * 20;
-          const fg = ctx2d.createRadialGradient(fx, -55 * s - fh * 0.5, 1, fx, -55 * s - fh * 0.5, fh * s * 0.5);
-          fg.addColorStop(0, 'rgba(255,180,0,0.6)'); fg.addColorStop(0.5, 'rgba(255,80,0,0.3)'); fg.addColorStop(1, 'transparent');
-          ctx2d.fillStyle = fg; ctx2d.beginPath(); ctx2d.arc(fx, -55 * s - fh * 0.5, fh * s * 0.5, 0, Math.PI * 2); ctx2d.fill();
-        }
-      }
-
-      // Eyes
-      if (charDef.eyeGlow) {
-        const eg = ctx2d.createRadialGradient(-4 * s * hs, -46 * s, 1, -4 * s * hs, -46 * s, 5 * s);
-        eg.addColorStop(0, charDef.eyeColor); eg.addColorStop(1, 'transparent');
-        ctx2d.fillStyle = eg; ctx2d.beginPath(); ctx2d.arc(-4 * s * hs, -46 * s, 5 * s, 0, Math.PI * 2); ctx2d.fill();
-        const eg2 = ctx2d.createRadialGradient(4 * s * hs, -46 * s, 1, 4 * s * hs, -46 * s, 5 * s);
-        eg2.addColorStop(0, charDef.eyeColor); eg2.addColorStop(1, 'transparent');
-        ctx2d.fillStyle = eg2; ctx2d.beginPath(); ctx2d.arc(4 * s * hs, -46 * s, 5 * s, 0, Math.PI * 2); ctx2d.fill();
-      } else {
-        ctx2d.fillStyle = '#111';
-        ctx2d.fillRect(-6 * s * hs, -48 * s, 3 * s, 3 * s);
-        ctx2d.fillRect(3 * s * hs, -48 * s, 3 * s, 3 * s);
-      }
-
-      // Scars
-      if (charDef.scarCount > 0) {
-        ctx2d.strokeStyle = 'rgba(150,50,50,0.5)'; ctx2d.lineWidth = 1.5 * s;
-        if (charDef.scarCount >= 1) { ctx2d.beginPath(); ctx2d.moveTo(3 * s, -50 * s); ctx2d.lineTo(8 * s, -40 * s); ctx2d.stroke(); }
-        if (charDef.scarCount >= 2) { ctx2d.beginPath(); ctx2d.moveTo(-6 * s, -48 * s); ctx2d.lineTo(-2 * s, -38 * s); ctx2d.stroke(); }
-        if (charDef.scarCount >= 3) { ctx2d.beginPath(); ctx2d.moveTo(-3 * s, -44 * s); ctx2d.lineTo(5 * s, -44 * s); ctx2d.stroke(); }
-      }
-
-      // Selection indicator
-      if (selected) {
-        ctx2d.strokeStyle = '#fff'; ctx2d.lineWidth = 2;
-        ctx2d.setLineDash([4, 4]);
-        ctx2d.beginPath(); ctx2d.arc(0, -10 * s, 45 * s, 0, Math.PI * 2); ctx2d.stroke();
-        ctx2d.setLineDash([]);
-      }
-
-      ctx2d.restore();
-    };
+    // drawCharPreview is now a module-level function
 
     return (
       <div className="relative w-full h-full flex flex-col items-center justify-center bg-black select-none overflow-hidden">
