@@ -1673,6 +1673,22 @@ const RagdollArena = () => {
       g.gore.forEach(gc => { ctx.save(); ctx.translate(gc.x, gc.y); ctx.rotate(gc.rot); ctx.fillStyle = gc.color; ctx.fillRect(-gc.sz / 2, -gc.sz / 2, gc.sz, gc.sz); ctx.restore(); });
       // Fighters
       g.fighters.forEach(f => drawFighter(ctx, f, fc));
+      // Thrown swords
+      g.thrownSwords.forEach(ts => {
+        ctx.save(); ctx.translate(ts.x, ts.y); ctx.rotate(ts.ang);
+        // Blade
+        ctx.strokeStyle = ts.weapon.blade; ctx.lineWidth = 3; ctx.lineCap = 'round';
+        ctx.beginPath(); ctx.moveTo(-ts.weapon.len * 0.3, 0); ctx.lineTo(ts.weapon.len * 0.3, 0); ctx.stroke();
+        // Handle
+        ctx.strokeStyle = ts.weapon.color; ctx.lineWidth = 4;
+        ctx.beginPath(); ctx.moveTo(-ts.weapon.len * 0.3, 0); ctx.lineTo(-ts.weapon.len * 0.3 - 12, 0); ctx.stroke();
+        // Glow trail
+        if (!ts.stuck) {
+          ctx.strokeStyle = 'rgba(255,200,100,0.3)'; ctx.lineWidth = 6;
+          ctx.beginPath(); ctx.moveTo(-ts.weapon.len * 0.4, 0); ctx.lineTo(-ts.weapon.len * 0.4 - 20, 0); ctx.stroke();
+        }
+        ctx.restore();
+      });
       // Bullets
       g.bullets.forEach(b => { if (b.trail.length > 1) { for (let i = 1; i < b.trail.length; i++) { const a = i / b.trail.length; ctx.strokeStyle = `rgba(255,200,50,${a * 0.5})`; ctx.lineWidth = 2 * a; ctx.beginPath(); ctx.moveTo(b.trail[i - 1].x, b.trail[i - 1].y); ctx.lineTo(b.trail[i].x, b.trail[i].y); ctx.stroke(); } } ctx.fillStyle = '#ff8'; ctx.beginPath(); ctx.arc(b.x, b.y, 2.5, 0, Math.PI * 2); ctx.fill(); });
       // Muzzle flashes
