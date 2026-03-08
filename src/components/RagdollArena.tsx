@@ -878,14 +878,16 @@ interface Fighter {
   hasSword: boolean;
   groundBeatTimer: number;
   specialCooldown: number;
+  charId: string;
 }
 
-function mkFighter(x: number, name: string, color: string, skin: string, hair: string, wKey: string, isAI: boolean): Fighter {
+function mkFighterFromChar(x: number, charDef: CharacterDef, isAI: boolean): Fighter {
   return {
     x, y: GY, vx: 0, vy: 0, hp: MAX_HP, stamina: 100,
     state: 'idle', frame: 0, dur: 0, facing: 1, grounded: true,
-    weapon: WEAPONS[wKey], combo: 0, comboTimer: 0,
-    name, color, skin, hair, isAI, wins: 0, aiTimer: 0,
+    weapon: WEAPONS[charDef.weaponKey] || WEAPONS.longsword, combo: 0, comboTimer: 0,
+    name: charDef.name, color: charDef.color, skin: charDef.skin, hair: charDef.hair,
+    isAI, wins: 0, aiTimer: 0,
     walkCycle: 0, bob: Math.random() * 6.28,
     rag: createRagdoll(x, GY), ragdolling: false, ragTimer: 0,
     severed: new Set(), bleedTimer: 0,
@@ -896,6 +898,7 @@ function mkFighter(x: number, name: string, color: string, skin: string, hair: s
     headHits: 0, shieldHP: 50, fatalityType: 0,
     hasSword: true, groundBeatTimer: 0,
     specialCooldown: 300 + Math.floor(rng(0, 200)),
+    charId: charDef.id,
   };
 }
 
