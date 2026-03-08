@@ -1294,8 +1294,11 @@ const RagdollArena = () => {
 
       // Blood pools
       g.pools.forEach(p => {
-        ctx.fillStyle = `rgba(70,0,0,${p.a})`;
-        ctx.beginPath(); ctx.ellipse(p.x, p.y + 2, p.r, p.r * 0.25, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = `rgba(120,0,0,${p.a})`;
+        ctx.beginPath(); ctx.ellipse(p.x, p.y + 2, p.r, p.r * 0.3, 0, 0, Math.PI * 2); ctx.fill();
+        // Darker center
+        ctx.fillStyle = `rgba(80,0,0,${p.a * 0.6})`;
+        ctx.beginPath(); ctx.ellipse(p.x, p.y + 2, p.r * 0.5, p.r * 0.15, 0, 0, Math.PI * 2); ctx.fill();
       });
 
       // Severed limbs
