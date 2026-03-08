@@ -199,6 +199,20 @@ function doDodge(b: Bot, dx: number, dy: number, power = 220) {
 // ═══════════════════════════════════════════════════════════════
 // ANIMATION
 // ═══════════════════════════════════════════════════════════════
+function snapToUprightPose(b: Bot, blend = 1) {
+  const baseRot = b.facing - Math.PI / 2;
+  for (let i = 0; i < JOINT_COUNT; i++) {
+    const rot = vrot(REST[i], baseRot);
+    const tx = b.pos.x + rot.x;
+    const ty = b.pos.y + rot.y;
+    b.joints[i].x = lerp(b.joints[i].x, tx, blend);
+    b.joints[i].y = lerp(b.joints[i].y, ty, blend);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// ANIMATION
+// ═══════════════════════════════════════════════════════════════
 function animBot(b: Bot, dt: number) {
   if (!b.alive && b.ragdoll <= 0) return;
   const spd = vlen(b.vel);
