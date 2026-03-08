@@ -584,8 +584,11 @@ const RagdollArena = () => {
       if (t === 'dashStab') { f.vx = f.facing * 12; }
       // Uppercut pops up
       if (t === 'uppercut') { f.vy = -6; f.grounded = false; }
-      // SpinSlash slight forward momentum
       if (t === 'spinSlash') { f.vx = f.facing * 5; }
+      // Backflip kick: jump backwards while flipping
+      if (t === 'backflipKick') { f.vy = -12; f.vx = -f.facing * 6; f.grounded = false; }
+      // Execution: lunge forward aggressively
+      if (t === 'execution') { f.vx = f.facing * 8; }
       spawnAfterimage(f);
       return true;
     };
