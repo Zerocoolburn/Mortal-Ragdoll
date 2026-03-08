@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 // MATH
 // ═══════════════════════════════════════════════════════
 const W = 1280, H = 720, GY = 575, GRAV = 0.4;
+const WALL_L = 50, WALL_R = W - 50;
 interface V { x: number; y: number }
 const v = (x = 0, y = 0): V => ({ x, y });
 const vadd = (a: V, b: V): V => ({ x: a.x + b.x, y: a.y + b.y });
@@ -23,7 +24,7 @@ interface RPoint { pos: V; old: V; acc: V; mass: number; pinned: boolean }
 interface RStick { a: number; b: number; len: number; stiff: number }
 
 function createRagdoll(x: number, y: number) {
-  const S = 1.35; // character scale
+  const S = 1.35;
   const offsets: V[] = [
     v(0, -108*S), v(0, -93*S), v(0, -72*S), v(0, -52*S), v(0, -36*S),
     v(-15*S, -86*S), v(-28*S, -64*S), v(-35*S, -46*S),
@@ -78,7 +79,7 @@ function stepRagdoll(pts: RPoint[], sticks: RStick[], dt: number, bounce: number
 // ═══════════════════════════════════════════════════════
 // FIGHTER
 // ═══════════════════════════════════════════════════════
-type FState = 'idle' | 'walk' | 'walkBack' | 'jump' | 'crouch' | 'slash' | 'heavySlash' | 'stab' | 'overhead' | 'jumpAtk' | 'uppercut' | 'spinSlash' | 'dashStab' | 'limbSmash' | 'backflipKick' | 'execution' | 'block' | 'hit' | 'stagger' | 'ko' | 'ragdoll' | 'dodge' | 'taunt' | 'pickup';
+type FState = 'idle' | 'walk' | 'walkBack' | 'jump' | 'crouch' | 'slash' | 'heavySlash' | 'stab' | 'overhead' | 'jumpAtk' | 'uppercut' | 'spinSlash' | 'dashStab' | 'limbSmash' | 'backflipKick' | 'execution' | 'shoot' | 'wallRun' | 'wallJump' | 'wallFlip' | 'divekick' | 'block' | 'hit' | 'stagger' | 'ko' | 'ragdoll' | 'dodge' | 'taunt' | 'pickup';
 
 interface Weapon {
   name: string; len: number; weight: number;
@@ -107,6 +108,9 @@ const ATK: Record<string, AtkDef> = {
   limbSmash:    { frames: 26, hitStart: 8,  hitEnd: 18, dmgKey: 'heavyDmg', kb: v(14, -12), stCost: 14, canSever: true },
   backflipKick: { frames: 28, hitStart: 8,  hitEnd: 20, dmgKey: 'heavyDmg', kb: v(8, -18),  stCost: 16, canSever: true },
   execution:    { frames: 50, hitStart: 15, hitEnd: 40, dmgKey: 'heavyDmg', kb: v(4, -4),   stCost: 20, canSever: true },
+  shoot:        { frames: 10, hitStart: 3,  hitEnd: 4,  dmgKey: 'stabDmg',  kb: v(6, -2),   stCost: 4,  canSever: false },
+  wallFlip:     { frames: 24, hitStart: 6,  hitEnd: 18, dmgKey: 'heavyDmg', kb: v(12, -14), stCost: 14, canSever: true },
+  divekick:     { frames: 20, hitStart: 4,  hitEnd: 16, dmgKey: 'heavyDmg', kb: v(10, 8),   stCost: 12, canSever: true },
 };
 
 interface Blood { x: number; y: number; vx: number; vy: number; life: number; maxLife: number; sz: number; grounded: boolean }
@@ -117,6 +121,9 @@ interface GoreChunk { x: number; y: number; vx: number; vy: number; sz: number; 
 interface Afterimage { x: number; y: number; pts: V[]; alpha: number; color: string }
 interface ImpactRing { x: number; y: number; r: number; maxR: number; life: number; color: string }
 interface Lightning { x1: number; y1: number; x2: number; y2: number; life: number; branches: V[][] }
+interface Bullet { x: number; y: number; vx: number; vy: number; life: number; owner: number; dmg: number; trail: V[] }
+interface MuzzleFlash { x: number; y: number; ang: number; life: number }
+interface WallSpark { x: number; y: number; vx: number; vy: number; life: number }
 
 let limbIdCounter = 0;
 
@@ -137,8 +144,12 @@ interface Fighter {
   wAngle: number; wTarget: number; hitDealt: boolean;
   hitDir: V; hitImpact: number;
   dodgeCool: number;
-  heldLimb: SevLimb | null; // picked up severed limb
+  heldLimb: SevLimb | null;
   limbSwingAng: number;
+  wallRunTimer: number;
+  wallSide: -1 | 0 | 1;
+  gunCooldown: number;
+  muzzleFlash: number;
 }
 
 function mkFighter(x: number, name: string, color: string, skin: string, hair: string, wKey: string, isAI: boolean): Fighter {
@@ -153,6 +164,7 @@ function mkFighter(x: number, name: string, color: string, skin: string, hair: s
     wAngle: -0.5, wTarget: -0.5, hitDealt: false,
     hitDir: v(), hitImpact: 0, dodgeCool: 0,
     heldLimb: null, limbSwingAng: 0,
+    wallRunTimer: 0, wallSide: 0, gunCooldown: 0, muzzleFlash: 0,
   };
 }
 
@@ -168,7 +180,6 @@ function poseRagdoll(f: Fighter) {
   const legSwing = Math.sin(wk) * 12 * S;
   const legBend = Math.abs(Math.sin(wk)) * 6 * S;
 
-  // Leg IK: hips stay fixed, knees bend naturally, feet stay on ground
   const lHipX = -9 * s * S, rHipX = 9 * s * S;
   const hipY = -33 * S + jmp;
   const footY = -1;
@@ -198,6 +209,74 @@ function poseRagdoll(f: Fighter) {
     for (let i = 0; i < targets.length; i++) { targets[i].y += Math.sin(roll) * 20; targets[i].x += Math.cos(roll) * 5 * s; }
   }
 
+  // Wall run pose: body against wall, legs running upward
+  if (f.state === 'wallRun') {
+    const ws = f.wallSide; // -1 = left wall, 1 = right wall
+    const runCycle = f.walkCycle * 2;
+    const legA = Math.sin(runCycle) * 25;
+    const legB = Math.cos(runCycle) * 25;
+    // Lean body toward wall
+    for (let i = 0; i < 5; i++) targets[i].x += ws * 15;
+    // Arms reach out
+    targets[6] = v((-28 - 10) * s * S, (-64 - 20) * S);
+    targets[7] = v((-35 - 15) * s * S, (-46 - 25) * S);
+    targets[9] = v((28 + 10) * s * S, (-64 - 20) * S);
+    targets[10] = v((35 + 15) * s * S, (-46 - 25) * S);
+    // Legs run vertically
+    targets[12] = v(lKneeX + ws * 8, -20 + legA);
+    targets[13] = v(lFootX + ws * 12, -5 + legA * 1.5);
+    targets[15] = v(rKneeX + ws * 8, -20 + legB);
+    targets[16] = v(rFootX + ws * 12, -5 + legB * 1.5);
+  }
+
+  // Wall flip: spectacular aerial flip off the wall
+  if (f.state === 'wallFlip') {
+    const flipAng = ap * Math.PI * 2.5;
+    const flipH = Math.sin(ap * Math.PI) * 100;
+    const flipX = f.facing * ap * 80;
+    for (let i = 0; i < targets.length; i++) {
+      const cx = 0, cy = -60 * S;
+      const dx2 = targets[i].x - cx, dy2 = targets[i].y - cy;
+      targets[i].x = cx + dx2 * Math.cos(flipAng) - dy2 * Math.sin(flipAng) + flipX;
+      targets[i].y = cy + dx2 * Math.sin(flipAng) + dy2 * Math.cos(flipAng) - flipH;
+    }
+    // Extend legs for kick at peak
+    if (ap > 0.25 && ap < 0.65) {
+      targets[16] = v(f.facing * 60 * S, -90 * S - flipH * 0.5);
+      targets[15] = v(f.facing * 40 * S, -70 * S - flipH * 0.5);
+    }
+  }
+
+  // Divekick: plummet down at angle with extended leg
+  if (f.state === 'divekick') {
+    const diveAng = ap * Math.PI * 0.5;
+    // Tuck body
+    for (let i = 0; i < 5; i++) {
+      targets[i].x += f.facing * 20 * ap;
+      targets[i].y -= 10;
+    }
+    // Extend lead leg downward-forward
+    targets[15] = v(f.facing * 50 * S, 10 + 30 * ap);
+    targets[16] = v(f.facing * 65 * S, 20 + 40 * ap);
+    // Tuck other leg
+    targets[12] = v(-f.facing * 5 * S, -40 * S);
+    targets[13] = v(-f.facing * 10 * S, -25 * S);
+    // Arms back
+    targets[6] = v(-f.facing * 30 * S, (-64 - 10 * Math.sin(diveAng)) * S);
+    targets[9] = v(f.facing * 10 * S, (-64 + 5 * Math.sin(diveAng)) * S);
+  }
+
+  // Shoot pose: aim pistol with left hand
+  if (f.state === 'shoot') {
+    // Left arm extends to aim
+    targets[6] = v((-28 + 25 * s) * S, (-70) * S + bob2);
+    targets[7] = v((-35 + 55 * s) * S, (-65) * S + bob2);
+    // Recoil effect
+    if (ap > 0.2 && ap < 0.5) {
+      targets[7] = vadd(targets[7], v(-s * 8, -5));
+    }
+  }
+
   if (['slash', 'heavySlash', 'stab', 'overhead', 'jumpAtk', 'uppercut', 'spinSlash', 'dashStab', 'limbSmash', 'backflipKick', 'execution'].includes(f.state)) {
     const reach = ap < 0.3 ? -15 : ap < 0.6 ? 28 : 10;
     const lift = ap < 0.3 ? -25 : ap < 0.6 ? 5 : -5;
@@ -224,7 +303,6 @@ function poseRagdoll(f: Fighter) {
       targets[6] = v((-28 + limbReach) * s * S, (-64 + limbLift) * S + bob2 + co + jmp);
       targets[7] = v((-35 + limbReach * 1.3) * s * S, (-46 + limbLift) * S + bob2 + co + jmp);
     }
-    // Backflip kick: full body rotation in air
     if (f.state === 'backflipKick') {
       const flipAng = ap * Math.PI * 2;
       const flipH = Math.sin(flipAng) * 70;
@@ -240,7 +318,6 @@ function poseRagdoll(f: Fighter) {
         targets[15] = v(s * 35 * S, -70 * S + flipH);
       }
     }
-    // Execution: repeated ground slams
     if (f.state === 'execution') {
       const subAp = (ap * 5) % 1;
       const slamDown = subAp < 0.4 ? -40 + subAp * 100 : subAp < 0.6 ? 0 : -20;
@@ -254,7 +331,7 @@ function poseRagdoll(f: Fighter) {
   if (f.state === 'pickup') {
     targets[6] = v(-10 * s, -20 + bob2); targets[7] = v(-5 * s, 0);
     targets[9] = v(10 * s, -20 + bob2); targets[10] = v(5 * s, 0);
-    targets[0] = v(0, -85 + bob2 + co); // bow head
+    targets[0] = v(0, -85 + bob2 + co);
   }
 
   if (f.state === 'block') {
@@ -274,7 +351,6 @@ function poseRagdoll(f: Fighter) {
   const blend = f.ragdolling ? 0 : 0.45;
   for (let i = 0; i < r.pts.length && i < targets.length; i++) {
     const target = vadd(v(f.x, f.y), targets[i]);
-    // Legs get stronger blend for snappier IK
     const b = (i >= 11) ? Math.min(blend * 1.4, 0.6) : blend;
     r.pts[i].pos = vlerp(r.pts[i].pos, target, b);
     if (!f.ragdolling) r.pts[i].old = vlerp(r.pts[i].old, target, b * 0.85);
@@ -299,7 +375,10 @@ const RagdollArena = () => {
     afterimages: [] as Afterimage[],
     rings: [] as ImpactRing[],
     lightnings: [] as Lightning[],
-    shake: 0, slowMo: 1, slowTimer: 0,
+    bullets: [] as Bullet[],
+    muzzleFlashes: [] as MuzzleFlash[],
+    wallSparks: [] as WallSpark[],
+    slowMo: 1, slowTimer: 0,
     flash: 0, flashColor: '#fff',
     round: 1, timer: 99 * 60,
     rs: 'intro' as 'intro' | 'fight' | 'ko',
@@ -373,6 +452,41 @@ const RagdollArena = () => {
     G.current.afterimages.push({ x: f.x, y: f.y, pts, alpha: 0.4, color: f.color });
   }, []);
 
+  const spawnBullet = useCallback((f: Fighter, idx: number) => {
+    const g = G.current;
+    const hand = f.rag.pts[7].pos;
+    const ang = Math.atan2(g.fighters[1 - idx].y - 60 - hand.y, g.fighters[1 - idx].x - hand.x) + rng(-0.1, 0.1);
+    const speed = 22;
+    g.bullets.push({
+      x: hand.x, y: hand.y,
+      vx: Math.cos(ang) * speed, vy: Math.sin(ang) * speed,
+      life: 40, owner: idx, dmg: 8 + rng(0, 5),
+      trail: [{ x: hand.x, y: hand.y }],
+    });
+    g.muzzleFlashes.push({ x: hand.x + Math.cos(ang) * 15, y: hand.y + Math.sin(ang) * 15, ang, life: 4 });
+    // Muzzle sparks
+    for (let i = 0; i < 6; i++) {
+      g.sparks.push({
+        x: hand.x, y: hand.y,
+        vx: Math.cos(ang + rng(-0.5, 0.5)) * rng(3, 10),
+        vy: Math.sin(ang + rng(-0.5, 0.5)) * rng(3, 10),
+        life: 5 + rng(0, 8), color: pick(['#ff8', '#ffa', '#fa0']), sz: 1 + rng(0, 2),
+      });
+    }
+    f.muzzleFlash = 4;
+  }, []);
+
+  const spawnWallSparks = useCallback((x: number, y: number, count: number, dir: number) => {
+    const g = G.current;
+    for (let i = 0; i < count; i++) {
+      g.wallSparks.push({
+        x, y: y + rng(-10, 10),
+        vx: dir * rng(2, 8), vy: rng(-4, 2),
+        life: 8 + rng(0, 10),
+      });
+    }
+  }, []);
+
   const sever = useCallback((f: Fighter, part: string, dir: number) => {
     if (f.severed.has(part)) return;
     f.severed.add(part);
@@ -394,7 +508,8 @@ const RagdollArena = () => {
     spawnGore(f.x, f.y - 55, 12, dir);
     spawnRing(f.x, f.y - 50, 80, '#a00');
     f.bleedTimer = 600;
-    g.shake = 30; g.slowMo = 0.1; g.slowTimer = 40;
+    // NO screen shake - just slow-mo and flash for dismemberments
+    g.slowMo = 0.1; g.slowTimer = 40;
     g.flash = 8; g.flashColor = '#600';
   }, [spawnBlood, spawnGore, spawnRing]);
 
@@ -414,6 +529,15 @@ const RagdollArena = () => {
     // Shadow
     ctx.fillStyle = 'rgba(0,0,0,0.25)';
     ctx.beginPath(); ctx.ellipse(p[4].pos.x, GY + 2, 30, 7, 0, 0, Math.PI * 2); ctx.fill();
+
+    // Wall run dust
+    if (f.state === 'wallRun') {
+      const wallX = f.wallSide < 0 ? WALL_L : WALL_R;
+      for (let i = 0; i < 3; i++) {
+        ctx.fillStyle = `rgba(150,130,100,${0.15 + rng(0, 0.1)})`;
+        ctx.beginPath(); ctx.arc(wallX + f.wallSide * rng(-5, 15), f.y + rng(-20, 10), rng(2, 6), 0, Math.PI * 2); ctx.fill();
+      }
+    }
 
     // Legs
     drawBone(4, 11, 8, f.color); drawBone(11, 12, 7, f.color); drawBone(12, 13, 6, f.color);
@@ -453,7 +577,41 @@ const RagdollArena = () => {
       }
     });
 
-    // ── WEAPON ──
+    // ── PISTOL (left hand) ──
+    if (!f.severed.has('leftArm')) {
+      const lhand = p[7].pos;
+      const g = G.current;
+      const oIdx = f === g.fighters[0] ? 1 : 0;
+      const other = g.fighters[oIdx];
+      const gunAng = Math.atan2(other.y - 60 - lhand.y, other.x - lhand.x);
+
+      // Draw pistol
+      ctx.save();
+      ctx.translate(lhand.x, lhand.y);
+      ctx.rotate(gunAng);
+      // Gun body
+      ctx.fillStyle = '#444';
+      ctx.fillRect(0, -3, 18, 6);
+      // Barrel
+      ctx.fillStyle = '#666';
+      ctx.fillRect(14, -2, 8, 4);
+      // Grip
+      ctx.fillStyle = '#332';
+      ctx.fillRect(2, 3, 6, 8);
+      // Muzzle flash
+      if (f.muzzleFlash > 0) {
+        const mfSize = f.muzzleFlash * 4;
+        const mfGrad = ctx.createRadialGradient(22, 0, 1, 22, 0, mfSize);
+        mfGrad.addColorStop(0, 'rgba(255,255,200,0.9)');
+        mfGrad.addColorStop(0.3, 'rgba(255,180,50,0.6)');
+        mfGrad.addColorStop(1, 'rgba(255,100,0,0)');
+        ctx.fillStyle = mfGrad;
+        ctx.beginPath(); ctx.arc(22, 0, mfSize, 0, Math.PI * 2); ctx.fill();
+      }
+      ctx.restore();
+    }
+
+    // ── WEAPON (right hand) ──
     if (!f.severed.has('rightArm')) {
       const hand = p[10].pos;
       const ang = f.wAngle * f.facing;
@@ -461,10 +619,9 @@ const RagdollArena = () => {
       const tipX = hand.x + Math.cos(ang) * wl;
       const tipY = hand.y + Math.sin(ang) * wl;
 
-      const isAtk = ['slash', 'heavySlash', 'overhead', 'stab', 'jumpAtk', 'uppercut', 'spinSlash', 'dashStab', 'limbSmash', 'backflipKick', 'execution'].includes(f.state);
+      const isAtk = ['slash', 'heavySlash', 'overhead', 'stab', 'jumpAtk', 'uppercut', 'spinSlash', 'dashStab', 'limbSmash', 'backflipKick', 'execution', 'wallFlip', 'divekick'].includes(f.state);
       const ap2 = f.dur > 0 ? f.frame / f.dur : 0;
       if (isAtk && ap2 > 0.2 && ap2 < 0.7) {
-        // Weapon trail glow
         ctx.strokeStyle = `rgba(255,255,255,${0.2 * (1 - Math.abs(ap2 - 0.45) * 4)})`;
         ctx.lineWidth = 18; ctx.beginPath(); ctx.moveTo(hand.x, hand.y); ctx.lineTo(tipX, tipY); ctx.stroke();
         ctx.strokeStyle = `rgba(200,200,255,0.12)`;
@@ -580,18 +737,35 @@ const RagdollArena = () => {
       if (!d || !ca(f) || f.stamina < d.stCost) return false;
       f.stamina -= d.stCost;
       ss(f, t as FState, Math.round(d.frames / f.weapon.speed));
-      // DashStab lunges forward
       if (t === 'dashStab') { f.vx = f.facing * 12; }
-      // Uppercut pops up
       if (t === 'uppercut') { f.vy = -6; f.grounded = false; }
       if (t === 'spinSlash') { f.vx = f.facing * 5; }
-      // Backflip kick: jump backwards while flipping
       if (t === 'backflipKick') { f.vy = -12; f.vx = -f.facing * 6; f.grounded = false; }
-      // Execution: lunge forward aggressively
       if (t === 'execution') { f.vx = f.facing * 8; }
+      if (t === 'wallFlip') { f.vy = -14; f.vx = f.facing * 10; f.grounded = false; f.wallSide = 0; f.wallRunTimer = 0; }
+      if (t === 'divekick') { f.vy = 8; f.vx = f.facing * 6; f.grounded = false; }
       spawnAfterimage(f);
       return true;
     };
+
+    const doShoot = (f: Fighter, idx: number) => {
+      if (f.gunCooldown > 0 || f.severed.has('leftArm') || f.stamina < 4) return false;
+      f.stamina -= 4;
+      f.gunCooldown = 18;
+      ss(f, 'shoot', 10);
+      spawnBullet(f, idx);
+      return true;
+    };
+
+    const startWallRun = (f: Fighter, side: -1 | 1) => {
+      if (f.wallRunTimer > 0 || f.state === 'wallRun') return;
+      f.state = 'wallRun' as FState;
+      f.wallSide = side;
+      f.wallRunTimer = 60; // max wall run frames
+      f.vy = -6;
+      f.grounded = false;
+    };
+
     const doDodge = (f: Fighter, dir: number) => {
       if (f.dodgeCool > 0 || f.stamina < 12) return;
       f.stamina -= 12; f.dodgeCool = 25; f.vx = dir * 10;
@@ -601,7 +775,6 @@ const RagdollArena = () => {
 
     const tryPickupLimb = (f: Fighter) => {
       if (f.heldLimb || !ca(f)) return false;
-      // Find closest grounded limb
       let best: SevLimb | null = null, bestD = 80;
       for (const l of g.limbs) {
         if (!l.grounded) continue;
@@ -620,7 +793,6 @@ const RagdollArena = () => {
     const doLimbSmash = (f: Fighter) => {
       if (!f.heldLimb || !ca(f) || f.stamina < 18) return false;
       f.stamina -= 18;
-      // Jump up for dramatic aerial limb smash
       f.vy = -9; f.grounded = false;
       ss(f, 'limbSmash' as FState, 36);
       spawnAfterimage(f);
@@ -647,18 +819,17 @@ const RagdollArena = () => {
         const imp = vscl(impulse, (1 - i * 0.05) * (0.7 + rng(0, 0.3)));
         pt.old = vsub(pt.pos, imp);
       }
-      // Drop held limb
       if (f.heldLimb) throwLimb(f);
     };
 
     // ═══════════════════════════════════════════════════════
     // AI
     // ═══════════════════════════════════════════════════════
-    type AIStyle = 'berserker' | 'assassin' | 'guardian' | 'wild' | 'tactician' | 'showboat' | 'juggernaut';
-    type AIIntent = 'pressure' | 'retreat' | 'circle' | 'feint' | 'punish' | 'bait' | 'rush' | 'rest' | 'jumpAtk' | 'dodgeIn' | 'taunt' | 'executeCombo' | 'pickupLimb' | 'limbAttack' | 'throwLimb';
+    type AIStyle = 'berserker' | 'assassin' | 'guardian' | 'wild' | 'tactician' | 'showboat' | 'juggernaut' | 'gunslinger' | 'acrobat';
+    type AIIntent = 'pressure' | 'retreat' | 'circle' | 'feint' | 'punish' | 'bait' | 'rush' | 'rest' | 'jumpAtk' | 'dodgeIn' | 'taunt' | 'executeCombo' | 'pickupLimb' | 'limbAttack' | 'throwLimb' | 'shoot' | 'wallRun' | 'wallFlipAtk' | 'divekickAtk' | 'airCombo';
 
     const mkPersonality = () => ({
-      style: pick(['berserker', 'assassin', 'guardian', 'wild', 'tactician', 'showboat', 'juggernaut'] as AIStyle[]),
+      style: pick(['berserker', 'assassin', 'guardian', 'wild', 'tactician', 'showboat', 'juggernaut', 'gunslinger', 'acrobat'] as AIStyle[]),
       aggression: 0.3 + rng(0, 0.7), patience: 0.1 + rng(0, 0.9), riskTaking: 0.2 + rng(0, 0.8),
       preferredAtk: pick(['slash', 'stab', 'heavySlash', 'overhead'] as const),
       comboChance: 0.3 + rng(0, 0.5), dodgeSkill: 0.2 + rng(0, 0.6), tauntsAfterKill: rng(0, 1) > 0.5,
@@ -681,35 +852,41 @@ const RagdollArena = () => {
       const hp = bot.hp / 100, plHp = pl.hp / 100, st = bot.stamina / 100;
       const r = Math.random();
 
-      // Check if limbs are on the ground nearby
       const nearbyLimb = g.limbs.some(l => l.grounded && Math.abs(l.pts[0].x - bot.x) < 120);
-      if (!bot.heldLimb && nearbyLimb && r < 0.35) return 'pickupLimb';
+      if (!bot.heldLimb && nearbyLimb && r < 0.25) return 'pickupLimb';
       if (bot.heldLimb && r < 0.3) return d < 100 ? 'limbAttack' : r < 0.15 ? 'throwLimb' : 'rush';
 
-      if (hp < 0.15) return r < 0.5 * p2.riskTaking ? 'rush' : r < 0.8 ? 'dodgeIn' : 'retreat';
-      if (plHp < 0.2) return r < 0.4 ? 'rush' : r < 0.6 ? 'executeCombo' : 'pressure';
-      // Try execution when opponent is very low
+      // Wall run / acrobatics
+      const nearWall = bot.x < WALL_L + 60 || bot.x > WALL_R - 60;
+      if (nearWall && r < 0.25 && st > 0.2) return 'wallRun';
+      if (!bot.grounded && r < 0.2) return 'divekickAtk';
+      if (d > 200 && r < 0.2) return 'shoot';
+      if (d > 150 && r < 0.15 && st > 0.15) return 'shoot';
+
+      if (hp < 0.15) return r < 0.5 * p2.riskTaking ? 'rush' : r < 0.7 ? 'wallRun' : r < 0.85 ? 'shoot' : 'retreat';
+      if (plHp < 0.2) return r < 0.3 ? 'rush' : r < 0.5 ? 'executeCombo' : r < 0.65 ? 'shoot' : 'pressure';
       if (plHp < 0.3 && d < 80 && r < 0.35) return 'executeCombo';
-      if (st < 0.15) return 'rest';
-      if (m.lastAtkLanded && r < 0.6) return r < 0.3 ? 'executeCombo' : 'pressure';
-      if (m.excitement > 5) return r < 0.4 ? 'rush' : r < 0.6 ? 'jumpAtk' : 'pressure';
+      if (st < 0.15) return r < 0.4 ? 'shoot' : 'rest';
+      if (m.lastAtkLanded && r < 0.6) return r < 0.2 ? 'shoot' : r < 0.4 ? 'executeCombo' : 'pressure';
+      if (m.excitement > 5) return r < 0.3 ? 'rush' : r < 0.45 ? 'jumpAtk' : r < 0.55 ? 'wallRun' : 'pressure';
 
       switch (p2.style) {
-        case 'berserker': return pick(['rush', 'pressure', 'pressure', 'executeCombo', 'jumpAtk']);
-        case 'assassin': return pick(['feint', 'dodgeIn', 'punish', 'circle', 'stab' as AIIntent]);
-        case 'guardian': return pick(['bait', 'circle', 'punish', 'retreat', 'pressure']);
-        case 'wild': return pick(['rush', 'pressure', 'feint', 'retreat', 'circle', 'punish', 'bait', 'jumpAtk', 'taunt', 'dodgeIn', 'executeCombo']);
+        case 'berserker': return pick(['rush', 'pressure', 'pressure', 'executeCombo', 'jumpAtk', 'wallRun']);
+        case 'assassin': return pick(['feint', 'dodgeIn', 'punish', 'circle', 'shoot', 'wallRun']);
+        case 'guardian': return pick(['bait', 'circle', 'punish', 'retreat', 'shoot', 'pressure']);
+        case 'wild': return pick(['rush', 'pressure', 'feint', 'retreat', 'circle', 'punish', 'bait', 'jumpAtk', 'taunt', 'dodgeIn', 'executeCombo', 'shoot', 'wallRun', 'divekickAtk']);
+        case 'gunslinger': return pick(['shoot', 'shoot', 'shoot', 'retreat', 'dodgeIn', 'wallRun', 'pressure']);
+        case 'acrobat': return pick(['wallRun', 'wallRun', 'backflipKick' as AIIntent, 'jumpAtk', 'divekickAtk', 'wallFlipAtk', 'pressure']);
         case 'tactician':
-          if (m.timesHit > 3) return 'retreat';
-          return d < 100 ? pick(['punish', 'circle', 'dodgeIn']) : pick(['pressure', 'feint', 'bait']);
-        case 'showboat': return r < 0.15 ? 'taunt' : pick(['feint', 'pressure', 'executeCombo', 'jumpAtk']);
-        case 'juggernaut': return pick(['pressure', 'pressure', 'rush', 'heavySlash' as AIIntent, 'overhead' as AIIntent]);
+          if (m.timesHit > 3) return r < 0.3 ? 'shoot' : 'retreat';
+          return d < 100 ? pick(['punish', 'circle', 'dodgeIn', 'shoot']) : pick(['pressure', 'feint', 'bait', 'shoot']);
+        case 'showboat': return r < 0.15 ? 'taunt' : pick(['feint', 'pressure', 'executeCombo', 'jumpAtk', 'wallRun', 'shoot']);
+        case 'juggernaut': return pick(['pressure', 'pressure', 'rush', 'heavySlash' as AIIntent, 'overhead' as AIIntent, 'shoot']);
         default: return 'pressure';
       }
     };
 
     const AI_COMBOS = [
-      // Long devastating combos with flips
       ['slash', 'slash', 'stab', 'slash', 'stab', 'stab', 'uppercut', 'jumpAtk', 'backflipKick', 'heavySlash'],
       ['stab', 'stab', 'slash', 'stab', 'slash', 'uppercut', 'backflipKick', 'spinSlash'],
       ['slash', 'stab', 'slash', 'stab', 'slash', 'stab', 'heavySlash'],
@@ -718,14 +895,18 @@ const RagdollArena = () => {
       ['stab', 'slash', 'stab', 'uppercut', 'backflipKick', 'jumpAtk'],
       ['dashStab', 'stab', 'stab', 'slash', 'slash', 'overhead'],
       ['spinSlash', 'stab', 'slash', 'stab', 'uppercut', 'backflipKick', 'heavySlash'],
-      // Execution combos (finish them!)
       ['uppercut', 'jumpAtk', 'backflipKick', 'execution'],
       ['dashStab', 'spinSlash', 'backflipKick', 'heavySlash'],
       ['slash', 'slash', 'dashStab', 'uppercut', 'backflipKick'],
       ['stab', 'stab', 'stab', 'stab', 'spinSlash', 'execution'],
-      // Pure flip combos
       ['backflipKick', 'dashStab', 'backflipKick', 'uppercut', 'jumpAtk'],
       ['uppercut', 'backflipKick', 'spinSlash', 'backflipKick', 'execution'],
+      // Wall flip combos
+      ['wallFlip', 'slash', 'slash', 'uppercut', 'backflipKick'],
+      ['dashStab', 'slash', 'wallFlip', 'heavySlash'],
+      // Divekick combos
+      ['divekick', 'stab', 'stab', 'spinSlash', 'uppercut'],
+      ['uppercut', 'divekick', 'slash', 'execution'],
     ];
 
     const ai = (bot: Fighter, pl: Fighter, idx: number) => {
@@ -739,18 +920,18 @@ const RagdollArena = () => {
 
       mem.styleShiftTimer--;
       if (mem.styleShiftTimer <= 0) {
-        pers.style = pick(['berserker', 'assassin', 'guardian', 'wild', 'tactician', 'showboat', 'juggernaut'] as AIStyle[]);
+        pers.style = pick(['berserker', 'assassin', 'guardian', 'wild', 'tactician', 'showboat', 'juggernaut', 'gunslinger', 'acrobat'] as AIStyle[]);
         pers.aggression = 0.3 + rng(0, 0.7); pers.riskTaking = 0.2 + rng(0, 0.8);
         pers.preferredAtk = pick(['slash', 'stab', 'heavySlash', 'overhead'] as const);
         mem.styleShiftTimer = 60 + rng(0, 200); mem.circleDir *= -1;
       }
 
       if (bot.aiTimer > 0) return;
-      if (bot.state === 'hit' || bot.state === 'stagger' || bot.state === 'pickup') return;
+      if (bot.state === 'hit' || bot.state === 'stagger' || bot.state === 'pickup' || bot.state === 'wallRun') return;
 
       const d = Math.abs(bot.x - pl.x);
       const wr = bot.weapon.len + 25;
-      const isPlAtk = ['slash', 'heavySlash', 'stab', 'overhead', 'jumpAtk', 'uppercut', 'spinSlash', 'dashStab', 'limbSmash'].includes(pl.state);
+      const isPlAtk = ['slash', 'heavySlash', 'stab', 'overhead', 'jumpAtk', 'uppercut', 'spinSlash', 'dashStab', 'limbSmash', 'shoot', 'wallFlip', 'divekick'].includes(pl.state);
       const isPlRecovering = pl.dur > 0 && pl.frame > pl.dur * 0.6;
       const st = bot.stamina / 100;
 
@@ -763,8 +944,9 @@ const RagdollArena = () => {
       // Reactive layer
       if (isPlAtk && d < 120) {
         const r = Math.random();
-        if (r < 0.12) { ss(bot, 'block'); bot.aiTimer = 4 + rng(0, 5) | 0; mem.consecutiveBlocks++; if (mem.consecutiveBlocks >= 2) { mem.intent = 'punish'; mem.intentTimer = 12; mem.consecutiveBlocks = 0; } return; }
-        else if (r < 0.22 && bot.dodgeCool <= 0 && bot.stamina > 12) { doDodge(bot, -bot.facing); bot.aiTimer = 3; mem.intent = 'punish'; mem.intentTimer = 10; return; }
+        if (r < 0.08) { ss(bot, 'block'); bot.aiTimer = 4 + rng(0, 5) | 0; mem.consecutiveBlocks++; if (mem.consecutiveBlocks >= 2) { mem.intent = 'punish'; mem.intentTimer = 12; mem.consecutiveBlocks = 0; } return; }
+        else if (r < 0.14 && bot.dodgeCool <= 0 && bot.stamina > 12) { doDodge(bot, -bot.facing); bot.aiTimer = 3; mem.intent = 'punish'; mem.intentTimer = 10; return; }
+        else if (r < 0.25) { doShoot(bot, idx); bot.aiTimer = 2; return; }
         else if (r < 0.7 && ca(bot) && st > 0.06) {
           if (bot.heldLimb && rng(0, 1) < 0.5) { doLimbSmash(bot); } else { doAtk(bot, pick(['slash', 'stab', 'uppercut', 'dashStab', 'spinSlash'])); }
           bot.aiTimer = 0; mem.intent = 'executeCombo'; mem.comboSeq = [...pick(AI_COMBOS)]; return;
@@ -778,8 +960,83 @@ const RagdollArena = () => {
       }
 
       switch (mem.intent) {
+        case 'shoot': {
+          if (d < 60) { mem.intent = 'pressure'; mem.intentTimer = 5; break; }
+          if (ca(bot) || bot.state === 'walk' || bot.state === 'walkBack') {
+            doShoot(bot, idx);
+            bot.aiTimer = 6 + rng(0, 10) | 0;
+            // Move while shooting
+            if (d < 150) { bot.vx = -bot.facing * 4; }
+            else if (d > 300) { bot.vx = bot.facing * 3; }
+            if (rng(0, 1) < 0.4) { mem.intent = 'pressure'; mem.intentTimer = 10; }
+          }
+          break;
+        }
+        case 'wallRun': {
+          // Run toward nearest wall
+          const nearLeft = bot.x < W / 2;
+          const wallDir = nearLeft ? -1 : 1;
+          const wallX = nearLeft ? WALL_L : WALL_R;
+          const wallDist = Math.abs(bot.x - wallX);
+          if (wallDist > 30) {
+            bot.vx = -wallDir * 5;
+            ss(bot, 'walk'); bot.aiTimer = 1;
+          } else if (bot.grounded) {
+            // Start wall run!
+            startWallRun(bot, nearLeft ? -1 : 1);
+            bot.aiTimer = 8;
+          } else {
+            mem.intent = 'pressure'; mem.intentTimer = 10;
+          }
+          break;
+        }
+        case 'wallFlipAtk': {
+          // Run to wall then flip off
+          const nearLeft2 = bot.x < W / 2;
+          const wallX2 = nearLeft2 ? WALL_L : WALL_R;
+          const wallDist2 = Math.abs(bot.x - wallX2);
+          if (wallDist2 > 30 && bot.grounded) {
+            bot.vx = nearLeft2 ? -5 : 5; ss(bot, 'walk'); bot.aiTimer = 1;
+          } else if (bot.grounded) {
+            startWallRun(bot, nearLeft2 ? -1 : 1);
+            bot.aiTimer = 5;
+          } else if (bot.state === 'wallRun') {
+            // Flip off wall with attack
+            doAtk(bot, 'wallFlip');
+            bot.aiTimer = 2;
+            mem.intent = 'executeCombo'; mem.comboSeq = [...pick(AI_COMBOS)]; mem.intentTimer = 20;
+          } else {
+            mem.intent = 'pressure'; mem.intentTimer = 8;
+          }
+          break;
+        }
+        case 'divekickAtk': {
+          if (bot.grounded) {
+            // Jump first
+            bot.vy = -12; bot.grounded = false; bot.vx = bot.facing * 5;
+            ss(bot, 'jump'); bot.aiTimer = 6;
+            mem.intent = 'divekickAtk'; mem.intentTimer = 15;
+          } else if (!bot.grounded && bot.y < GY - 50) {
+            doAtk(bot, 'divekick');
+            bot.aiTimer = 2;
+            mem.intent = 'pressure'; mem.intentTimer = 15;
+          } else {
+            mem.intent = 'pressure'; mem.intentTimer = 10;
+          }
+          break;
+        }
+        case 'airCombo': {
+          if (bot.grounded) {
+            bot.vy = -11; bot.grounded = false; bot.vx = bot.facing * 8;
+            ss(bot, 'jump'); bot.aiTimer = 4;
+          } else {
+            doAtk(bot, pick(['jumpAtk', 'divekick', 'backflipKick']));
+            bot.aiTimer = 0;
+            mem.intent = 'executeCombo'; mem.comboSeq = [...pick(AI_COMBOS)]; mem.intentTimer = 20;
+          }
+          break;
+        }
         case 'pickupLimb': {
-          // Walk toward nearest grounded limb
           const nearest = g.limbs.filter(l => l.grounded).sort((a, b) => Math.abs(a.pts[0].x - bot.x) - Math.abs(b.pts[0].x - bot.x))[0];
           if (nearest) {
             const ld = nearest.pts[0].x - bot.x;
@@ -799,7 +1056,6 @@ const RagdollArena = () => {
         case 'limbAttack': {
           if (d > 80) { ss(bot, 'walk'); bot.vx += bot.facing * 4; bot.aiTimer = 1 + rng(0, 2) | 0; }
           else if (ca(bot)) {
-            // Jump in the air and smash with the limb!
             doLimbSmash(bot);
             bot.aiTimer = 2 + rng(0, 4) | 0;
             mem.intent = rng(0, 1) < 0.5 ? 'pressure' : 'taunt'; mem.intentTimer = 15;
@@ -817,20 +1073,24 @@ const RagdollArena = () => {
           if (d > wr + 15) {
             ss(bot, 'walk'); bot.aiTimer = 1;
             if (d > 100 && rng(0, 1) < 0.6 && mem.dashCooldown <= 0) { bot.vx = bot.facing * (10 + rng(0, 6)); mem.dashCooldown = 8; }
+            // Shoot while closing distance
+            if (d > 150 && rng(0, 1) < 0.3) { doShoot(bot, idx); }
           } else if (ca(bot) && st > 0.06) {
             const r = Math.random();
-            if (bot.heldLimb && r < 0.25) doLimbSmash(bot);
-            else if (r < 0.2) doAtk(bot, 'slash');
-            else if (r < 0.35) doAtk(bot, 'stab');
-            else if (r < 0.45) doAtk(bot, 'dashStab');
-            else if (r < 0.55) doAtk(bot, 'uppercut');
-            else if (r < 0.65) doAtk(bot, 'spinSlash');
-            else if (r < 0.75 && bot.stamina > 18) doAtk(bot, 'heavySlash');
-            else if (r < 0.85 && bot.stamina > 16) doAtk(bot, 'overhead');
+            if (bot.heldLimb && r < 0.2) doLimbSmash(bot);
+            else if (r < 0.15) doAtk(bot, 'slash');
+            else if (r < 0.28) doAtk(bot, 'stab');
+            else if (r < 0.36) doAtk(bot, 'dashStab');
+            else if (r < 0.44) doAtk(bot, 'uppercut');
+            else if (r < 0.52) doAtk(bot, 'spinSlash');
+            else if (r < 0.60 && bot.stamina > 18) doAtk(bot, 'heavySlash');
+            else if (r < 0.67 && bot.stamina > 16) doAtk(bot, 'overhead');
+            else if (r < 0.72) { doShoot(bot, idx); }
+            else if (r < 0.78) doAtk(bot, 'backflipKick');
             else doAtk(bot, pers.preferredAtk);
-            bot.aiTimer = 1; // Near instant follow-up
+            bot.aiTimer = 1;
             mem.comboStep++;
-            if (mem.comboStep < 8 && rng(0, 1) < 0.85) bot.aiTimer = 0; // CHAIN ATTACKS
+            if (mem.comboStep < 8 && rng(0, 1) < 0.85) bot.aiTimer = 0;
             else mem.comboStep = 0;
           } else { ss(bot, 'walk'); bot.aiTimer = 1; }
           break;
@@ -840,14 +1100,23 @@ const RagdollArena = () => {
           if (d > wr + 10) { ss(bot, 'walk'); bot.vx += bot.facing * 6; bot.aiTimer = 1; }
           else if (ca(bot) && mem.comboSeq.length > 0) {
             const next = mem.comboSeq.shift()!;
-            if (doAtk(bot, next)) { bot.aiTimer = 0; } // INSTANT chain for combos
+            if (next === 'wallFlip' || next === 'divekick') {
+              // These need special setup
+              if (next === 'wallFlip') { mem.intent = 'wallFlipAtk'; mem.intentTimer = 20; }
+              else { mem.intent = 'divekickAtk'; mem.intentTimer = 15; }
+            } else if (doAtk(bot, next)) { bot.aiTimer = 0; }
             else { mem.comboSeq = []; mem.intent = 'retreat'; mem.intentTimer = 10; }
             if (mem.comboSeq.length === 0) { mem.intent = rng(0, 1) < 0.7 ? 'pressure' : 'taunt'; mem.intentTimer = 8; }
           }
           break;
         }
         case 'retreat': {
-          if (d < 160) { ss(bot, 'walkBack'); bot.aiTimer = 2 + rng(0, 4) | 0; if (rng(0, 1) < 0.3 && mem.dashCooldown <= 0) { bot.vx = -bot.facing * 8; mem.dashCooldown = 10; } }
+          if (d < 160) {
+            ss(bot, 'walkBack'); bot.aiTimer = 2 + rng(0, 4) | 0;
+            if (rng(0, 1) < 0.3 && mem.dashCooldown <= 0) { bot.vx = -bot.facing * 8; mem.dashCooldown = 10; }
+            // Shoot while retreating
+            if (rng(0, 1) < 0.35) { doShoot(bot, idx); }
+          }
           else { mem.intent = rng(0, 1) < 0.6 ? 'pressure' : 'circle'; mem.intentTimer = 15 + rng(0, 20); }
           if (d < wr && ca(bot) && rng(0, 1) < 0.45) { doAtk(bot, rng(0, 1) < 0.5 ? 'stab' : 'slash'); bot.aiTimer = 2; }
           break;
@@ -859,6 +1128,7 @@ const RagdollArena = () => {
           else ss(bot, rng(0, 1) > 0.5 ? 'walk' : 'walkBack');
           bot.aiTimer = 2 + rng(0, 5) | 0;
           if (rng(0, 1) < 0.15) mem.circleDir *= -1;
+          if (rng(0, 1) < 0.2) doShoot(bot, idx);
           if (d < wr + 5 && rng(0, 1) < 0.45 * pers.aggression && ca(bot)) { doAtk(bot, pick(['slash', 'stab', 'heavySlash', 'overhead'])); bot.aiTimer = 2 + rng(0, 3) | 0; }
           break;
         }
@@ -880,7 +1150,7 @@ const RagdollArena = () => {
           break;
         }
         case 'bait': {
-          if (d < 100) { ss(bot, 'walkBack'); bot.aiTimer = 2 + rng(0, 3) | 0; }
+          if (d < 100) { ss(bot, 'walkBack'); bot.aiTimer = 2 + rng(0, 3) | 0; if (rng(0, 1) < 0.2) doShoot(bot, idx); }
           else if (d < 200) { ss(bot, 'idle'); bot.aiTimer = 3 + rng(0, 6) | 0; }
           else { mem.intent = 'pressure'; mem.intentTimer = 15; }
           if (isPlAtk && d < wr + 20 && ca(bot)) { doAtk(bot, 'stab'); bot.aiTimer = 1; mem.intent = 'executeCombo'; }
@@ -888,7 +1158,10 @@ const RagdollArena = () => {
         }
         case 'rush': {
           mem.rushMomentum += 2;
-          if (d > wr) { ss(bot, 'walk'); bot.vx += bot.facing * (8 + Math.min(mem.rushMomentum * 0.8, 12)); bot.aiTimer = 0; }
+          if (d > wr) {
+            ss(bot, 'walk'); bot.vx += bot.facing * (8 + Math.min(mem.rushMomentum * 0.8, 12)); bot.aiTimer = 0;
+            if (d > 200 && rng(0, 1) < 0.3) doShoot(bot, idx);
+          }
           else if (ca(bot)) {
             doAtk(bot, pick(['dashStab', 'slash', 'slash', 'uppercut', 'spinSlash', 'stab', 'backflipKick']));
             bot.aiTimer = 0; mem.comboStep = 1;
@@ -897,7 +1170,7 @@ const RagdollArena = () => {
           break;
         }
         case 'rest': {
-          if (d < 120) { ss(bot, 'walkBack'); bot.aiTimer = 3; }
+          if (d < 120) { ss(bot, 'walkBack'); bot.aiTimer = 3; if (rng(0, 1) < 0.3) doShoot(bot, idx); }
           else { ss(bot, 'idle'); bot.aiTimer = 5 + rng(0, 10) | 0; }
           if (bot.stamina > 50) { mem.intent = 'pressure'; mem.intentTimer = 15; }
           break;
@@ -907,7 +1180,7 @@ const RagdollArena = () => {
           else if (bot.grounded && ca(bot)) {
             bot.vy = -11; bot.grounded = false; bot.vx = bot.facing * 7;
             ss(bot, 'jump'); bot.aiTimer = 4;
-            setTimeout(() => { if (bot.state === 'jump') doAtk(bot, 'jumpAtk'); }, 100);
+            setTimeout(() => { if (bot.state === 'jump') doAtk(bot, pick(['jumpAtk', 'divekick'])); }, 100);
             mem.intent = 'pressure'; mem.intentTimer = 15;
           }
           break;
@@ -943,7 +1216,6 @@ const RagdollArena = () => {
         g.introTimer -= spd;
         if (g.introTimer <= 0) g.rs = 'fight';
         p1.facing = 1; p2.facing = -1;
-        // Walk toward center
         if (p1.x < 450) { p1.x += 2; ss(p1, 'walk'); }
         if (p2.x > 830) { p2.x -= 2; ss(p2, 'walk'); }
       }
@@ -959,7 +1231,7 @@ const RagdollArena = () => {
           f1.wins = p1.wins; f2.wins = p2.wins;
           g.fighters[0] = f1; g.fighters[1] = f2;
           g.blood = []; g.limbs = []; g.pools = []; g.sparks = []; g.gore = [];
-          g.afterimages = []; g.rings = []; g.lightnings = [];
+          g.afterimages = []; g.rings = []; g.lightnings = []; g.bullets = []; g.muzzleFlashes = []; g.wallSparks = [];
           g.rs = 'intro'; g.introTimer = 80; g.timer = 99 * 60;
           aiData[0] = { personality: mkPersonality(), mem: mkAiMem() };
           aiData[1] = { personality: mkPersonality(), mem: mkAiMem() };
@@ -989,11 +1261,24 @@ const RagdollArena = () => {
         else if (g.keys.has('i')) { doLimbSmash(p1); p1HasInput = true; }
         else if (g.keys.has('o')) { tryPickupLimb(p1); p1HasInput = true; }
         else if (g.keys.has('p')) { throwLimb(p1); p1HasInput = true; }
+        else if (g.keys.has('f')) { doShoot(p1, 0); p1HasInput = true; }
+        else if (g.keys.has('r')) { doAtk(p1, 'backflipKick'); p1HasInput = true; }
+        else if (g.keys.has('t')) { doAtk(p1, 'divekick'); p1HasInput = true; }
         else if (g.keys.has('s') && g.keys.has('shift')) { ss(p1, 'block'); p1HasInput = true; }
         else if (g.keys.has('s')) { ss(p1, 'crouch'); p1HasInput = true; }
         else if (g.keys.has('w') && p1.grounded) { p1.vy = -11; p1.grounded = false; ss(p1, 'jump'); p1HasInput = true; }
         else if (g.keys.has('a')) { p1.vx = -3.5; if (p1.grounded) ss(p1, p1.facing === -1 ? 'walk' : 'walkBack'); p1HasInput = true; }
         else if (g.keys.has('d')) { p1.vx = 3.5; if (p1.grounded) ss(p1, p1.facing === 1 ? 'walk' : 'walkBack'); p1HasInput = true; }
+      }
+      // Wall run input: press toward wall while near it
+      if (!p1HasInput && !p1.grounded) {
+        if (g.keys.has('a') && p1.x < WALL_L + 40) { startWallRun(p1, -1); p1HasInput = true; }
+        if (g.keys.has('d') && p1.x > WALL_R - 40) { startWallRun(p1, 1); p1HasInput = true; }
+      }
+      // Wall run jump off
+      if (p1.state === 'wallRun' && g.keys.has('w')) {
+        doAtk(p1, 'wallFlip');
+        p1HasInput = true;
       }
 
       if (!p1HasInput) ai(p1, p2, 0);
@@ -1016,16 +1301,55 @@ const RagdollArena = () => {
 
         if (ca(f) || f.state === 'block') f.stamina = Math.min(100, f.stamina + 0.35);
         f.dodgeCool = Math.max(0, f.dodgeCool - spd);
+        if (f.gunCooldown > 0) f.gunCooldown -= spd;
+        if (f.muzzleFlash > 0) f.muzzleFlash -= spd;
 
-        if (!f.grounded) {
+        // Wall run physics
+        if (f.state === 'wallRun') {
+          f.wallRunTimer -= spd;
+          f.vy = -4.5; // Run upward
+          f.y += f.vy * spd;
+          f.walkCycle += 0.25 * spd;
+          // Clamp to wall
+          if (f.wallSide < 0) f.x = WALL_L + 5;
+          else f.x = WALL_R - 5;
+          // Wall sparks
+          if (fc % 4 === 0) spawnWallSparks(f.x, f.y - 30, 3, -f.wallSide);
+          // Can't go above certain height or timer expires
+          if (f.y < 120 || f.wallRunTimer <= 0) {
+            // Auto wall flip!
+            f.facing = -f.wallSide as 1 | -1;
+            doAtk(f, 'wallFlip');
+          }
+          // Afterimage during wall run
+          if (fc % 3 === 0) spawnAfterimage(f);
+        }
+
+        if (!f.grounded && f.state !== 'wallRun') {
           f.vy += GRAV * spd; f.y += f.vy * spd;
-          if (f.y >= GY) { f.y = GY; f.vy = 0; f.grounded = true; if (f.state === 'jump') ss(f, 'idle'); }
+          if (f.y >= GY) {
+            f.y = GY; f.vy = 0; f.grounded = true;
+            if (f.state === 'jump') ss(f, 'idle');
+            if (f.state === 'divekick') {
+              // Ground slam impact
+              spawnRing(f.x, GY, 60, '#fa0');
+              for (let i = 0; i < 8; i++) {
+                g.sparks.push({ x: f.x + rng(-20, 20), y: GY, vx: rng(-6, 6), vy: -rng(3, 10), life: 10 + rng(0, 8), color: '#fa0', sz: 1.5 + rng(0, 2) });
+              }
+            }
+          }
+        }
+
+        // Auto wall run for AI: when touching walls while airborne
+        if (f.isAI && !f.grounded && f.state !== 'wallRun' && f.state !== 'wallFlip') {
+          if (f.x <= WALL_L + 10 && rng(0, 1) < 0.4) startWallRun(f, -1);
+          else if (f.x >= WALL_R - 10 && rng(0, 1) < 0.4) startWallRun(f, 1);
         }
 
         f.x += f.vx * spd; f.vx *= 0.86;
         if (f.state === 'walk') { f.x += f.facing * 3.2 * spd; f.walkCycle += 0.14 * spd; }
         else if (f.state === 'walkBack') { f.x -= f.facing * 2.2 * spd; f.walkCycle += 0.1 * spd; }
-        f.x = clamp(f.x, 50, W - 50);
+        f.x = clamp(f.x, WALL_L, WALL_R);
         f.bob += 0.04 * spd;
         if (f.hitImpact > 0) f.hitImpact *= 0.84;
 
@@ -1046,71 +1370,118 @@ const RagdollArena = () => {
         else if (f.state === 'uppercut') f.wTarget = ap2 < 0.3 ? -1.0 : ap2 < 0.5 ? -2.8 : -0.5;
         else if (f.state === 'spinSlash') { const spin = ap2 * Math.PI * 2; f.wTarget = Math.sin(spin) * 2.5; }
         else if (f.state === 'dashStab') f.wTarget = ap2 < 0.2 ? -0.2 : ap2 < 0.7 ? 0.1 : -0.3;
-        else if (f.state === 'limbSmash') f.wTarget = ap2 < 0.3 ? -2.0 : ap2 < 0.55 ? 1.8 : 0.2;
-        else if (f.state === 'backflipKick') f.wTarget = ap2 < 0.3 ? -1.5 : ap2 < 0.6 ? 2.0 : 0.5;
-        else if (f.state === 'execution') { const subP = (ap2 * 5) % 1; f.wTarget = subP < 0.4 ? -2.5 : subP < 0.6 ? 2.5 : -0.5; }
-        else f.wTarget = f.state === 'block' ? -1.3 : -0.5;
+        else if (f.state === 'backflipKick') f.wTarget = -1.5 + Math.sin(ap2 * Math.PI * 2) * 1.5;
+        else if (f.state === 'execution') { const subAp = (ap2 * 5) % 1; f.wTarget = subAp < 0.4 ? -2.5 : subAp < 0.6 ? 2.5 : 0; }
+        else if (f.state === 'wallFlip') f.wTarget = Math.sin(ap2 * Math.PI * 2.5) * 2.5;
+        else if (f.state === 'divekick') f.wTarget = 1.0;
+        else if (f.state === 'block') f.wTarget = -1.2;
+        else if (f.state === 'shoot') f.wTarget = -0.5;
+        else f.wTarget = -0.5;
         f.wAngle += (f.wTarget - f.wAngle) * 0.38;
 
-        // Bleed from stumps
+        if (f.state === 'dodge') f.vx = (f.facing === 1 ? -1 : 1) * 8 * (1 - ap2);
+
         if (f.bleedTimer > 0) {
-          f.bleedTimer -= spd; f.hp -= 0.025 * spd;
-          if (fc % 3 === 0) {
-            for (const part of f.severed) {
-              const idx2 = part === 'leftArm' ? 5 : part === 'rightArm' ? 8 : part === 'leftLeg' ? 11 : part === 'rightLeg' ? 14 : 1;
-              if (f.rag.pts[idx2]) spawnBlood(f.rag.pts[idx2].pos.x, f.rag.pts[idx2].pos.y, rng(-1.5, 1.5), 5, 3);
+          f.bleedTimer -= spd;
+          f.severed.forEach(part => {
+            const pidx = part === 'leftArm' ? 5 : part === 'rightArm' ? 8 : part === 'leftLeg' ? 11 : part === 'rightLeg' ? 14 : 1;
+            if (fc % 4 === 0 && f.rag.pts[pidx]) {
+              spawnBlood(f.rag.pts[pidx].pos.x, f.rag.pts[pidx].pos.y, rng(-1, 1), 4, 2.5);
+            }
+          });
+        }
+        if (f.comboTimer > 0) { f.comboTimer -= spd; if (f.comboTimer <= 0) f.combo = 0; }
+
+        stepRagdoll(f.rag.pts, f.rag.sticks, spd, 0.3);
+        if (!f.ragdolling) poseRagdoll(f);
+
+        // Afterimages during attacks
+        if (['slash', 'heavySlash', 'stab', 'overhead', 'jumpAtk', 'uppercut', 'spinSlash', 'dashStab', 'backflipKick', 'execution', 'wallFlip', 'divekick'].includes(f.state) && fc % 3 === 0) {
+          spawnAfterimage(f);
+        }
+      });
+
+      // ─── BULLET PHYSICS ──────────────────────────────
+      g.bullets = g.bullets.filter(b => {
+        b.x += b.vx * spd;
+        b.y += b.vy * spd;
+        b.vy += 0.05 * spd; // very slight drop
+        b.trail.push({ x: b.x, y: b.y });
+        if (b.trail.length > 8) b.trail.shift();
+        b.life -= spd;
+
+        // Hit detection against fighters
+        const target = g.fighters[1 - b.owner];
+        if (target.state !== 'ko' && target.state !== 'dodge') {
+          for (let i = 0; i < target.rag.pts.length; i++) {
+            const tp = target.rag.pts[i].pos;
+            const dd = vlen(vsub(v(b.x, b.y), tp));
+            if (dd < 25) {
+              // Bullet hit!
+              const hitDir = vnorm(v(b.vx, b.vy));
+              target.hp = Math.max(0, target.hp - b.dmg);
+              target.vx += hitDir.x * 4;
+              target.vy += hitDir.y * 2;
+              target.hitDir = hitDir;
+              target.hitImpact = b.dmg * 0.5;
+              spawnBlood(b.x, b.y, hitDir.x > 0 ? 1 : -1, 25, 3);
+              spawnSparks(b.x, b.y, 8);
+              spawnRing(b.x, b.y, 30, '#fa0');
+              if (b.dmg >= 10) {
+                ss(target, 'hit', 12);
+              }
+              // KO from bullet
+              if (target.hp <= 0) {
+                const shooter = g.fighters[b.owner];
+                ss(target, 'ko');
+                startRagdoll(target, vscl(hitDir, 18), 999);
+                shooter.wins++; g.rs = 'ko'; g.koTimer = 280;
+                g.slowMo = 0.05; g.slowTimer = 55;
+                g.flash = 15; g.flashColor = '#fff';
+                spawnBlood(b.x, b.y, hitDir.x > 0 ? 1 : -1, 80, 6);
+                spawnGore(b.x, b.y, 10, hitDir.x > 0 ? 1 : -1);
+                spawnRing(b.x, b.y, 100, '#f00');
+              }
+              return false; // bullet consumed
             }
           }
         }
 
-        if (f.comboTimer > 0) { f.comboTimer -= spd; if (f.comboTimer <= 0) f.combo = 0; }
-
-        // Afterimage on fast movement
-        if (fc % 3 === 0 && (Math.abs(f.vx) > 4 || ['slash', 'heavySlash', 'jumpAtk', 'uppercut', 'spinSlash', 'dashStab', 'limbSmash', 'backflipKick', 'execution', 'dodge'].includes(f.state))) {
-          spawnAfterimage(f);
+        // Bullet hit ground or walls
+        if (b.y > GY || b.x < 10 || b.x > W - 10) {
+          spawnSparks(b.x, Math.min(b.y, GY), 5);
+          return false;
         }
 
-        if (f.ragdolling) {
-          stepRagdoll(f.rag.pts, f.rag.sticks, spd, 0.3);
-          f.x = f.rag.pts[4].pos.x; f.y = Math.min(GY, f.rag.pts[4].pos.y);
-        } else {
-          poseRagdoll(f); stepRagdoll(f.rag.pts, f.rag.sticks, spd * 0.5, 0.2);
-        }
-
-        if (f.hp <= 0 && f.state !== 'ko') {
-          f.hp = 0; ss(f, 'ko');
-          startRagdoll(f, v(f.facing * -5, -6), 999);
-          o.wins++; g.rs = 'ko'; g.koTimer = 280;
-        }
+        return b.life > 0;
       });
 
-      // Body collision
-      const dx = g.fighters[1].x - g.fighters[0].x;
-      const dist = Math.abs(dx);
-      if (dist < 50 && dist > 0) {
-        const push = (50 - dist) / 2;
-        const dir = dx > 0 ? 1 : -1;
-        g.fighters[0].x -= push * dir; g.fighters[1].x += push * dir;
-        g.fighters.forEach(f => f.x = clamp(f.x, 50, W - 50));
-      }
-
-      // ── HIT DETECTION ──
+      // ─── MELEE HIT DETECTION ─────────────────────────
       g.fighters.forEach((f, idx) => {
         const o = g.fighters[1 - idx];
         const atkName = f.state === 'limbSmash' ? 'limbSmash' : f.state;
         const ad = ATK[atkName];
         if (!ad || f.hitDealt) return;
-        if (f.state === 'dodge') return;
+        if (f.state === 'dodge' || f.state === 'shoot') return;
         const hs = Math.round(ad.hitStart / f.weapon.speed);
         const he = Math.round(ad.hitEnd / f.weapon.speed);
         if (f.frame < hs || f.frame > he) return;
 
-        // Hit point: weapon tip for normal attacks, left hand for limb smash
         let tipX: number, tipY: number;
         if (f.state === 'limbSmash' && f.heldLimb) {
           const lhand = f.rag.pts[7].pos;
           tipX = lhand.x + Math.cos(f.limbSwingAng * f.facing) * 45;
           tipY = lhand.y + Math.sin(f.limbSwingAng * f.facing) * 45;
+        } else if (f.state === 'divekick') {
+          // Divekick uses feet
+          tipX = f.rag.pts[16].pos.x;
+          tipY = f.rag.pts[16].pos.y;
+        } else if (f.state === 'wallFlip') {
+          // Wall flip uses both weapon and feet
+          const hand = f.rag.pts[10].pos;
+          const ang = f.wAngle * f.facing;
+          tipX = hand.x + Math.cos(ang) * f.weapon.len * 0.8;
+          tipY = hand.y + Math.sin(ang) * f.weapon.len * 0.8;
         } else {
           const hand = f.rag.pts[10].pos;
           const ang = f.wAngle * f.facing;
@@ -1136,19 +1507,15 @@ const RagdollArena = () => {
         if (hitPt) {
           f.hitDealt = true;
           let dmg = f.weapon[ad.dmgKey];
-          // Limb smash does bonus damage and is hilarious
           if (f.state === 'limbSmash' && f.heldLimb) {
             dmg *= 1.5;
-            // Limb explodes on impact
             spawnBlood(hitPt.x, hitPt.y, f.facing, 60, 5);
             spawnGore(hitPt.x, hitPt.y, 10, f.facing);
             spawnRing(hitPt.x, hitPt.y, 100, '#f40');
             spawnLightning(f.rag.pts[7].pos.x, f.rag.pts[7].pos.y, hitPt.x, hitPt.y);
-            // Destroy the held limb
             f.heldLimb = null;
             g.flash = 6; g.flashColor = '#ff4';
           }
-          // Execution: massive damage, brutal VFX
           if (f.state === 'execution') {
             dmg *= 2.5;
             spawnBlood(hitPt.x, hitPt.y, f.facing, 80, 6);
@@ -1158,11 +1525,27 @@ const RagdollArena = () => {
             g.flash = 10; g.flashColor = '#a00';
             g.slowMo = 0.15; g.slowTimer = 25;
           }
-          // Backflip kick: launcher effect
           if (f.state === 'backflipKick') {
             dmg *= 1.3;
             spawnRing(hitPt.x, hitPt.y, 80, '#ff8');
             g.slowMo = 0.3; g.slowTimer = 12;
+          }
+          if (f.state === 'wallFlip') {
+            dmg *= 1.8;
+            spawnRing(hitPt.x, hitPt.y, 90, '#8ff');
+            spawnLightning(hitPt.x - 40, hitPt.y - 80, hitPt.x + 40, hitPt.y + 20);
+            g.slowMo = 0.2; g.slowTimer = 18;
+            g.flash = 6; g.flashColor = '#8af';
+          }
+          if (f.state === 'divekick') {
+            dmg *= 1.6;
+            spawnRing(hitPt.x, hitPt.y, 70, '#fa0');
+            g.slowMo = 0.25; g.slowTimer = 15;
+            g.flash = 5; g.flashColor = '#fa0';
+            // Ground slam on divekick
+            for (let i = 0; i < 12; i++) {
+              g.sparks.push({ x: hitPt.x + rng(-15, 15), y: hitPt.y, vx: rng(-8, 8), vy: -rng(4, 12), life: 10 + rng(0, 10), color: '#fa0', sz: 1.5 + rng(0, 2.5) });
+            }
           }
 
           const hitDir2 = v(f.facing, -0.3);
@@ -1173,7 +1556,6 @@ const RagdollArena = () => {
             o.vx = f.facing * ad.kb.x * 0.3; o.stamina -= dmg * 0.7;
             spawnSparks((f.x + o.x) / 2, hitPt.y, 15);
             spawnRing((f.x + o.x) / 2, hitPt.y, 50, '#ff8');
-            // no shake on block - only dismemberments shake
             for (let i = 0; i < 5; i++) o.rag.pts[i].old = vsub(o.rag.pts[i].pos, vscl(hitDir2, -2.5));
           } else {
             f.combo++; f.comboTimer = 80;
@@ -1192,13 +1574,11 @@ const RagdollArena = () => {
 
             if (dmg >= 18) {
               startRagdoll(o, vscl(hitDir2, dmg * 0.5), 35 + dmg);
-              // no shake - only on dismemberment
               spawnRing(hitPt.x, hitPt.y, 70, '#a00');
             } else {
               ss(o, dmg >= 13 ? 'stagger' : 'hit', dmg >= 13 ? 25 : 14);
             }
 
-            // Blood
             spawnBlood(hitPt.x, hitPt.y, f.facing, Math.round(dmg * 2.5), dmg / 6);
             spawnBlood(hitPt.x, hitPt.y - 12, f.facing * -0.5, Math.round(dmg * 1.5), dmg / 8);
             spawnBlood(hitPt.x, hitPt.y + 5, 0, Math.round(dmg * 0.7), dmg / 9);
@@ -1282,7 +1662,8 @@ const RagdollArena = () => {
       g.afterimages = g.afterimages.filter(a => { a.alpha -= 0.03; return a.alpha > 0; });
       g.rings = g.rings.filter(r => { r.r += (r.maxR - r.r) * 0.15; r.life -= 0.06; return r.life > 0; });
       g.lightnings = g.lightnings.filter(l => { l.life -= 1; return l.life > 0; });
-      if (g.shake > 0) g.shake *= 0.87;
+      g.muzzleFlashes = g.muzzleFlashes.filter(m => { m.life -= spd; return m.life > 0; });
+      g.wallSparks = g.wallSparks.filter(ws => { ws.x += ws.vx * spd; ws.y += ws.vy * spd; ws.vy += 0.2 * spd; ws.life -= spd; return ws.life > 0; });
 
       if (fc % 3 === 0) setHud({ p1hp: p1.hp, p2hp: p2.hp, timer: Math.ceil(g.timer / 60), round: g.round, p1st: p1.stamina, p2st: p2.stamina, p1w: p1.wins, p2w: p2.wins, rs: g.rs, n1: p1.name, n2: p2.name, w1: p1.weapon.name, w2: p2.weapon.name, p1limb: !!p1.heldLimb, p2limb: !!p2.heldLimb });
     };
@@ -1290,13 +1671,9 @@ const RagdollArena = () => {
     // ── RENDER ──
     const render = () => {
       tick();
-      const shk = g.shake;
-      const sx = shk > 0.5 ? rng(-1, 1) * shk * 2 : 0;
-      const sy = shk > 0.5 ? rng(-1, 1) * shk * 2 : 0;
-      ctx.save(); ctx.translate(sx, sy);
+      ctx.save();
 
       // ── EPIC BACKGROUND ──
-      // Sky gradient with aurora
       const sky = ctx.createLinearGradient(0, 0, 0, GY);
       sky.addColorStop(0, '#020108');
       sky.addColorStop(0.2, '#060318');
@@ -1305,7 +1682,7 @@ const RagdollArena = () => {
       sky.addColorStop(1, '#141430');
       ctx.fillStyle = sky; ctx.fillRect(0, 0, W, GY);
 
-      // Stars - twinkling
+      // Stars
       for (let i = 0; i < 80; i++) {
         const sx2 = (i * 137 + 30) % W;
         const sy2 = (i * 73 + 10) % (GY * 0.6);
@@ -1319,7 +1696,7 @@ const RagdollArena = () => {
         }
       }
 
-      // Moon with glow
+      // Moon
       const moonX = 180, moonY = 100;
       const moonGlow = ctx.createRadialGradient(moonX, moonY, 20, moonX, moonY, 120);
       moonGlow.addColorStop(0, 'rgba(200,180,140,0.15)');
@@ -1328,11 +1705,10 @@ const RagdollArena = () => {
       ctx.fillStyle = moonGlow; ctx.fillRect(moonX - 120, moonY - 120, 240, 240);
       ctx.fillStyle = 'rgba(220,210,180,0.12)'; ctx.beginPath(); ctx.arc(moonX, moonY, 55, 0, Math.PI * 2); ctx.fill();
       ctx.fillStyle = 'rgba(240,230,200,0.08)'; ctx.beginPath(); ctx.arc(moonX, moonY, 45, 0, Math.PI * 2); ctx.fill();
-      // Moon face
       ctx.fillStyle = 'rgba(200,190,160,0.06)'; ctx.beginPath(); ctx.arc(moonX - 10, moonY - 8, 8, 0, Math.PI * 2); ctx.fill();
       ctx.beginPath(); ctx.arc(moonX + 15, moonY + 5, 12, 0, Math.PI * 2); ctx.fill();
 
-      // Clouds drifting
+      // Clouds
       g.clouds.forEach(c => {
         c.x += c.speed;
         if (c.x > W + 100) c.x = -c.w;
@@ -1342,36 +1718,26 @@ const RagdollArena = () => {
         ctx.beginPath(); ctx.ellipse(c.x + c.w * 0.3, c.y - 5, c.w * 0.6, c.w * 0.15, 0, 0, Math.PI * 2); ctx.fill();
       });
 
-      // Mountain range - back layer
+      // Mountains
       ctx.fillStyle = '#070512';
       ctx.beginPath(); ctx.moveTo(0, GY);
       for (let x = 0; x <= W; x += 20) ctx.lineTo(x, GY - 120 - Math.sin(x * 0.004) * 60 - Math.sin(x * 0.012) * 30);
       ctx.lineTo(W, GY); ctx.fill();
-
-      // Mountain range - mid layer
       ctx.fillStyle = '#0a0818';
       ctx.beginPath(); ctx.moveTo(0, GY);
       for (let x = 0; x <= W; x += 25) ctx.lineTo(x, GY - 80 - Math.sin(x * 0.007 + 1) * 40 - Math.sin(x * 0.018) * 20);
       ctx.lineTo(W, GY); ctx.fill();
 
-      // Castle - larger, more detailed
+      // Castle
       ctx.fillStyle = '#08061a';
-      // Main keep
       ctx.fillRect(480, GY - 260, 320, 260);
-      // Towers
       ctx.fillRect(460, GY - 310, 50, 310);
       ctx.fillRect(770, GY - 290, 50, 290);
-      // Battlements
-      for (let bx = 460; bx < 820; bx += 20) {
-        ctx.fillRect(bx, GY - 275, 12, 15);
-      }
-      // Pointed roofs
+      for (let bx = 460; bx < 820; bx += 20) ctx.fillRect(bx, GY - 275, 12, 15);
       ctx.beginPath(); ctx.moveTo(450, GY - 310); ctx.lineTo(485, GY - 370); ctx.lineTo(520, GY - 310); ctx.fill();
       ctx.beginPath(); ctx.moveTo(760, GY - 290); ctx.lineTo(795, GY - 345); ctx.lineTo(830, GY - 290); ctx.fill();
-      // Center tower
       ctx.fillRect(600, GY - 320, 80, 320);
       ctx.beginPath(); ctx.moveTo(590, GY - 320); ctx.lineTo(640, GY - 390); ctx.lineTo(690, GY - 320); ctx.fill();
-      // Windows with glow
       ctx.fillStyle = '#1a0808';
       const windowGlow = (wx: number, wy: number) => {
         ctx.fillStyle = '#1a0808'; ctx.fillRect(wx, wy, 14, 20);
@@ -1385,12 +1751,27 @@ const RagdollArena = () => {
       [510, 570, 630, 690, 750].forEach(wx => { windowGlow(wx, GY - 200); windowGlow(wx, GY - 140); });
       [620, 660].forEach(wx => windowGlow(wx, GY - 280));
 
-      // Torches with animated fire
+      // Arena walls (visible barriers)
+      // Left wall
+      ctx.fillStyle = '#0c0a1a';
+      ctx.fillRect(WALL_L - 8, 80, 12, GY - 80);
+      ctx.fillStyle = '#181530';
+      ctx.fillRect(WALL_L - 4, 80, 4, GY - 80);
+      // Right wall
+      ctx.fillRect(WALL_R - 4, 80, 12, GY - 80);
+      ctx.fillStyle = '#181530';
+      ctx.fillRect(WALL_R, 80, 4, GY - 80);
+      // Wall scuff marks (show wall-runnable)
+      for (let wy = 150; wy < GY; wy += 60) {
+        ctx.strokeStyle = 'rgba(100,80,60,0.15)'; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(WALL_L - 2, wy); ctx.lineTo(WALL_L + 3, wy + 15); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(WALL_R + 2, wy); ctx.lineTo(WALL_R - 3, wy + 15); ctx.stroke();
+      }
+
+      // Torches
       g.torches.forEach(torch => {
-        // Torch post
         ctx.strokeStyle = '#443'; ctx.lineWidth = 3;
         ctx.beginPath(); ctx.moveTo(torch.x, torch.y + 50); ctx.lineTo(torch.x, torch.y); ctx.stroke();
-        // Fire
         const fireH = 12 + Math.sin(g.bgTime * 8 + torch.x) * 4;
         const fireW = 6 + Math.sin(g.bgTime * 6 + torch.x * 0.5) * 2;
         const fg = ctx.createRadialGradient(torch.x, torch.y - fireH / 2, 1, torch.x, torch.y, fireH);
@@ -1399,18 +1780,16 @@ const RagdollArena = () => {
         fg.addColorStop(1, 'rgba(255,50,0,0)');
         ctx.fillStyle = fg;
         ctx.beginPath(); ctx.ellipse(torch.x, torch.y - fireH * 0.3, fireW, fireH, 0, 0, Math.PI * 2); ctx.fill();
-        // Fire glow on ground
         const glow = ctx.createRadialGradient(torch.x, GY, 5, torch.x, GY, 80);
         glow.addColorStop(0, `rgba(255,120,30,${0.04 + Math.sin(g.bgTime * 5 + torch.x) * 0.02})`);
         glow.addColorStop(1, 'rgba(0,0,0,0)');
         ctx.fillStyle = glow; ctx.fillRect(torch.x - 80, GY - 60, 160, 70);
-        // Sparks from torches
         if (fc % 12 === 0) {
           g.sparks.push({ x: torch.x + rng(-3, 3), y: torch.y - fireH, vx: rng(-1, 1), vy: -rng(1, 4), life: 15 + rng(0, 10), color: '#fa0', sz: 1 + rng(0, 1.5) });
         }
       });
 
-      // Fog layer
+      // Fog
       ctx.fillStyle = `rgba(20,15,40,${0.08 + Math.sin(g.bgTime * 0.3) * 0.03})`;
       ctx.fillRect(0, GY - 50, W, 60);
 
@@ -1418,7 +1797,6 @@ const RagdollArena = () => {
       const gnd = ctx.createLinearGradient(0, GY - 3, 0, H);
       gnd.addColorStop(0, '#1a1008'); gnd.addColorStop(0.5, '#120a06'); gnd.addColorStop(1, '#0a0604');
       ctx.fillStyle = gnd; ctx.fillRect(0, GY - 3, W, H - GY + 3);
-      // Ground detail
       ctx.strokeStyle = '#3a2a15'; ctx.lineWidth = 2;
       ctx.beginPath(); ctx.moveTo(0, GY); ctx.lineTo(W, GY); ctx.stroke();
       ctx.strokeStyle = '#2a1a0a'; ctx.lineWidth = 1;
@@ -1432,7 +1810,6 @@ const RagdollArena = () => {
         ctx.beginPath(); ctx.ellipse(p3.x, p3.y + 2, p3.r, p3.r * 0.3, 0, 0, Math.PI * 2); ctx.fill();
         ctx.fillStyle = `rgba(90,0,0,${p3.a * 0.6})`;
         ctx.beginPath(); ctx.ellipse(p3.x, p3.y + 2, p3.r * 0.5, p3.r * 0.15, 0, 0, Math.PI * 2); ctx.fill();
-        // Blood reflection
         ctx.fillStyle = `rgba(200,0,0,${p3.a * 0.15})`;
         ctx.beginPath(); ctx.ellipse(p3.x - p3.r * 0.2, p3.y + 1, p3.r * 0.2, p3.r * 0.08, 0, 0, Math.PI * 2); ctx.fill();
       });
@@ -1441,7 +1818,6 @@ const RagdollArena = () => {
       g.afterimages.forEach(ai2 => {
         ctx.globalAlpha = ai2.alpha * 0.4;
         ctx.strokeStyle = ai2.color; ctx.lineWidth = 3; ctx.lineCap = 'round';
-        // Draw simplified skeleton
         const drawAiBone = (a: number, b: number) => {
           if (ai2.pts[a] && ai2.pts[b]) {
             ctx.beginPath(); ctx.moveTo(ai2.pts[a].x, ai2.pts[a].y); ctx.lineTo(ai2.pts[b].x, ai2.pts[b].y); ctx.stroke();
@@ -1453,7 +1829,7 @@ const RagdollArena = () => {
       });
       ctx.globalAlpha = 1;
 
-      // Severed limbs on ground
+      // Severed limbs
       g.limbs.forEach(l => {
         if (l.pts.length === 0) return;
         ctx.save(); ctx.translate(l.pts[0].x, l.pts[0].y); ctx.rotate(l.ang);
@@ -1475,7 +1851,6 @@ const RagdollArena = () => {
           }
           ctx.fillStyle = '#800'; ctx.beginPath(); ctx.arc(0, 0, 4, 0, Math.PI * 2); ctx.fill();
         }
-        // Glow if pickupable
         if (l.grounded) {
           ctx.strokeStyle = `rgba(255,255,100,${0.1 + Math.sin(g.bgTime * 4) * 0.08})`;
           ctx.lineWidth = 1;
@@ -1489,7 +1864,6 @@ const RagdollArena = () => {
         ctx.save(); ctx.translate(gc.x, gc.y); ctx.rotate(gc.rot);
         ctx.fillStyle = gc.color;
         ctx.fillRect(-gc.sz / 2, -gc.sz / 2, gc.sz, gc.sz);
-        // Inner detail
         ctx.fillStyle = 'rgba(0,0,0,0.3)';
         ctx.fillRect(-gc.sz / 4, -gc.sz / 4, gc.sz / 2, gc.sz / 2);
         ctx.restore();
@@ -1497,6 +1871,47 @@ const RagdollArena = () => {
 
       // Fighters
       g.fighters.forEach(f => drawFighter(ctx, f, fc));
+
+      // Bullets with trails
+      g.bullets.forEach(b => {
+        // Trail
+        if (b.trail.length > 1) {
+          for (let i = 1; i < b.trail.length; i++) {
+            const a = i / b.trail.length;
+            ctx.strokeStyle = `rgba(255,200,50,${a * 0.5})`;
+            ctx.lineWidth = 2 * a;
+            ctx.beginPath(); ctx.moveTo(b.trail[i - 1].x, b.trail[i - 1].y); ctx.lineTo(b.trail[i].x, b.trail[i].y); ctx.stroke();
+          }
+        }
+        // Bullet
+        ctx.fillStyle = '#ff8';
+        ctx.beginPath(); ctx.arc(b.x, b.y, 2.5, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#fff';
+        ctx.beginPath(); ctx.arc(b.x, b.y, 1, 0, Math.PI * 2); ctx.fill();
+        // Bullet glow
+        const bg = ctx.createRadialGradient(b.x, b.y, 1, b.x, b.y, 12);
+        bg.addColorStop(0, 'rgba(255,200,50,0.3)');
+        bg.addColorStop(1, 'rgba(255,100,0,0)');
+        ctx.fillStyle = bg;
+        ctx.beginPath(); ctx.arc(b.x, b.y, 12, 0, Math.PI * 2); ctx.fill();
+      });
+
+      // Muzzle flashes
+      g.muzzleFlashes.forEach(m => {
+        const mfSize = m.life * 8;
+        const mfGrad = ctx.createRadialGradient(m.x, m.y, 1, m.x, m.y, mfSize);
+        mfGrad.addColorStop(0, `rgba(255,255,200,${m.life / 4 * 0.8})`);
+        mfGrad.addColorStop(0.4, `rgba(255,180,50,${m.life / 4 * 0.4})`);
+        mfGrad.addColorStop(1, 'rgba(255,100,0,0)');
+        ctx.fillStyle = mfGrad;
+        ctx.beginPath(); ctx.arc(m.x, m.y, mfSize, 0, Math.PI * 2); ctx.fill();
+      });
+
+      // Wall sparks
+      g.wallSparks.forEach(ws => {
+        ctx.fillStyle = `rgba(255,200,100,${ws.life / 18})`;
+        ctx.beginPath(); ctx.arc(ws.x, ws.y, 1.5, 0, Math.PI * 2); ctx.fill();
+      });
 
       // Blood particles
       g.blood.forEach(b => {
@@ -1511,7 +1926,6 @@ const RagdollArena = () => {
             ctx.fillStyle = `rgba(255,60,30,${a * 0.45})`;
             ctx.beginPath(); ctx.arc(b.x, b.y, b.sz * 0.3, 0, Math.PI * 2); ctx.fill();
           }
-          // Blood trail
           if (b.sz > 3) {
             ctx.strokeStyle = `rgba(180,0,0,${a * 0.3})`; ctx.lineWidth = b.sz * 0.3;
             ctx.beginPath(); ctx.moveTo(b.x, b.y); ctx.lineTo(b.x - b.vx * 2, b.y - b.vy * 2); ctx.stroke();
@@ -1523,7 +1937,6 @@ const RagdollArena = () => {
       g.sparks.forEach(s => {
         ctx.globalAlpha = s.life / 20; ctx.fillStyle = s.color;
         ctx.beginPath(); ctx.arc(s.x, s.y, s.sz * (s.life / 20), 0, Math.PI * 2); ctx.fill();
-        // Spark trail
         ctx.strokeStyle = s.color; ctx.lineWidth = 0.5;
         ctx.beginPath(); ctx.moveTo(s.x, s.y); ctx.lineTo(s.x - s.vx, s.y - s.vy); ctx.stroke();
       });
@@ -1538,7 +1951,7 @@ const RagdollArena = () => {
       });
       ctx.globalAlpha = 1;
 
-      // Lightning effects
+      // Lightning
       g.lightnings.forEach(l => {
         ctx.globalAlpha = l.life / 8;
         l.branches.forEach(branch => {
@@ -1588,7 +2001,6 @@ const RagdollArena = () => {
         const sc = p3 < 0.1 ? p3 / 0.1 : 1;
         ctx.scale(sc, sc);
         ctx.font = 'bold 85px Georgia, serif'; ctx.textAlign = 'center';
-        // Glowing KO text
         ctx.shadowBlur = 30; ctx.shadowColor = '#f00';
         ctx.fillStyle = '#200'; ctx.fillText('K.O.', 3, 3);
         ctx.fillStyle = '#a00'; ctx.fillText('K.O.', 0, 0);
@@ -1603,7 +2015,7 @@ const RagdollArena = () => {
         ctx.restore();
       }
 
-      // Vignette always
+      // Vignette
       const vig2 = ctx.createRadialGradient(W / 2, H / 2, H * 0.4, W / 2, H / 2, W * 0.7);
       vig2.addColorStop(0, 'rgba(0,0,0,0)'); vig2.addColorStop(1, 'rgba(0,0,0,0.35)');
       ctx.fillStyle = vig2; ctx.fillRect(0, 0, W, H);
@@ -1613,7 +2025,7 @@ const RagdollArena = () => {
     };
     aid = requestAnimationFrame(render);
     return () => { cancelAnimationFrame(aid); window.removeEventListener('keydown', kd); window.removeEventListener('keyup', ku); };
-  }, [drawFighter, spawnBlood, spawnSparks, sever, spawnGore, spawnAfterimage, spawnRing, spawnLightning]);
+  }, [drawFighter, spawnBlood, spawnSparks, sever, spawnGore, spawnAfterimage, spawnRing, spawnLightning, spawnBullet, spawnWallSparks]);
 
   return (
     <div className="relative w-full h-full flex items-center justify-center bg-black select-none">
@@ -1655,7 +2067,7 @@ const RagdollArena = () => {
         </div>
       </div>
       <div className="absolute bottom-3 left-1/2 -translate-x-1/2 text-white/15 text-[10px] font-mono pointer-events-none tracking-wider">
-        WASD Move • J Slash • K Stab • L Heavy • U Overhead • I Limb Smash • O Pickup • P Throw
+        WASD Move • J Slash • K Stab • L Heavy • U Overhead • F Shoot • R Backflip • T Divekick
       </div>
     </div>
   );
