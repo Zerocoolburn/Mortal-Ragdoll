@@ -1224,6 +1224,7 @@ const RagdollArena = () => {
     rings: [] as ImpactRing[], lightnings: [] as Lightning[],
     bullets: [] as Bullet[], muzzleFlashes: [] as MuzzleFlash[], wallSparks: [] as WallSpark[],
     fatalityTexts: [] as FatalityText[], thrownSwords: [] as ThrownSword[],
+    skullFires: [] as SkullFireEntity[], dragons: [] as DragonEntity[],
     slowMo: 1, slowTimer: 0, flash: 0, flashColor: '#fff',
     round: 1, timer: 99 * 60,
     rs: 'intro' as 'intro' | 'fight' | 'ko',
