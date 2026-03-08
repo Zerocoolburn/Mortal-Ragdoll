@@ -110,7 +110,7 @@ const FATALITIES: FatalityDef[] = [
 // ═══════════════════════════════════════════════════════
 // FIGHTER
 // ═══════════════════════════════════════════════════════
-type FState = 'idle' | 'walk' | 'walkBack' | 'jump' | 'crouch' | 'slash' | 'heavySlash' | 'stab' | 'overhead' | 'jumpAtk' | 'uppercut' | 'spinSlash' | 'dashStab' | 'limbSmash' | 'backflipKick' | 'execution' | 'shoot' | 'wallRun' | 'wallJump' | 'wallFlip' | 'divekick' | 'kick' | 'headKick' | 'kneeStrike' | 'roundhouse' | 'fatality' | 'block' | 'hit' | 'stagger' | 'ko' | 'ragdoll' | 'dodge' | 'taunt' | 'pickup';
+type FState = 'idle' | 'walk' | 'walkBack' | 'jump' | 'crouch' | 'slash' | 'heavySlash' | 'stab' | 'overhead' | 'jumpAtk' | 'uppercut' | 'spinSlash' | 'dashStab' | 'limbSmash' | 'backflipKick' | 'execution' | 'shoot' | 'wallRun' | 'wallJump' | 'wallFlip' | 'divekick' | 'kick' | 'headKick' | 'kneeStrike' | 'roundhouse' | 'headbutt' | 'swordThrow' | 'punch' | 'fatality' | 'block' | 'hit' | 'stagger' | 'ko' | 'ragdoll' | 'dodge' | 'taunt' | 'pickup';
 
 interface Weapon {
   name: string; len: number; weight: number;
