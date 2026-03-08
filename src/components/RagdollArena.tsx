@@ -127,33 +127,140 @@ const playSFX = (type: 'hit' | 'slash' | 'heavyHit' | 'block' | 'kick' | 'headbu
 };
 
 // ═══════════════════════════════════════════════════════
-// TTS SYSTEM - Rated R funny fatality lines
+// TTS SYSTEM - Context-specific R-rated lines with unique voices
 // ═══════════════════════════════════════════════════════
-const FATALITY_LINES_WINNER = [
-  "Get absolutely wrecked, mate!",
+
+// Lines when YOUR limb gets severed (spoken by the victim)
+const LIMB_LOST_LINES = [
+  "Holy fuck my fucking leg is gone!",
+  "Ahh stop you bitch!",
+  "That was my good arm you piece of shit!",
+  "I NEED that you psychopath!",
+  "What the fuck?! My arm!",
+  "Oh god oh fuck that's a lot of blood!",
+  "You ripped my goddamn leg off!",
+  "That's it I'm suing your ass!",
+  "MY LEG! MY BEAUTIFUL LEG!",
+  "Dude that was attached to me!",
+  "How am I supposed to fight with no arm?!",
+  "You absolute shithead that was my favorite limb!",
+  "AAAHHH MOTHER OF GOD!",
+  "That's not how joints work you maniac!",
+  "I can see the bone! I CAN SEE THE BONE!",
+  "You just ripped off my... oh I'm gonna be sick",
+  "Put that back! PUT THAT BACK!",
+  "Cool cool cool my leg is over there now",
+  "That was still under warranty!",
+  "Holy shit I'm literally falling apart!",
+  "BRO that's my wiping hand!",
+  "My arm! I had plans for that arm!",
+  "Oh nice now I'm asymmetrical!",
+  "Was the dismemberment really necessary Karen?!",
+  "Mommy I want to go home!",
+  "I didn't consent to amputation!",
+  "Well there goes my basketball career!",
+  "You owe me a prosthetic you dick!",
+  "MY KNEE! MY BEAUTIFUL KNEE!",
+  "I can't even flip you off anymore!",
+  "Okay NOW I'm pissed!",
+  "You know what, I didn't need that anyway",
+  "I JUST got that limb waxed!",
+  "That was my texting hand you monster!",
+  "Congratulations you just ruined my yoga practice!",
+  "This is a workplace safety violation!",
+  "File that under things I didn't want today!",
+  "You tore off my arm like a chicken wing!",
+  "I literally just healed from last round!",
+  "My physical therapist is gonna be SO mad!",
+  "Well at least it wasn't my head... yet",
+  "I hope you stub your toe every morning!",
+  "Are you EATING my leg?! What the fu-",
+  "MEDIC! MEDIIIIIC!",
+  "That was my dominant arm you ass!",
+  "Oh look I'm a human starfish now",
+  "I paid good money for that limb!",
+  "You fight like a goddamn blender!",
+  "Alright who ordered the amputation?!",
+  "FUCK FUCK FUCK FUCK FUCKKKK!",
+];
+
+// Lines when YOUR head gets severed
+const HEAD_LOST_LINES = [
+  "Well shit that was my thinking part!",
+  "I can still see! Oh wait no I can't...",
+  "Tell my mom I love heeerrr...",
+  "My head! Has anyone seen my head?!",
+  "This is the worst haircut I've ever had!",
+  "Decapitated? In THIS economy?!",
+  "I specifically said no beheading!",
+  "That's... that's not supposed to come off...",
+  "Oh so we're doing decapitations today cool cool",
+  "I was using that!",
+];
+
+// Lines spoken by the WINNER after KO
+const KO_WINNER_LINES = [
+  "Get absolutely wrecked mate!",
   "Was that your head or a watermelon?",
   "You fight like my dead grandma!",
   "I'll use your spine as a back scratcher!",
-  "That's what happens when you skip sword practice!",
   "Your mother fights better than you!",
   "I've seen potatoes with more fight!",
   "Say hello to the dirt for me!",
   "You just got absolutely demolished!",
-  "Maybe try checkers instead?",
-  "Boom! Headshot! Wait, wrong game.",
+  "Boom! Headshot! Wait wrong game.",
   "Is that all you've got? Pathetic!",
   "I didn't even break a sweat!",
   "You're going home in a body bag!",
-  "Rest in pieces, you absolute walnut!",
+  "Rest in pieces you absolute walnut!",
+  "That's what you get for showing up!",
+  "I could beat you with one arm! Oh wait I just did!",
+  "Someone call a hearse and a therapist!",
+  "Sit DOWN clown!",
+  "You fought like a drunk toddler!",
+  "Tell the devil I said wassup!",
+  "That's for looking at me funny!",
+  "You just got ratio'd in real life!",
+  "Delete your fighter account bro!",
+  "I've slapped harder in my sleep!",
+  "GG EZ no re!",
+  "You got bodied son! BODIED!",
+  "Another day another corpse!",
+  "You should try a different hobby like breathing!",
+  "I just made modern art outta your face!",
+  "Don't worry your skull will buffer out!",
+  "Get rekt scrub!",
+  "Your ancestors felt that one!",
+  "This isn't even my final form!",
+  "Somebody get a mop for this mess!",
+  "You just brought a face to a sword fight!",
+  "I've seen scarecrows put up more of a fight!",
+  "And THAT is why you don't skip training!",
+  "You need milk!",
+  "That was embarrassing for both of us honestly!",
+  "I'm adding this to my highlight reel!",
+  "First round knockout! Thanks for coming!",
+  "Your fighting style is called Losing!",
+  "I've beaten tougher sandwiches!",
+  "You were supposed to block that genius!",
+  "Your health bar said nah I'm out!",
+  "Someone order an ambulance and a priest!",
+  "I just committed several war crimes!",
+  "You went from warrior to floor decoration!",
+  "I didn't know they let punching bags in the arena!",
+  "Flawless victory! Just kidding I got a scratch!",
+  "Sorry not sorry!",
 ];
-const FATALITY_LINES_LOSER = [
-  "Holy shit, I'm fucked!",
-  "You just beat me with my own arm, you knob goblin!",
-  "Well, that's my spine... great.",
+
+// Lines spoken by the LOSER during/after KO
+const KO_LOSER_LINES = [
+  "Holy shit I'm fucked!",
+  "You just beat me with my own arm you knob goblin!",
+  "Well that's my spine... great.",
   "I think I left my dignity back there...",
   "Was that my head? I need that!",
   "Tell my wife... she was right about everything.",
-  "I can't feel my legs... oh wait, they're over there.",
+  "I can't feel my legs... oh wait they're over there.",
   "This is fine. Everything is fine.",
   "At least buy me dinner first!",
   "My insurance doesn't cover this!",
@@ -167,24 +274,126 @@ const FATALITY_LINES_LOSER = [
   "I didn't sign up for this!",
   "Was the decapitation really necessary?!",
   "You fight dirty and I respect that... from the grave.",
+  "I think I swallowed a tooth... or six",
+  "Why does everything taste like copper?!",
+  "That's it I'm calling my lawyer!",
+  "This is NOT what the brochure promised!",
+  "I want a refund on this life!",
+  "My chiropractor is gonna flip out!",
+  "Is it too late to surrender?!",
+  "I could feel that in my SOUL!",
+  "You're going on my blocked list!",
+  "I hope they remember me as handsome!",
+  "I had a family you know!",
+  "Respawn? RESPAWN?! Hello?!",
+  "Five stars would NOT recommend fighting this guy!",
+  "I think you broke my everything!",
+  "Well I just got speed-ran!",
+  "This is definitely going on my tombstone!",
+  "Do you validate parking at least?!",
+  "I can see a white light... never mind that's a sword!",
+  "My face! My beautiful face!",
+  "I should have been a librarian!",
+  "Okay I deserved maybe ONE hit not FORTY!",
+  "Someone tell my dog I love him!",
+  "I'm too pretty to die like this!",
+  "That escalated quickly!",
+  "Warning label said may cause death and it wasn't lying!",
+  "I'd like to speak to the manager of this arena!",
+  "My spine just filed for divorce!",
+  "Note to self never do this again!",
+  "This is the worst Tuesday ever!",
+  "I think that last hit dislocated my SOUL!",
 ];
-const KO_LINES = [
+
+// Lines during the ground beatdown
+const BEATDOWN_LINES_WINNER = [
+  "Stay down! STAY DOWN!",
+  "Had enough yet?! NO?! Good!",
+  "This is for fun now!",
+  "I can do this all day!",
+  "Stop hitting yourself! Oh wait that's me!",
+  "Tenderizing the meat!",
+  "How's that taste?!",
+  "Take that! And that! AND THAT!",
+  "Oh you want more?! HERE!",
+  "I'm not done with you yet!",
+];
+
+const BEATDOWN_LINES_LOSER = [
+  "Please stop oh god PLEASE STOP!",
+  "I'M ALREADY DEAD!",
+  "HE'S ALREADY DEAD DUDE!",
+  "Okay I get it you won STOP HITTING ME!",
+  "UNCLE! UNCLE! I SAID UNCLE!",
+  "Can I at LEAST die with dignity?!",
+  "You're kicking a dead horse! Literally!",
+  "This is excessive force!",
+  "Someone call the ref! THE REF!",
+  "I'LL GIVE YOU MY WALLET JUST STOP!",
+];
+
+// Announcer lines
+const KO_ANNOUNCER_LINES = [
   "FINISH HIM!", "DESTROYED!", "OBLITERATED!", "ANNIHILATED!",
   "WASTED!", "GAME OVER MAN!", "ABSOLUTELY BODIED!", "SENT TO THE SHADOW REALM!",
+  "BRUTAL!", "SAVAGE!", "FATALITY!", "TOASTY!",
+];
+
+// Fighter voice configs
+interface VoiceConfig { pitch: number; rate: number; voiceIdx: number }
+const FIGHTER_VOICES: VoiceConfig[] = [
+  { pitch: 0.7, rate: 0.95, voiceIdx: 0 },   // Fighter 1: deep, slow
+  { pitch: 1.5, rate: 1.15, voiceIdx: 2 },   // Fighter 2: high, fast
 ];
 
 let lastTTSTime = 0;
-const speakLine = (text: string, pitch = 1, rate = 1) => {
+let lastTTSByFighter = [0, 0];
+
+const getVoices = (): SpeechSynthesisVoice[] => {
+  const voices = speechSynthesis.getVoices();
+  return voices.length > 0 ? voices : [];
+};
+
+const speakLine = (text: string, pitch = 1, rate = 1, fighterIdx = -1) => {
   try {
     const now = Date.now();
-    if (now - lastTTSTime < 3000) return; // Debounce
+    if (now - lastTTSTime < 1800) return;
+    if (fighterIdx >= 0 && now - lastTTSByFighter[fighterIdx] < 2500) return;
     lastTTSTime = now;
+    if (fighterIdx >= 0) lastTTSByFighter[fighterIdx] = now;
+    
     const u = new SpeechSynthesisUtterance(text);
-    u.pitch = pitch;
-    u.rate = rate;
-    u.volume = 0.7;
+    const voices = getVoices();
+    
+    if (fighterIdx >= 0 && fighterIdx < FIGHTER_VOICES.length) {
+      const vc = FIGHTER_VOICES[fighterIdx];
+      u.pitch = vc.pitch;
+      u.rate = vc.rate;
+      // Try to pick different voices for each fighter
+      if (voices.length > 0) {
+        const enVoices = voices.filter(v2 => v2.lang.startsWith('en'));
+        const pool = enVoices.length > 0 ? enVoices : voices;
+        u.voice = pool[vc.voiceIdx % pool.length];
+      }
+    } else {
+      u.pitch = pitch;
+      u.rate = rate;
+      // Announcer voice: deep and boomy
+      if (voices.length > 0) {
+        const enVoices = voices.filter(v2 => v2.lang.startsWith('en'));
+        const pool = enVoices.length > 0 ? enVoices : voices;
+        u.voice = pool[Math.min(1, pool.length - 1)];
+      }
+    }
+    u.volume = 0.8;
+    speechSynthesis.cancel();
     speechSynthesis.speak(u);
   } catch (e) { /* TTS not available */ }
+};
+
+const speakFighterLine = (lines: string[], fighterIdx: number) => {
+  speakLine(pick(lines), 1, 1, fighterIdx);
 };
 
 // ═══════════════════════════════════════════════════════
@@ -707,7 +916,7 @@ const RagdollArena = () => {
   const [gameScreen, setGameScreen] = useState<GameScreen>('menu');
   const [sfxVolume, setSfxVolume] = useState(0.15);
   const [ttsEnabled, setTtsEnabled] = useState(true);
-  const [showControls, setShowControls] = useState(false);
+  
 
   const G = useRef({
     fighters: [
@@ -806,7 +1015,16 @@ const RagdollArena = () => {
     spawnGore(f.x, f.y - 55, 12, dir); spawnRing(f.x, f.y - 50, 80, '#a00');
     f.bleedTimer = 600; g.slowMo = 0.1; g.slowTimer = 40; g.flash = 8; g.flashColor = '#600';
     playSFX('sever', sfxVolume);
-  }, [spawnBlood, spawnGore, spawnRing, sfxVolume]);
+    // TTS: victim reacts to losing a limb
+    if (ttsEnabled) {
+      const fIdx = g.fighters.indexOf(f);
+      if (part === 'head') {
+        speakFighterLine(HEAD_LOST_LINES, fIdx >= 0 ? fIdx : 0);
+      } else {
+        speakFighterLine(LIMB_LOST_LINES, fIdx >= 0 ? fIdx : 0);
+      }
+    }
+  }, [spawnBlood, spawnGore, spawnRing, sfxVolume, ttsEnabled]);
 
   // ─── DRAW FIGHTER ──────────────────────────────────────
   const drawFighter = useCallback((ctx: CanvasRenderingContext2D, f: Fighter, t: number) => {
@@ -1076,8 +1294,8 @@ const RagdollArena = () => {
       playSFX('heavyHit', sfxVolume * 2);
       // TTS fatality lines!
       if (ttsEnabled) {
-        setTimeout(() => speakLine(pick(FATALITY_LINES_WINNER), 0.8, 1.1), 500);
-        setTimeout(() => speakLine(pick(FATALITY_LINES_LOSER), 1.5, 1.3), 2000);
+        setTimeout(() => speakFighterLine(KO_WINNER_LINES, g.fighters.indexOf(f)), 500);
+        setTimeout(() => speakFighterLine(KO_LOSER_LINES, g.fighters.indexOf(o)), 2000);
       }
       return true;
     };
@@ -1424,6 +1642,13 @@ const RagdollArena = () => {
               loser.rag.pts[i].old = vsub(loser.rag.pts[i].pos, v(winner.facing * rng(3, 8), -rng(2, 6)));
             }
             if (fc % 15 === 0) { spawnRing(hitPt.x, hitPt.y, 40, '#f80'); playSFX('hit', sfxVolume * 0.5); }
+            // Beatdown TTS
+            if (ttsEnabled && winner.groundBeatTimer > 60 && fc % 90 === 0) {
+              const wIdx = g.fighters.indexOf(winner);
+              const lIdx = g.fighters.indexOf(loser);
+              if (rng(0, 1) < 0.5) speakFighterLine(BEATDOWN_LINES_WINNER, wIdx);
+              else speakFighterLine(BEATDOWN_LINES_LOSER, lIdx);
+            }
           }
           stepRagdoll(winner.rag.pts, winner.rag.sticks, spd, 0.3);
           if (!winner.ragdolling) poseRagdoll(winner);
@@ -1468,40 +1693,11 @@ const RagdollArena = () => {
         else { p2.wins++; ss(p1, 'ko'); startRagdoll(p1, v(-5, -8), 999); }
         g.rs = 'ko'; g.koTimer = 180;
         playSFX('ko', sfxVolume);
-        if (ttsEnabled) speakLine(pick(KO_LINES), 0.6, 0.9);
+        if (ttsEnabled) speakLine(pick(KO_ANNOUNCER_LINES), 0.5, 0.8);
       }
 
-      // Player controls
-      let p1HasInput = false;
-      if (ca(p1) || p1.state === 'block') {
-        if (g.keys.has('j')) { doAtk(p1, 'slash'); p1HasInput = true; }
-        else if (g.keys.has('k')) { doAtk(p1, 'stab'); p1HasInput = true; }
-        else if (g.keys.has('l')) { doAtk(p1, 'heavySlash'); p1HasInput = true; }
-        else if (g.keys.has('u')) { doAtk(p1, 'overhead'); p1HasInput = true; }
-        else if (g.keys.has('f')) { doShoot(p1, 0); p1HasInput = true; }
-        else if (g.keys.has('r')) { doAtk(p1, 'backflipKick'); p1HasInput = true; }
-        else if (g.keys.has('t')) { doAtk(p1, 'divekick'); p1HasInput = true; }
-        else if (g.keys.has('g')) { doAtk(p1, 'kick'); p1HasInput = true; }
-        else if (g.keys.has('h')) { doAtk(p1, 'headKick'); p1HasInput = true; }
-        else if (g.keys.has('n')) { doAtk(p1, 'kneeStrike'); p1HasInput = true; }
-        else if (g.keys.has('m')) { doAtk(p1, 'roundhouse'); p1HasInput = true; }
-        else if (g.keys.has('b')) { doAtk(p1, 'headbutt'); p1HasInput = true; }
-        else if (g.keys.has('v')) { doSwordThrow(p1, 0); p1HasInput = true; }
-        else if (g.keys.has('c')) { doAtk(p1, 'punch'); p1HasInput = true; }
-        else if (g.keys.has('x')) { doFatality(p1, p2); p1HasInput = true; }
-        else if (g.keys.has('s') && g.keys.has('shift')) { ss(p1, 'block'); p1HasInput = true; }
-        else if (g.keys.has('s')) { ss(p1, 'crouch'); p1HasInput = true; }
-        else if (g.keys.has('w') && p1.grounded) { p1.vy = -11; p1.grounded = false; ss(p1, 'jump'); p1HasInput = true; }
-        else if (g.keys.has('a')) { p1.vx = -3.5; if (p1.grounded) ss(p1, p1.facing === -1 ? 'walk' : 'walkBack'); p1HasInput = true; }
-        else if (g.keys.has('d')) { p1.vx = 3.5; if (p1.grounded) ss(p1, p1.facing === 1 ? 'walk' : 'walkBack'); p1HasInput = true; }
-      }
-      if (!p1HasInput && !p1.grounded) {
-        if (g.keys.has('a') && p1.x < WALL_L + 40) { startWallRun(p1, -1); p1HasInput = true; }
-        if (g.keys.has('d') && p1.x > WALL_R - 40) { startWallRun(p1, 1); p1HasInput = true; }
-      }
-      if (p1.state === 'wallRun' && g.keys.has('w')) { doAtk(p1, 'wallFlip'); p1HasInput = true; }
-
-      if (!p1HasInput) ai(p1, p2, 0);
+      // Both fighters are AI controlled
+      ai(p1, p2, 0);
       ai(p2, p1, 1);
 
       // Update fighters
@@ -1592,7 +1788,7 @@ const RagdollArena = () => {
               if (target.hp <= 0) {
                 const shooter = g.fighters[b.owner]; ss(target, 'ko'); startRagdoll(target, vscl(hitDir, 18), 999); shooter.wins++; g.rs = 'ko'; g.koTimer = 340; g.slowMo = 0.05; g.slowTimer = 55; g.flash = 15; g.flashColor = '#fff'; spawnBlood(b.x, b.y, hitDir.x > 0 ? 1 : -1, 80, 6); spawnGore(b.x, b.y, 10, hitDir.x > 0 ? 1 : -1); spawnRing(b.x, b.y, 100, '#f00');
                 playSFX('ko', sfxVolume);
-                if (ttsEnabled) { speakLine(pick(KO_LINES), 0.6, 0.9); setTimeout(() => speakLine(pick(FATALITY_LINES_LOSER), 1.4, 1.2), 2000); }
+                if (ttsEnabled) { speakLine(pick(KO_ANNOUNCER_LINES), 0.5, 0.8); setTimeout(() => speakFighterLine(KO_LOSER_LINES, 1 - b.owner), 2000); setTimeout(() => speakFighterLine(KO_WINNER_LINES, b.owner), 4000); }
               }
               return false;
             }
@@ -1737,7 +1933,7 @@ const RagdollArena = () => {
               const lp = ['leftArm', 'rightArm', 'leftLeg', 'rightLeg'].filter(p3 => !o.severed.has(p3));
               if (lp.length > 0) sever(o, pick(lp), f.facing);
               playSFX('ko', sfxVolume);
-              if (ttsEnabled) { speakLine(pick(KO_LINES), 0.6, 0.9); setTimeout(() => speakLine(pick(FATALITY_LINES_LOSER), 1.4, 1.2), 2500); }
+              if (ttsEnabled) { speakLine(pick(KO_ANNOUNCER_LINES), 0.5, 0.8); setTimeout(() => speakFighterLine(KO_LOSER_LINES, 1 - idx), 2000); setTimeout(() => speakFighterLine(KO_WINNER_LINES, idx), 4000); }
             }
           }
         }
@@ -1777,7 +1973,7 @@ const RagdollArena = () => {
                 g.fighters[ts.owner].wins++; g.rs = 'ko'; g.koTimer = 340;
                 g.slowMo = 0.05; g.slowTimer = 40; g.flash = 12; g.flashColor = '#fff';
                 playSFX('ko', sfxVolume);
-                if (ttsEnabled) speakLine(pick(KO_LINES), 0.6, 0.9);
+                if (ttsEnabled) { speakLine(pick(KO_ANNOUNCER_LINES), 0.5, 0.8); setTimeout(() => speakFighterLine(KO_LOSER_LINES, 1 - ts.owner), 2000); }
               }
               ts.stuck = true; ts.vx = 0; ts.vy = 0; ts.life = 60;
               return true;
@@ -2121,55 +2317,14 @@ const RagdollArena = () => {
             >
               SETTINGS
             </button>
-
-            <button
-              onClick={() => setShowControls(!showControls)}
-              className="group relative px-10 py-3 text-base font-bold tracking-[0.2em] uppercase transition-all duration-300 hover:scale-105"
-              style={{
-                fontFamily: '"Orbitron", sans-serif',
-                color: '#aaa',
-                background: 'linear-gradient(180deg, rgba(40,40,40,0.8) 0%, rgba(20,20,20,0.9) 100%)',
-                border: '1px solid #444',
-                clipPath: 'polygon(6% 0%, 100% 0%, 94% 100%, 0% 100%)',
-              }}
-            >
-              CONTROLS
-            </button>
           </div>
-
-          {/* Controls panel */}
-          {showControls && (
-            <div className="mt-2 p-4 rounded border max-w-md text-xs" style={{
-              fontFamily: '"Orbitron", sans-serif',
-              background: 'rgba(0,0,0,0.9)',
-              borderColor: '#333',
-              color: '#888',
-            }}>
-              <div className="grid grid-cols-2 gap-x-6 gap-y-1">
-                <span><span className="text-accent">WASD</span> - Move/Jump</span>
-                <span><span className="text-accent">J</span> - Slash</span>
-                <span><span className="text-accent">K</span> - Stab</span>
-                <span><span className="text-accent">L</span> - Heavy</span>
-                <span><span className="text-accent">G</span> - Kick</span>
-                <span><span className="text-accent">H</span> - Head Kick</span>
-                <span><span className="text-accent">N</span> - Knee</span>
-                <span><span className="text-accent">M</span> - Roundhouse</span>
-                <span><span className="text-accent">B</span> - Headbutt</span>
-                <span><span className="text-accent">C</span> - Punch</span>
-                <span><span className="text-accent">F</span> - Shoot</span>
-                <span><span className="text-accent">X</span> - Fatality</span>
-                <span><span className="text-accent">V</span> - Throw Sword</span>
-                <span><span className="text-accent">R</span> - Backflip</span>
-              </div>
-            </div>
-          )}
 
           {/* Footer */}
           <div className="mt-4 text-[10px] tracking-[0.3em] uppercase" style={{
             fontFamily: '"Orbitron", sans-serif',
             color: '#333',
           }}>
-            Press FIGHT to begin
+            AI vs AI • Watch the carnage
           </div>
         </div>
       </div>
@@ -2254,8 +2409,8 @@ const RagdollArena = () => {
   const p2Pct = Math.max(0, (hud.p2hp / MAX_HP) * 100);
 
   return (
-    <div className="relative w-full h-full flex items-center justify-center bg-black select-none">
-      <canvas ref={canvasRef} width={W} height={H} className="max-w-full max-h-full" />
+    <div className="relative w-screen h-screen bg-black select-none overflow-hidden">
+      <canvas ref={canvasRef} width={W} height={H} className="w-full h-full" style={{ objectFit: 'cover' }} />
 
       {/* MK-STYLE HUD OVERLAY */}
       <div className="absolute top-0 left-0 right-0 pointer-events-none" style={{ maxWidth: W, margin: '0 auto' }}>
@@ -2398,23 +2553,6 @@ const RagdollArena = () => {
         </div>
       </div>
 
-      {/* Bottom bar */}
-      <div className="absolute bottom-0 left-0 right-0 pointer-events-auto" style={{ maxWidth: W, margin: '0 auto' }}>
-        <div className="flex items-center justify-between px-4 py-2" style={{
-          background: 'linear-gradient(180deg, transparent 0%, rgba(0,0,0,0.6) 50%, rgba(0,0,0,0.8) 100%)',
-        }}>
-          <button
-            onClick={() => setGameScreen('menu')}
-            className="text-[10px] tracking-widest uppercase px-3 py-1 transition-all hover:text-red-400"
-            style={{ fontFamily: '"Orbitron", sans-serif', color: '#444', border: '1px solid #333' }}
-          >
-            ESC MENU
-          </button>
-          <div className="text-[9px] tracking-[0.15em] uppercase" style={{ fontFamily: '"Orbitron", sans-serif', color: '#333' }}>
-            J Slash • K Stab • G Kick • H HeadKick • X Fatality
-          </div>
-        </div>
-      </div>
     </div>
   );
 };
