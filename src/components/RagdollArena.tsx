@@ -548,16 +548,31 @@ let voicesLoaded = false;
 let assignedVoices: (SpeechSynthesisVoice | null)[] = [null, null, null];
 
 // Known female voice names to exclude
-const FEMALE_NAMES = ['samantha', 'karen', 'victoria', 'zira', 'susan', 'hazel', 'fiona', 'moira', 'tessa', 'allison', 'ava', 'joana', 'nicky', 'sandy', 'shelley', 'kate', 'serena', 'veena', 'catherine', 'princess'];
+const FEMALE_NAMES = ['samantha', 'karen', 'victoria', 'zira', 'susan', 'hazel', 'fiona', 'moira', 'tessa', 'allison', 'ava', 'joana', 'nicky', 'sandy', 'shelley', 'kate', 'serena', 'veena', 'catherine', 'princess', 'alice', 'emma', 'olivia', 'sophia', 'linda', 'rachel', 'jenny', 'emily', 'aria', 'lisa', 'helen', 'anna', 'sara'];
+
+// Only allow explicitly male-indicating English voices (strict mode)
+const MALE_NAMES = ['daniel', 'george', 'david', 'james', 'arthur', 'fred', 'aaron', 'tom', 'alex', 'rishi', 'albert', 'mark', 'ralph', 'bruce', 'junior', 'male'];
 
 const isMaleEnglish = (v: SpeechSynthesisVoice): boolean => {
-  if (!v.lang.startsWith('en')) return false;
+  if (!v.lang.toLowerCase().startsWith('en')) return false;
   const name = v.name.toLowerCase();
-  // Exclude known female names
-  for (const f of FEMALE_NAMES) {
-    if (name.includes(f)) return false;
+  if (FEMALE_NAMES.some((f) => name.includes(f))) return false;
+  return MALE_NAMES.some((m) => name.includes(m));
+};
+
+const resolveRoleVoice = (roleIdx: number): SpeechSynthesisVoice | null => {
+  const maleEn = cachedVoices.filter(isMaleEnglish);
+  if (maleEn.length === 0) return null;
+
+  const preferred = VOICE_ROLE_PREFS[roleIdx]
+    ?.map((pref) => pref.toLowerCase())
+    .find((pref) => maleEn.some((v) => v.name.toLowerCase().includes(pref)));
+
+  if (preferred) {
+    return maleEn.find((v) => v.name.toLowerCase().includes(preferred)) ?? null;
   }
-  return true;
+
+  return maleEn[roleIdx % maleEn.length] ?? null;
 };
 
 // Preload voices
@@ -566,28 +581,8 @@ if (typeof window !== 'undefined' && window.speechSynthesis) {
     cachedVoices = speechSynthesis.getVoices();
     if (cachedVoices.length > 0) {
       voicesLoaded = true;
-      // Assign 3 distinct male English voices
-      const maleEn = cachedVoices.filter(isMaleEnglish);
-      // NEVER fall back to female voices - only use confirmed male English voices
-      // If we don't have enough, reuse male voices with different pitch/rate configs
-      const pool = maleEn.length > 0 ? maleEn : [];
-      
-      const used = new Set<string>();
       for (let role = 0; role < 3; role++) {
-        let found: SpeechSynthesisVoice | null = null;
-        // Try preferences first - only from male pool
-        for (const pref of VOICE_ROLE_PREFS[role]) {
-          const match = pool.find(v => v.name.toLowerCase().includes(pref.toLowerCase()) && !used.has(v.name));
-          if (match) { found = match; break; }
-        }
-        // Fallback: pick any unused MALE voice from pool only
-        if (!found && pool.length > 0) {
-          found = pool.find(v => !used.has(v.name)) || null;
-          // If all male voices used, reuse from pool (pitch/rate will differentiate)
-          if (!found) found = pool[role % pool.length];
-        }
-        if (found) used.add(found.name);
-        assignedVoices[role] = found;
+        assignedVoices[role] = resolveRoleVoice(role);
       }
     }
   };
@@ -600,21 +595,23 @@ const speakLine = (text: string, roleIdx = 2) => {
     const now = Date.now();
     if (now - lastTTSTime < 1500) return;
     if (now - lastTTSByFighter[roleIdx] < 2200) return;
+
+    // HARD RULE: no verified male voice -> no TTS (never fallback to browser default)
+    const voice = resolveRoleVoice(roleIdx) ?? assignedVoices[roleIdx];
+    if (!voice || !isMaleEnglish(voice)) return;
+
     lastTTSTime = now;
     lastTTSByFighter[roleIdx] = now;
-    
+
     speechSynthesis.cancel();
-    
+
     const u = new SpeechSynthesisUtterance(text);
     const cfg = VOICE_CONFIGS[roleIdx] || VOICE_CONFIGS[2];
     u.pitch = cfg.pitch;
     u.rate = cfg.rate;
     u.volume = 0.85;
-    
-    // Use pre-assigned voice for this role
-    const voice = assignedVoices[roleIdx];
-    if (voice) u.voice = voice;
-    
+    u.voice = voice;
+
     speechSynthesis.speak(u);
   } catch (e) { /* TTS not available */ }
 };
