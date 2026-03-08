@@ -686,7 +686,7 @@ const RagdollArena = () => {
       // Pick new intent
       aiMem.intentTimer--;
       if (aiMem.intentTimer <= 0) {
-        aiMem.intent = pickNewIntent(bot, pl);
+        aiMem.intent = pickNewIntent(bot, pl, aiPersonality, aiMem);
         aiMem.intentTimer = 20 + Math.floor(Math.random() * 40);
       }
 
