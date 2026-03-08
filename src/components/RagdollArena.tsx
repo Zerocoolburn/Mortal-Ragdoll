@@ -2635,6 +2635,103 @@ const RagdollArena = () => {
       // Lightning
       g.lightnings.forEach(l => { ctx.globalAlpha = l.life / 8; l.branches.forEach(branch => { ctx.strokeStyle = '#fff'; ctx.lineWidth = 2 + l.life * 0.3; ctx.beginPath(); branch.forEach((p4, i) => { if (i === 0) ctx.moveTo(p4.x, p4.y); else ctx.lineTo(p4.x, p4.y); }); ctx.stroke(); }); }); ctx.globalAlpha = 1;
 
+      // ── SKULL FIRE SPECIAL ──
+      g.skullFires.forEach(sk => {
+        const progress = 1 - sk.life / sk.maxLife;
+        const alpha = sk.phase === 'fade' ? (sk.life / (sk.maxLife * 0.15)) : 1;
+        ctx.save(); ctx.globalAlpha = alpha;
+        // Giant skull
+        const skullSize = sk.phase === 'rise' ? 30 + progress * 40 : 70;
+        const bobY = Math.sin(progress * 8) * 5;
+        ctx.translate(sk.x, sk.y + bobY);
+        // Skull glow
+        const skGlow = ctx.createRadialGradient(0, 0, 10, 0, 0, skullSize * 1.8);
+        skGlow.addColorStop(0, 'rgba(255,120,0,0.4)'); skGlow.addColorStop(0.5, 'rgba(255,60,0,0.15)'); skGlow.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.fillStyle = skGlow; ctx.beginPath(); ctx.arc(0, 0, skullSize * 1.8, 0, Math.PI * 2); ctx.fill();
+        // Skull shape
+        ctx.fillStyle = '#e8d8b0'; ctx.beginPath(); ctx.arc(0, -5, skullSize * 0.5, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#d0c0a0'; ctx.beginPath(); ctx.ellipse(0, skullSize * 0.2, skullSize * 0.3, skullSize * 0.25, 0, 0, Math.PI * 2); ctx.fill();
+        // Eye sockets - glowing
+        const eyeGlow = ctx.createRadialGradient(-skullSize * 0.15, -skullSize * 0.08, 1, -skullSize * 0.15, -skullSize * 0.08, skullSize * 0.15);
+        eyeGlow.addColorStop(0, '#ff4400'); eyeGlow.addColorStop(0.5, '#ff2200'); eyeGlow.addColorStop(1, '#440000');
+        ctx.fillStyle = eyeGlow; ctx.beginPath(); ctx.ellipse(-skullSize * 0.15, -skullSize * 0.08, skullSize * 0.1, skullSize * 0.12, 0, 0, Math.PI * 2); ctx.fill();
+        const eyeGlow2 = ctx.createRadialGradient(skullSize * 0.15, -skullSize * 0.08, 1, skullSize * 0.15, -skullSize * 0.08, skullSize * 0.15);
+        eyeGlow2.addColorStop(0, '#ff4400'); eyeGlow2.addColorStop(0.5, '#ff2200'); eyeGlow2.addColorStop(1, '#440000');
+        ctx.fillStyle = eyeGlow2; ctx.beginPath(); ctx.ellipse(skullSize * 0.15, -skullSize * 0.08, skullSize * 0.1, skullSize * 0.12, 0, 0, Math.PI * 2); ctx.fill();
+        // Nose
+        ctx.fillStyle = '#222'; ctx.beginPath(); ctx.moveTo(-4, skullSize * 0.08); ctx.lineTo(4, skullSize * 0.08); ctx.lineTo(0, skullSize * 0.18); ctx.closePath(); ctx.fill();
+        // Teeth
+        ctx.fillStyle = '#ddd';
+        for (let t = -3; t <= 3; t++) { ctx.fillRect(t * skullSize * 0.06 - 2, skullSize * 0.25, 4, 8); }
+        // Jaw opening for fire
+        if (sk.phase === 'breathe') {
+          const jawOpen = 6 + Math.sin(progress * 12) * 3;
+          ctx.fillStyle = '#ff3300'; ctx.beginPath(); ctx.ellipse(0, skullSize * 0.3 + jawOpen, skullSize * 0.2, jawOpen, 0, 0, Math.PI * 2); ctx.fill();
+        }
+        ctx.restore();
+        // Fire stream
+        if (sk.phase === 'breathe') {
+          sk.fireParticles.forEach(fp => {
+            const fpAlpha = fp.life / 35;
+            const grad = ctx.createRadialGradient(fp.x, fp.y, 0, fp.x, fp.y, fp.sz * 2);
+            grad.addColorStop(0, `rgba(255,220,50,${fpAlpha})`); grad.addColorStop(0.4, `rgba(255,100,0,${fpAlpha * 0.7})`); grad.addColorStop(1, `rgba(200,0,0,0)`);
+            ctx.fillStyle = grad; ctx.beginPath(); ctx.arc(fp.x, fp.y, fp.sz * 2, 0, Math.PI * 2); ctx.fill();
+          });
+        }
+        ctx.globalAlpha = 1;
+      });
+
+      // ── DRAGON SPECIAL ──
+      g.dragons.forEach(dr => {
+        const alpha = dr.phase === 'flyAway' ? Math.max(0, dr.life / (dr.maxLife * 0.3)) : 1;
+        // Trail
+        dr.trail.forEach(t => {
+          if (t.alpha > 0) {
+            ctx.fillStyle = `rgba(0,150,255,${t.alpha * 0.3})`;
+            ctx.beginPath(); ctx.arc(t.x, t.y, 8, 0, Math.PI * 2); ctx.fill();
+          }
+        });
+        ctx.save(); ctx.globalAlpha = alpha;
+        ctx.translate(dr.x, dr.y);
+        ctx.scale(dr.facing, 1);
+        // Dragon glow
+        const drGlow = ctx.createRadialGradient(0, 0, 10, 0, 0, 80);
+        drGlow.addColorStop(0, 'rgba(0,150,255,0.3)'); drGlow.addColorStop(0.5, 'rgba(0,80,200,0.1)'); drGlow.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.fillStyle = drGlow; ctx.beginPath(); ctx.arc(0, 0, 80, 0, Math.PI * 2); ctx.fill();
+        // Dragon body
+        ctx.fillStyle = '#1a3a6a'; ctx.beginPath();
+        ctx.moveTo(40, 0); ctx.quadraticCurveTo(20, -20, -10, -15);
+        ctx.quadraticCurveTo(-30, -10, -50, 5);
+        ctx.quadraticCurveTo(-30, 15, -10, 15);
+        ctx.quadraticCurveTo(20, 20, 40, 0);
+        ctx.fill();
+        // Wings
+        const wingFlap = Math.sin(dr.life * 0.4) * 20;
+        ctx.fillStyle = 'rgba(30,80,160,0.8)';
+        ctx.beginPath(); ctx.moveTo(0, -10); ctx.quadraticCurveTo(-20, -50 - wingFlap, -50, -30 - wingFlap); ctx.quadraticCurveTo(-30, -15, 0, -10); ctx.fill();
+        ctx.beginPath(); ctx.moveTo(0, 10); ctx.quadraticCurveTo(-20, 50 + wingFlap, -50, 30 + wingFlap); ctx.quadraticCurveTo(-30, 15, 0, 10); ctx.fill();
+        // Head
+        ctx.fillStyle = '#2a4a8a'; ctx.beginPath(); ctx.arc(35, 0, 12, 0, Math.PI * 2); ctx.fill();
+        // Eye
+        ctx.fillStyle = '#0ff'; ctx.beginPath(); ctx.arc(40, -3, 3, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(41, -3, 1.5, 0, Math.PI * 2); ctx.fill();
+        // Horns
+        ctx.strokeStyle = '#4a6aaa'; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(30, -10); ctx.lineTo(25, -22); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(35, -10); ctx.lineTo(32, -20); ctx.stroke();
+        // Tail
+        ctx.strokeStyle = '#1a3a6a'; ctx.lineWidth = 4; ctx.lineCap = 'round';
+        ctx.beginPath(); ctx.moveTo(-50, 5); ctx.quadraticCurveTo(-70, 0 + Math.sin(dr.life * 0.3) * 10, -85, -5 + Math.sin(dr.life * 0.5) * 8); ctx.stroke();
+        // Spikes on tail
+        ctx.fillStyle = '#4a6aaa';
+        for (let i = 0; i < 4; i++) {
+          const tx = -50 - i * 9; const ty = 5 + Math.sin(dr.life * 0.3 + i) * 4 - i * 1;
+          ctx.beginPath(); ctx.moveTo(tx - 2, ty); ctx.lineTo(tx, ty - 6); ctx.lineTo(tx + 2, ty); ctx.fill();
+        }
+        ctx.restore();
+        ctx.globalAlpha = 1;
+      });
+
       ctx.restore(); // end world-space
 
       // ── SCREEN-SPACE EFFECTS ──
