@@ -161,7 +161,7 @@ export const CHARACTERS: CharacterDef[] = [
   // ── 7. SHADE — Shadow Wraith ──
   {
     id: 'shade', name: 'SHADE', title: 'Shadow Wraith',
-    color: '#2a1a3a', color2: '#a0f',
+    color: '#2a1a3a', color2: '#aa00ff',
     skin: '#9a8a9a', hair: '#1a0a2a',
     weaponKey: 'longsword', specialType: 'shadowClone',
     specialName: 'PHANTOM SLASH', specialColor: '#a0f', specialGlow: '#c4f',
