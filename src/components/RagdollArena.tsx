@@ -729,16 +729,16 @@ const RagdollArena = () => {
         const r = Math.random();
         if (r < 0.12) { ss(bot, 'block'); bot.aiTimer = 4 + rng(0, 5) | 0; mem.consecutiveBlocks++; if (mem.consecutiveBlocks >= 2) { mem.intent = 'punish'; mem.intentTimer = 12; mem.consecutiveBlocks = 0; } return; }
         else if (r < 0.22 && bot.dodgeCool <= 0 && bot.stamina > 12) { doDodge(bot, -bot.facing); bot.aiTimer = 3; mem.intent = 'punish'; mem.intentTimer = 10; return; }
-        else if (r < 0.6 && ca(bot) && st > 0.12) {
-          if (bot.heldLimb && rng(0, 1) < 0.5) { doLimbSmash(bot); } else { doAtk(bot, pick(['slash', 'stab', 'heavySlash', 'overhead'])); }
-          bot.aiTimer = 1 + rng(0, 3) | 0; return;
+        else if (r < 0.7 && ca(bot) && st > 0.06) {
+          if (bot.heldLimb && rng(0, 1) < 0.5) { doLimbSmash(bot); } else { doAtk(bot, pick(['slash', 'stab', 'uppercut', 'dashStab', 'spinSlash'])); }
+          bot.aiTimer = 0; mem.intent = 'executeCombo'; mem.comboSeq = [...pick(AI_COMBOS)]; return;
         }
       }
 
       if (isPlRecovering && d < wr + 25 && ca(bot)) {
         if (bot.heldLimb && rng(0, 1) < 0.4) doLimbSmash(bot);
-        else doAtk(bot, pick(['slash', 'stab', 'heavySlash']));
-        bot.aiTimer = 1 + rng(0, 3) | 0; mem.comboStep = 1; return;
+        else doAtk(bot, pick(['slash', 'stab', 'uppercut', 'dashStab']));
+        bot.aiTimer = 0; mem.comboStep = 1; mem.intent = 'executeCombo'; mem.comboSeq = [...pick(AI_COMBOS)]; return;
       }
 
       switch (mem.intent) {
