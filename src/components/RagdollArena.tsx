@@ -6,6 +6,7 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 const W = 1280, H = 720, GY = 575, GRAV = 0.4;
 const WORLD_W = 6000;
 const WALL_L = 50, WALL_R = WORLD_W - 50;
+const MAX_HP = 250;
 interface V { x: number; y: number }
 const v = (x = 0, y = 0): V => ({ x, y });
 const vadd = (a: V, b: V): V => ({ x: a.x + b.x, y: a.y + b.y });
@@ -19,6 +20,174 @@ const rng = (mn: number, mx: number) => mn + Math.random() * (mx - mn);
 const pick = <T,>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)];
 
 // ═══════════════════════════════════════════════════════
+// SOUND FX SYSTEM (Web Audio)
+// ═══════════════════════════════════════════════════════
+let audioCtx: AudioContext | null = null;
+const getAudioCtx = () => {
+  if (!audioCtx) audioCtx = new AudioContext();
+  return audioCtx;
+};
+
+const playSFX = (type: 'hit' | 'slash' | 'heavyHit' | 'block' | 'kick' | 'headbutt' | 'gunshot' | 'sever' | 'ko' | 'roundStart' | 'footstep' | 'whoosh', vol = 0.15) => {
+  try {
+    const ctx = getAudioCtx();
+    const g = ctx.createGain();
+    g.gain.value = vol;
+    g.connect(ctx.destination);
+
+    if (type === 'hit' || type === 'kick') {
+      const osc = ctx.createOscillator();
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(type === 'kick' ? 80 : 120, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(40, ctx.currentTime + 0.08);
+      g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.1);
+      osc.connect(g); osc.start(); osc.stop(ctx.currentTime + 0.1);
+      // Noise burst for impact
+      const buf = ctx.createBuffer(1, ctx.sampleRate * 0.05, ctx.sampleRate);
+      const data = buf.getChannelData(0);
+      for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / data.length);
+      const noise = ctx.createBufferSource();
+      noise.buffer = buf;
+      const ng = ctx.createGain(); ng.gain.value = vol * 0.6;
+      ng.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.06);
+      noise.connect(ng); ng.connect(ctx.destination); noise.start(); noise.stop(ctx.currentTime + 0.06);
+    } else if (type === 'slash') {
+      const buf = ctx.createBuffer(1, ctx.sampleRate * 0.12, ctx.sampleRate);
+      const data = buf.getChannelData(0);
+      for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1) * Math.sin(i / data.length * Math.PI) * 0.5;
+      const noise = ctx.createBufferSource(); noise.buffer = buf;
+      const filter = ctx.createBiquadFilter(); filter.type = 'highpass'; filter.frequency.value = 2000;
+      noise.connect(filter); filter.connect(g); noise.start(); noise.stop(ctx.currentTime + 0.12);
+    } else if (type === 'heavyHit') {
+      const osc = ctx.createOscillator(); osc.type = 'square';
+      osc.frequency.setValueAtTime(60, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(20, ctx.currentTime + 0.2);
+      g.gain.value = vol * 1.5;
+      g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.25);
+      osc.connect(g); osc.start(); osc.stop(ctx.currentTime + 0.25);
+      const buf = ctx.createBuffer(1, ctx.sampleRate * 0.1, ctx.sampleRate);
+      const data = buf.getChannelData(0);
+      for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / data.length);
+      const noise = ctx.createBufferSource(); noise.buffer = buf;
+      const ng = ctx.createGain(); ng.gain.value = vol;
+      noise.connect(ng); ng.connect(ctx.destination); noise.start(); noise.stop(ctx.currentTime + 0.1);
+    } else if (type === 'block') {
+      const osc = ctx.createOscillator(); osc.type = 'triangle';
+      osc.frequency.setValueAtTime(800, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(200, ctx.currentTime + 0.08);
+      g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.1);
+      osc.connect(g); osc.start(); osc.stop(ctx.currentTime + 0.1);
+    } else if (type === 'headbutt') {
+      const osc = ctx.createOscillator(); osc.type = 'sine';
+      osc.frequency.setValueAtTime(200, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(50, ctx.currentTime + 0.15);
+      g.gain.value = vol * 1.2;
+      g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.18);
+      osc.connect(g); osc.start(); osc.stop(ctx.currentTime + 0.18);
+    } else if (type === 'gunshot') {
+      const buf = ctx.createBuffer(1, ctx.sampleRate * 0.08, ctx.sampleRate);
+      const data = buf.getChannelData(0);
+      for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (data.length * 0.15));
+      const noise = ctx.createBufferSource(); noise.buffer = buf;
+      g.gain.value = vol * 2;
+      noise.connect(g); noise.start(); noise.stop(ctx.currentTime + 0.08);
+    } else if (type === 'sever') {
+      const osc = ctx.createOscillator(); osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(300, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(50, ctx.currentTime + 0.3);
+      g.gain.value = vol * 1.8;
+      g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.35);
+      osc.connect(g); osc.start(); osc.stop(ctx.currentTime + 0.35);
+    } else if (type === 'ko') {
+      for (let i = 0; i < 3; i++) {
+        const osc = ctx.createOscillator(); osc.type = 'square';
+        osc.frequency.setValueAtTime(100 - i * 20, ctx.currentTime + i * 0.1);
+        osc.frequency.exponentialRampToValueAtTime(30, ctx.currentTime + i * 0.1 + 0.3);
+        const og = ctx.createGain(); og.gain.value = vol * 2;
+        og.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + i * 0.1 + 0.35);
+        osc.connect(og); og.connect(ctx.destination); osc.start(ctx.currentTime + i * 0.1); osc.stop(ctx.currentTime + i * 0.1 + 0.35);
+      }
+    } else if (type === 'roundStart') {
+      [400, 500, 700].forEach((f, i) => {
+        const osc = ctx.createOscillator(); osc.type = 'square';
+        osc.frequency.value = f;
+        const og = ctx.createGain(); og.gain.value = vol * 0.5;
+        og.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + i * 0.15 + 0.2);
+        osc.connect(og); og.connect(ctx.destination); osc.start(ctx.currentTime + i * 0.15); osc.stop(ctx.currentTime + i * 0.15 + 0.2);
+      });
+    } else if (type === 'whoosh') {
+      const buf = ctx.createBuffer(1, ctx.sampleRate * 0.1, ctx.sampleRate);
+      const data = buf.getChannelData(0);
+      for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1) * Math.sin(i / data.length * Math.PI) * 0.3;
+      const noise = ctx.createBufferSource(); noise.buffer = buf;
+      const filter = ctx.createBiquadFilter(); filter.type = 'bandpass'; filter.frequency.value = 3000; filter.Q.value = 2;
+      noise.connect(filter); filter.connect(g); noise.start(); noise.stop(ctx.currentTime + 0.1);
+    }
+  } catch (e) { /* audio not available */ }
+};
+
+// ═══════════════════════════════════════════════════════
+// TTS SYSTEM - Rated R funny fatality lines
+// ═══════════════════════════════════════════════════════
+const FATALITY_LINES_WINNER = [
+  "Get absolutely wrecked, mate!",
+  "Was that your head or a watermelon?",
+  "You fight like my dead grandma!",
+  "I'll use your spine as a back scratcher!",
+  "That's what happens when you skip sword practice!",
+  "Your mother fights better than you!",
+  "I've seen potatoes with more fight!",
+  "Say hello to the dirt for me!",
+  "You just got absolutely demolished!",
+  "Maybe try checkers instead?",
+  "Boom! Headshot! Wait, wrong game.",
+  "Is that all you've got? Pathetic!",
+  "I didn't even break a sweat!",
+  "You're going home in a body bag!",
+  "Rest in pieces, you absolute walnut!",
+];
+const FATALITY_LINES_LOSER = [
+  "Holy shit, I'm fucked!",
+  "You just beat me with my own arm, you knob goblin!",
+  "Well, that's my spine... great.",
+  "I think I left my dignity back there...",
+  "Was that my head? I need that!",
+  "Tell my wife... she was right about everything.",
+  "I can't feel my legs... oh wait, they're over there.",
+  "This is fine. Everything is fine.",
+  "At least buy me dinner first!",
+  "My insurance doesn't cover this!",
+  "You absolute psychopath!",
+  "I specifically asked you not to do that!",
+  "That's coming out of your paycheck!",
+  "Ow ow ow ow OW!",
+  "I quit! I freaking quit!",
+  "Next time I'm bringing a gun... oh wait.",
+  "My ancestors are very disappointed right now.",
+  "I didn't sign up for this!",
+  "Was the decapitation really necessary?!",
+  "You fight dirty and I respect that... from the grave.",
+];
+const KO_LINES = [
+  "FINISH HIM!", "DESTROYED!", "OBLITERATED!", "ANNIHILATED!",
+  "WASTED!", "GAME OVER MAN!", "ABSOLUTELY BODIED!", "SENT TO THE SHADOW REALM!",
+];
+
+let lastTTSTime = 0;
+const speakLine = (text: string, pitch = 1, rate = 1) => {
+  try {
+    const now = Date.now();
+    if (now - lastTTSTime < 3000) return; // Debounce
+    lastTTSTime = now;
+    const u = new SpeechSynthesisUtterance(text);
+    u.pitch = pitch;
+    u.rate = rate;
+    u.volume = 0.7;
+    speechSynthesis.speak(u);
+  } catch (e) { /* TTS not available */ }
+};
+
+// ═══════════════════════════════════════════════════════
 // RAGDOLL SYSTEM
 // ═══════════════════════════════════════════════════════
 interface RPoint { pos: V; old: V; acc: V; mass: number; pinned: boolean }
@@ -26,12 +195,13 @@ interface RStick { a: number; b: number; len: number; stiff: number }
 
 function createRagdoll(x: number, y: number) {
   const S = 1.35;
+  // FIXED: Longer legs to match torso proportions, added mid-spine flexibility
   const offsets: V[] = [
-    v(0, -108*S), v(0, -93*S), v(0, -72*S), v(0, -52*S), v(0, -36*S),
-    v(-15*S, -86*S), v(-28*S, -64*S), v(-35*S, -46*S),
-    v(15*S, -86*S), v(28*S, -64*S), v(35*S, -46*S),
-    v(-9*S, -33*S), v(-11*S, -16*S), v(-9*S, -1),
-    v(9*S, -33*S), v(11*S, -16*S), v(9*S, -1),
+    v(0, -108*S), v(0, -93*S), v(0, -72*S), v(0, -52*S), v(0, -36*S),  // head, neck, upper chest, lower chest/mid-spine, hip
+    v(-15*S, -86*S), v(-28*S, -64*S), v(-35*S, -46*S),  // left arm
+    v(15*S, -86*S), v(28*S, -64*S), v(35*S, -46*S),  // right arm
+    v(-10*S, -33*S), v(-13*S, -14*S), v(-11*S, 4),  // left leg (longer: hip->knee->foot)
+    v(10*S, -33*S), v(13*S, -14*S), v(11*S, 4),  // right leg (longer)
   ];
   const pts: RPoint[] = offsets.map(o => ({
     pos: v(x + o.x, y + o.y), old: v(x + o.x, y + o.y),
@@ -40,14 +210,22 @@ function createRagdoll(x: number, y: number) {
   pts[0].mass = 0.8; pts[13].mass = 1.5; pts[16].mass = 1.5;
   const sticks: RStick[] = [
     { a: 0, b: 1, len: 15, stiff: 1 }, { a: 1, b: 2, len: 21, stiff: 1 },
-    { a: 2, b: 3, len: 20, stiff: 0.9 }, { a: 3, b: 4, len: 16, stiff: 0.9 },
+    { a: 2, b: 3, len: 20, stiff: 0.7 }, // Mid-spine - LOWER stiffness for bending!
+    { a: 3, b: 4, len: 16, stiff: 0.75 }, // Lower spine - also flexible
     { a: 1, b: 5, len: 16, stiff: 0.8 }, { a: 5, b: 6, len: 26, stiff: 0.7 }, { a: 6, b: 7, len: 20, stiff: 0.6 },
     { a: 1, b: 8, len: 16, stiff: 0.8 }, { a: 8, b: 9, len: 26, stiff: 0.7 }, { a: 9, b: 10, len: 20, stiff: 0.6 },
-    { a: 4, b: 11, len: 10, stiff: 0.9 }, { a: 11, b: 12, len: 18, stiff: 0.85 }, { a: 12, b: 13, len: 16, stiff: 0.85 },
-    { a: 4, b: 14, len: 10, stiff: 0.9 }, { a: 14, b: 15, len: 18, stiff: 0.85 }, { a: 15, b: 16, len: 16, stiff: 0.85 },
+    { a: 4, b: 11, len: 12, stiff: 0.9 },  // hip to thigh (slightly longer)
+    { a: 11, b: 12, len: 26, stiff: 0.85 }, // upper leg (was 18, now 26!)
+    { a: 12, b: 13, len: 22, stiff: 0.85 }, // lower leg (was 16, now 22!)
+    { a: 4, b: 14, len: 12, stiff: 0.9 },
+    { a: 14, b: 15, len: 26, stiff: 0.85 }, // upper leg
+    { a: 15, b: 16, len: 22, stiff: 0.85 }, // lower leg
     { a: 2, b: 5, len: 20, stiff: 0.5 }, { a: 2, b: 8, len: 20, stiff: 0.5 },
-    { a: 4, b: 11, len: 10, stiff: 0.5 }, { a: 4, b: 14, len: 10, stiff: 0.5 },
-    { a: 0, b: 2, len: 36, stiff: 0.4 }, { a: 11, b: 14, len: 18, stiff: 0.4 }, { a: 5, b: 8, len: 30, stiff: 0.4 },
+    { a: 4, b: 11, len: 12, stiff: 0.5 }, { a: 4, b: 14, len: 12, stiff: 0.5 },
+    { a: 0, b: 2, len: 36, stiff: 0.4 }, { a: 11, b: 14, len: 20, stiff: 0.4 }, { a: 5, b: 8, len: 30, stiff: 0.4 },
+    // Cross-braces for spine stability (but allow bending)
+    { a: 1, b: 4, len: 76, stiff: 0.25 }, // spine cross-brace (loose for flex)
+    { a: 2, b: 4, len: 36, stiff: 0.3 }, // lower spine brace
   ];
   return { pts, sticks };
 }
@@ -196,13 +374,13 @@ interface Fighter {
   headHits: number;
   shieldHP: number;
   fatalityType: number;
-  hasSword: boolean; // whether fighter still has their sword
-  groundBeatTimer: number; // post-KO beatdown timer
+  hasSword: boolean;
+  groundBeatTimer: number;
 }
 
 function mkFighter(x: number, name: string, color: string, skin: string, hair: string, wKey: string, isAI: boolean): Fighter {
   return {
-    x, y: GY, vx: 0, vy: 0, hp: 250, stamina: 100,
+    x, y: GY, vx: 0, vy: 0, hp: MAX_HP, stamina: 100,
     state: 'idle', frame: 0, dur: 0, facing: 1, grounded: true,
     weapon: WEAPONS[wKey], combo: 0, comboTimer: 0,
     name, color, skin, hair, isAI, wins: 0, aiTimer: 0,
@@ -232,22 +410,36 @@ function poseRagdoll(f: Fighter) {
   const wk = f.state === 'walk' || f.state === 'walkBack' ? f.walkCycle : 0;
   const ap = f.dur > 0 ? f.frame / f.dur : 0;
   const jmp = !f.grounded ? -10 : 0;
-  const legSwing = Math.sin(wk) * 12 * S;
-  const legBend = Math.abs(Math.sin(wk)) * 6 * S;
+  const legSwing = Math.sin(wk) * 14 * S;
+  const legBend = Math.abs(Math.sin(wk)) * 8 * S;
 
-  const lHipX = -9 * s * S, rHipX = 9 * s * S;
+  // Spine bend - dynamic mid-back flex based on action
+  let spineBend = 0;
+  if (f.state === 'slash' || f.state === 'heavySlash') spineBend = Math.sin(ap * Math.PI) * 8 * s;
+  else if (f.state === 'uppercut') spineBend = -12 * s * ap;
+  else if (f.state === 'kick' || f.state === 'headKick' || f.state === 'roundhouse') spineBend = -6 * s * Math.sin(ap * Math.PI);
+  else if (f.state === 'headbutt') spineBend = 15 * s * (ap < 0.5 ? -ap : ap - 1);
+  else if (f.state === 'stagger' || f.state === 'hit') spineBend = -8 * f.hitDir.x;
+  else if (f.state === 'dodge') spineBend = Math.sin(ap * Math.PI * 2) * 10 * s;
+  else if (isIdle) spineBend = Math.sin(f.bob * 0.4) * 2;
+  else if (f.state === 'walk') spineBend = Math.sin(wk * 2) * 3 * s;
+
+  const lHipX = -10 * s * S, rHipX = 10 * s * S;
   const hipY = -33 * S + jmp;
-  const footY = -1;
+  const footY = 4; // Longer legs - feet extend slightly below reference
   const lFootX = (lHipX - legSwing * 0.8 * s);
   const rFootX = (rHipX + legSwing * 0.8 * s);
-  const lKneeX = (lHipX + lFootX) / 2 + s * 4 * S;
-  const lKneeY = (hipY + footY) / 2 - legBend - 4 * S;
-  const rKneeX = (rHipX + rFootX) / 2 + s * 4 * S;
-  const rKneeY = (hipY + footY) / 2 - legBend - 4 * S;
+  const lKneeX = (lHipX + lFootX) / 2 + s * 5 * S;
+  const lKneeY = (hipY + footY) / 2 - legBend - 6 * S;
+  const rKneeX = (rHipX + rFootX) / 2 + s * 5 * S;
+  const rKneeY = (hipY + footY) / 2 - legBend - 6 * S;
 
   const targets: V[] = [
-    v(sway * 0.5, -108 * S + bob2 + co + jmp + breathe * 0.3), v(sway * 0.4, -93 * S + bob2 + co + jmp + breathe * 0.5),
-    v(sway * 0.3, -72 * S + bob2 + co + jmp + breathe), v(sway * 0.2, -52 * S + co + jmp + breathe * 0.5), v(weightShift, hipY),
+    v(sway * 0.5 + spineBend * 0.3, -108 * S + bob2 + co + jmp + breathe * 0.3),
+    v(sway * 0.4 + spineBend * 0.25, -93 * S + bob2 + co + jmp + breathe * 0.5),
+    v(sway * 0.3 + spineBend * 0.5, -72 * S + bob2 + co + jmp + breathe), // mid-spine bends!
+    v(sway * 0.2 + spineBend * 0.8, -52 * S + co + jmp + breathe * 0.5), // lower spine bends more!
+    v(weightShift + spineBend * 0.2, hipY),
     v(-15 * s * S + armIdle * 0.3, -86 * S + bob2 + co + jmp + breathe * 0.4), v(-28 * s * S + armIdle * 0.6, -64 * S + bob2 + co + jmp + armIdle * 0.5), v(-35 * s * S + armIdle, -46 * S + bob2 + co + jmp + armIdle * 0.8),
     v(15 * s * S - armIdle * 0.2, -86 * S + bob2 + co + jmp + breathe * 0.4), v(28 * s * S - armIdle * 0.4, -64 * S + bob2 + co + jmp - armIdle * 0.3), v(35 * s * S - armIdle * 0.5, -46 * S + bob2 + co + jmp - armIdle * 0.5),
     v(lHipX + weightShift, hipY), v(lKneeX + weightShift * 0.5, lKneeY + jmp), v(lFootX + weightShift * 0.3, footY),
@@ -264,56 +456,44 @@ function poseRagdoll(f: Fighter) {
     for (let i = 0; i < targets.length; i++) { targets[i].y += Math.sin(roll) * 20; targets[i].x += Math.cos(roll) * 5 * s; }
   }
 
-  // ── KICK POSES ── Proper knee bending!
+  // ── KICK POSES ──
   if (f.state === 'kick') {
-    // Front kick: knee bends up then leg extends forward
     const bendPhase = ap < 0.3 ? ap / 0.3 : ap < 0.6 ? 1 : 1 - (ap - 0.6) / 0.4;
     const extendPhase = ap < 0.3 ? 0 : ap < 0.6 ? (ap - 0.3) / 0.3 : 1 - (ap - 0.6) / 0.4;
-    // Right leg (kicking leg) - knee bends up then extends
-    targets[14] = v(rHipX + s * 10 * extendPhase, hipY - 30 * bendPhase);
-    targets[15] = v(rHipX + s * 30 * extendPhase, hipY - 15 * bendPhase - 10 * extendPhase);
-    targets[16] = v(rHipX + s * 55 * extendPhase, hipY - 5 * bendPhase + 5 * (1 - extendPhase));
-    // Plant leg bends slightly
+    targets[14] = v(rHipX + s * 10 * extendPhase, hipY - 35 * bendPhase);
+    targets[15] = v(rHipX + s * 35 * extendPhase, hipY - 18 * bendPhase - 12 * extendPhase);
+    targets[16] = v(rHipX + s * 60 * extendPhase, hipY - 5 * bendPhase + 8 * (1 - extendPhase));
     targets[12] = v(lKneeX, lKneeY + 5);
     targets[13] = v(lFootX, footY);
   }
 
   if (f.state === 'headKick') {
-    // High kick targeting head height - big wind up
     const windUp = ap < 0.25 ? ap / 0.25 : 0;
     const kickUp = ap < 0.25 ? 0 : ap < 0.55 ? (ap - 0.25) / 0.3 : 1;
     const recover = ap > 0.7 ? (ap - 0.7) / 0.3 : 0;
-    // Right leg sweeps up to head height
-    targets[14] = v(rHipX + s * 5, hipY + 5 * windUp - 20 * kickUp + 15 * recover);
-    targets[15] = v(rHipX + s * 20 * kickUp, hipY - 30 * kickUp - 20 * windUp + 20 * recover);
-    targets[16] = v(rHipX + s * 50 * kickUp, -80 * S * kickUp + footY * (1 - kickUp) + 30 * recover);
-    // Lean back for balance
+    targets[14] = v(rHipX + s * 5, hipY + 5 * windUp - 25 * kickUp + 18 * recover);
+    targets[15] = v(rHipX + s * 25 * kickUp, hipY - 35 * kickUp - 25 * windUp + 22 * recover);
+    targets[16] = v(rHipX + s * 55 * kickUp, -85 * S * kickUp + footY * (1 - kickUp) + 35 * recover);
     for (let i = 0; i < 5; i++) targets[i].x -= s * 8 * kickUp;
     targets[12] = v(lKneeX - s * 5, lKneeY + 8 * kickUp);
   }
 
   if (f.state === 'kneeStrike') {
-    // Knee strike: step forward and drive knee into opponent
     const drivePhase = ap < 0.2 ? ap / 0.2 : ap < 0.5 ? 1 : 1 - (ap - 0.5) / 0.5;
-    targets[14] = v(rHipX + s * 25 * drivePhase, hipY - 25 * drivePhase);
-    targets[15] = v(rHipX + s * 30 * drivePhase, hipY - 35 * drivePhase); // Knee is the weapon
-    targets[16] = v(rHipX + s * 15 * drivePhase, hipY - 15 * drivePhase); // Foot tucked back
-    // Lean forward into it
+    targets[14] = v(rHipX + s * 28 * drivePhase, hipY - 30 * drivePhase);
+    targets[15] = v(rHipX + s * 35 * drivePhase, hipY - 40 * drivePhase);
+    targets[16] = v(rHipX + s * 18 * drivePhase, hipY - 18 * drivePhase);
     for (let i = 0; i < 5; i++) targets[i].x += s * 10 * drivePhase;
   }
 
   if (f.state === 'roundhouse') {
-    // Full spinning roundhouse kick
     const spinPhase = ap * Math.PI * 1.5;
-    const height = Math.sin(ap * Math.PI) * 60;
-    // Spinning body
+    const height = Math.sin(ap * Math.PI) * 70;
     const bodyTwist = Math.sin(spinPhase) * 12;
     for (let i = 0; i < 5; i++) targets[i].x += bodyTwist;
-    // Kicking leg sweeps in arc
-    targets[14] = v(rHipX + Math.cos(spinPhase) * 20 * s, hipY - 25);
-    targets[15] = v(rHipX + Math.cos(spinPhase) * 40 * s, hipY - 40 - height * 0.3);
-    targets[16] = v(rHipX + Math.cos(spinPhase) * 60 * s, -70 * S - height * 0.5);
-    // Support leg
+    targets[14] = v(rHipX + Math.cos(spinPhase) * 22 * s, hipY - 30);
+    targets[15] = v(rHipX + Math.cos(spinPhase) * 45 * s, hipY - 45 - height * 0.3);
+    targets[16] = v(rHipX + Math.cos(spinPhase) * 65 * s, -75 * S - height * 0.5);
     targets[12] = v(lKneeX, lKneeY + 5);
     targets[13] = v(lFootX, footY);
   }
@@ -323,29 +503,24 @@ function poseRagdoll(f: Fighter) {
     const windUp = ap < 0.25 ? ap / 0.25 : 0;
     const strike = ap < 0.25 ? 0 : ap < 0.5 ? (ap - 0.25) / 0.25 : 1;
     const recover = ap > 0.6 ? (ap - 0.6) / 0.4 : 0;
-    // Lean back then thrust head forward
     for (let i = 0; i < 5; i++) {
       targets[i].x -= s * 12 * windUp;
       targets[i].x += s * 25 * strike - s * 10 * recover;
     }
-    // Head lunges forward
     targets[0] = v(sway + s * 30 * strike - s * 5 * recover, -108 * S + bob2 + 15 * strike);
     targets[1] = v(sway + s * 15 * strike, -93 * S + bob2 + 8 * strike);
-    // Plant legs firmly
     targets[12] = v(lKneeX - s * 5 * strike, lKneeY + 5 * strike);
     targets[15] = v(rKneeX + s * 5 * strike, rKneeY + 5 * strike);
   }
 
-  // ── PUNCH POSE (unarmed) ──
+  // ── PUNCH POSE ──
   if (f.state === 'punch') {
     const windUp = ap < 0.2 ? ap / 0.2 : 0;
     const strike = ap < 0.2 ? 0 : ap < 0.5 ? (ap - 0.2) / 0.3 : 1;
     const recover = ap > 0.6 ? (ap - 0.6) / 0.4 : 0;
-    // Right arm punches forward
     targets[8] = v((15 + 20 * strike - 10 * recover) * s * S, (-86 + 10 * windUp) * S + bob2);
     targets[9] = v((28 + 35 * strike - 15 * recover) * s * S, (-64 + 15 * strike - 5 * recover) * S + bob2);
     targets[10] = v((35 + 50 * strike - 20 * recover) * s * S, (-55 + 20 * strike - 8 * recover) * S + bob2);
-    // Lean into punch
     for (let i = 0; i < 5; i++) targets[i].x += s * 8 * strike - s * 3 * recover;
   }
 
@@ -353,28 +528,24 @@ function poseRagdoll(f: Fighter) {
   if (f.state === 'swordThrow') {
     const windUp = ap < 0.3 ? ap / 0.3 : 0;
     const release = ap < 0.3 ? 0 : ap < 0.5 ? (ap - 0.3) / 0.2 : 1;
-    // Wind up - arm goes back
     targets[8] = v((15 - 25 * windUp + 30 * release) * s * S, (-86 - 15 * windUp + 10 * release) * S);
     targets[9] = v((28 - 30 * windUp + 40 * release) * s * S, (-64 - 20 * windUp + 15 * release) * S);
     targets[10] = v((35 - 35 * windUp + 50 * release) * s * S, (-46 - 25 * windUp + 20 * release) * S);
-    // Body twist
     for (let i = 0; i < 5; i++) targets[i].x += s * (-8 * windUp + 12 * release);
   }
 
   if (f.state === 'fatality') {
-    // Different fatality poses based on fatalityType
-    const ft = f.fatalityType % 5; // cycle through pose groups
+    const ft = f.fatalityType % 5;
     const subAp = (ap * 4) % 1;
-    if (ft === 0) { // Decapitation style
-      const swingAng = ap < 0.4 ? -2.5 : ap < 0.6 ? 2.5 : 0;
+    if (ft === 0) {
       targets[9] = v((28 + 30 * (ap > 0.4 ? 1 : 0)) * s * S, (-64 - 20 * (ap > 0.4 ? 1 : 0)) * S);
       targets[10] = v((35 + 40 * (ap > 0.4 ? 1 : 0)) * s * S, (-46 - 30 * (ap > 0.4 ? 1 : 0)) * S);
-    } else if (ft === 1) { // Stomp style
+    } else if (ft === 1) {
       const stompH = subAp < 0.3 ? -50 : subAp < 0.5 ? 20 : -30;
-      targets[15] = v(s * 20, stompH);
-      targets[16] = v(s * 25, stompH + 15);
+      targets[15] = v(s * 22, stompH);
+      targets[16] = v(s * 28, stompH + 18);
       for (let i = 0; i < 5; i++) targets[i].y += Math.sin(subAp * Math.PI) * 10;
-    } else if (ft === 2) { // Spin attack
+    } else if (ft === 2) {
       const spinA = ap * Math.PI * 4;
       for (let i = 0; i < targets.length; i++) {
         const cx = 0, cy = -60 * S;
@@ -382,18 +553,18 @@ function poseRagdoll(f: Fighter) {
         targets[i].x = cx + dx2 * Math.cos(spinA * 0.3) - dy2 * Math.sin(spinA * 0.3);
         targets[i].y = cy + dx2 * Math.sin(spinA * 0.3) + dy2 * Math.cos(spinA * 0.3);
       }
-    } else if (ft === 3) { // Ground pound
+    } else if (ft === 3) {
       const smashPhase = subAp < 0.4 ? subAp / 0.4 : 1 - (subAp - 0.4) / 0.6;
       targets[9] = v(30 * s * S, (-50 + 60 * smashPhase) * S);
       targets[10] = v(40 * s * S, (-35 + 50 * smashPhase) * S);
-    } else { // Knee + kick combo
+    } else {
       if (ap < 0.5) {
         const knee = ap * 2;
-        targets[15] = v(s * 30 * knee, -35 * S * knee);
+        targets[15] = v(s * 35 * knee, -40 * S * knee);
       } else {
         const kickPhase = (ap - 0.5) * 2;
-        targets[16] = v(s * 55 * kickPhase, -90 * S * kickPhase);
-        targets[15] = v(s * 35 * kickPhase, -70 * S * kickPhase);
+        targets[16] = v(s * 60 * kickPhase, -95 * S * kickPhase);
+        targets[15] = v(s * 40 * kickPhase, -75 * S * kickPhase);
       }
     }
   }
@@ -401,16 +572,16 @@ function poseRagdoll(f: Fighter) {
   if (f.state === 'wallRun') {
     const ws = f.wallSide;
     const runCycle = f.walkCycle * 2;
-    const legA = Math.sin(runCycle) * 25;
-    const legB = Math.cos(runCycle) * 25;
+    const legA = Math.sin(runCycle) * 28;
+    const legB = Math.cos(runCycle) * 28;
     for (let i = 0; i < 5; i++) targets[i].x += ws * 15;
     targets[6] = v((-28 - 10) * s * S, (-64 - 20) * S);
     targets[7] = v((-35 - 15) * s * S, (-46 - 25) * S);
     targets[9] = v((28 + 10) * s * S, (-64 - 20) * S);
     targets[10] = v((35 + 15) * s * S, (-46 - 25) * S);
-    targets[12] = v(lKneeX + ws * 8, -20 + legA);
+    targets[12] = v(lKneeX + ws * 8, -22 + legA);
     targets[13] = v(lFootX + ws * 12, -5 + legA * 1.5);
-    targets[15] = v(rKneeX + ws * 8, -20 + legB);
+    targets[15] = v(rKneeX + ws * 8, -22 + legB);
     targets[16] = v(rFootX + ws * 12, -5 + legB * 1.5);
   }
 
@@ -425,17 +596,17 @@ function poseRagdoll(f: Fighter) {
       targets[i].y = cy + dx2 * Math.sin(flipAng) + dy2 * Math.cos(flipAng) - flipH;
     }
     if (ap > 0.25 && ap < 0.65) {
-      targets[16] = v(f.facing * 60 * S, -90 * S - flipH * 0.5);
-      targets[15] = v(f.facing * 40 * S, -70 * S - flipH * 0.5);
+      targets[16] = v(f.facing * 65 * S, -95 * S - flipH * 0.5);
+      targets[15] = v(f.facing * 45 * S, -75 * S - flipH * 0.5);
     }
   }
 
   if (f.state === 'divekick') {
     for (let i = 0; i < 5; i++) { targets[i].x += f.facing * 20 * ap; targets[i].y -= 10; }
-    targets[15] = v(f.facing * 50 * S, 10 + 30 * ap);
-    targets[16] = v(f.facing * 65 * S, 20 + 40 * ap);
-    targets[12] = v(-f.facing * 5 * S, -40 * S);
-    targets[13] = v(-f.facing * 10 * S, -25 * S);
+    targets[15] = v(f.facing * 55 * S, 12 + 35 * ap);
+    targets[16] = v(f.facing * 70 * S, 22 + 45 * ap);
+    targets[12] = v(-f.facing * 5 * S, -45 * S);
+    targets[13] = v(-f.facing * 10 * S, -28 * S);
   }
 
   if (f.state === 'shoot') {
@@ -481,8 +652,8 @@ function poseRagdoll(f: Fighter) {
         targets[i].y = cy + dx2 * Math.sin(flipAng) + dy2 * Math.cos(flipAng) + flipH - 50;
       }
       if (ap > 0.3 && ap < 0.7) {
-        targets[16] = v(s * 55 * S, -90 * S + flipH);
-        targets[15] = v(s * 35 * S, -70 * S + flipH);
+        targets[16] = v(s * 60 * S, -95 * S + flipH);
+        targets[15] = v(s * 40 * S, -75 * S + flipH);
       }
     }
     if (f.state === 'execution') {
@@ -502,7 +673,6 @@ function poseRagdoll(f: Fighter) {
   }
 
   if (f.state === 'block') {
-    // Shield block pose - left arm forward with shield
     targets[5] = v(-10 * s * S, -80 * S + bob2 + co);
     targets[6] = v(5 * s * S, -72 * S + bob2 + co);
     targets[7] = v(12 * s * S, -62 * S + bob2 + co);
@@ -518,7 +688,7 @@ function poseRagdoll(f: Fighter) {
     if (f.y + targets[i].y > GY) targets[i].y = GY - f.y;
   }
 
-  const blend = f.ragdolling ? 0 : 0.35; // Smoother blending
+  const blend = f.ragdolling ? 0 : 0.35;
   for (let i = 0; i < r.pts.length && i < targets.length; i++) {
     const target = vadd(v(f.x, f.y), targets[i]);
     const b = (i >= 11) ? Math.min(blend * 1.3, 0.5) : blend;
@@ -530,8 +700,15 @@ function poseRagdoll(f: Fighter) {
 // ═══════════════════════════════════════════════════════
 // COMPONENT
 // ═══════════════════════════════════════════════════════
+type GameScreen = 'menu' | 'settings' | 'fight';
+
 const RagdollArena = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [gameScreen, setGameScreen] = useState<GameScreen>('menu');
+  const [sfxVolume, setSfxVolume] = useState(0.15);
+  const [ttsEnabled, setTtsEnabled] = useState(true);
+  const [showControls, setShowControls] = useState(false);
+
   const G = useRef({
     fighters: [
       mkFighter(2800, 'SIEGFRIED', '#8B0000', '#e8b878', '#2a1a0a', 'greatsword', true),
@@ -546,30 +723,21 @@ const RagdollArena = () => {
     round: 1, timer: 99 * 60,
     rs: 'intro' as 'intro' | 'fight' | 'ko',
     introTimer: 100, koTimer: 0, keys: new Set<string>(), bgTime: 0,
-    camX: 2360, // camera center X in world coords
+    camX: 2360,
     clouds: Array.from({ length: 12 }, () => ({ x: rng(0, WORLD_W), y: rng(20, 200), w: rng(60, 200), speed: rng(0.1, 0.5), opacity: rng(0.02, 0.08) })),
     torches: [] as { x: number; y: number }[],
-    // Random scenery distributed across the world
     scenery: (() => {
       const items: { type: string; x: number; scale: number; flip: boolean }[] = [];
-      // Dead trees
       for (let i = 0; i < 25; i++) items.push({ type: 'deadTree', x: rng(100, WORLD_W - 100), scale: 0.7 + rng(0, 0.6), flip: Math.random() > 0.5 });
-      // Gravestones
       for (let i = 0; i < 30; i++) items.push({ type: 'grave', x: rng(100, WORLD_W - 100), scale: 0.6 + rng(0, 0.5), flip: Math.random() > 0.5 });
-      // Ruined pillars
       for (let i = 0; i < 12; i++) items.push({ type: 'pillar', x: rng(200, WORLD_W - 200), scale: 0.8 + rng(0, 0.4), flip: Math.random() > 0.5 });
-      // Standing stones
       for (let i = 0; i < 15; i++) items.push({ type: 'stone', x: rng(100, WORLD_W - 100), scale: 0.5 + rng(0, 0.7), flip: false });
-      // Fences
       for (let i = 0; i < 18; i++) items.push({ type: 'fence', x: rng(100, WORLD_W - 100), scale: 0.8 + rng(0, 0.3), flip: false });
-      // Skulls on stakes
       for (let i = 0; i < 10; i++) items.push({ type: 'skull', x: rng(200, WORLD_W - 200), scale: 0.7 + rng(0, 0.4), flip: Math.random() > 0.5 });
-      // Castles (a few spread out)
       for (let i = 0; i < 4; i++) items.push({ type: 'castle', x: 800 + i * 1400, scale: 0.8 + rng(0, 0.4), flip: false });
       items.sort((a, b) => a.x - b.x);
       return items;
     })(),
-    // Far mountains generated for the whole world
     farMountains: Array.from({ length: 120 }, (_, i) => ({
       x: i * (WORLD_W / 40),
       h: 80 + Math.sin(i * 0.25) * 50 + Math.sin(i * 0.08) * 30 + rng(0, 20),
@@ -580,7 +748,7 @@ const RagdollArena = () => {
     })),
   });
   const [hud, setHud] = useState({
-    p1hp: 100, p2hp: 100, timer: 99, round: 1,
+    p1hp: MAX_HP, p2hp: MAX_HP, timer: 99, round: 1,
     p1st: 100, p2st: 100, p1w: 0, p2w: 0,
     rs: 'intro', n1: 'SIEGFRIED', n2: 'NIGHTMARE',
     w1: 'Greatsword', w2: 'Battle Axe',
@@ -619,7 +787,8 @@ const RagdollArena = () => {
     g.muzzleFlashes.push({ x: hand.x + Math.cos(ang) * 15, y: hand.y + Math.sin(ang) * 15, ang, life: 4 });
     for (let i = 0; i < 6; i++) g.sparks.push({ x: hand.x, y: hand.y, vx: Math.cos(ang + rng(-0.5, 0.5)) * rng(3, 10), vy: Math.sin(ang + rng(-0.5, 0.5)) * rng(3, 10), life: 5 + rng(0, 8), color: pick(['#ff8', '#ffa', '#fa0']), sz: 1 + rng(0, 2) });
     f.muzzleFlash = 4;
-  }, []);
+    playSFX('gunshot', sfxVolume);
+  }, [sfxVolume]);
   const spawnWallSparks = useCallback((x: number, y: number, count: number, dir: number) => {
     const g = G.current;
     for (let i = 0; i < count; i++) g.wallSparks.push({ x, y: y + rng(-10, 10), vx: dir * rng(2, 8), vy: rng(-4, 2), life: 8 + rng(0, 10) });
@@ -636,7 +805,8 @@ const RagdollArena = () => {
     spawnBlood(f.x, f.y - 60, dir, 90, 5); spawnBlood(f.x, f.y - 70, -dir * 0.5, 45, 4.5); spawnBlood(f.x, f.y - 65, 0, 35, 4);
     spawnGore(f.x, f.y - 55, 12, dir); spawnRing(f.x, f.y - 50, 80, '#a00');
     f.bleedTimer = 600; g.slowMo = 0.1; g.slowTimer = 40; g.flash = 8; g.flashColor = '#600';
-  }, [spawnBlood, spawnGore, spawnRing]);
+    playSFX('sever', sfxVolume);
+  }, [spawnBlood, spawnGore, spawnRing, sfxVolume]);
 
   // ─── DRAW FIGHTER ──────────────────────────────────────
   const drawFighter = useCallback((ctx: CanvasRenderingContext2D, f: Fighter, t: number) => {
@@ -659,22 +829,22 @@ const RagdollArena = () => {
       for (let i = 0; i < 3; i++) { ctx.fillStyle = `rgba(150,130,100,${0.15 + rng(0, 0.1)})`; ctx.beginPath(); ctx.arc(wallX + f.wallSide * rng(-5, 15), f.y + rng(-20, 10), rng(2, 6), 0, Math.PI * 2); ctx.fill(); }
     }
 
-    // Legs with knee joints
-    drawBone(4, 11, 8, f.color); drawBone(11, 12, 7, f.color); drawBone(12, 13, 6, f.color);
-    drawBone(4, 14, 8, f.color); drawBone(14, 15, 7, f.color); drawBone(15, 16, 6, f.color);
-    // Knee caps (visible joints)
+    // Legs (longer proportions)
+    drawBone(4, 11, 9, f.color); drawBone(11, 12, 8, f.color); drawBone(12, 13, 7, f.color);
+    drawBone(4, 14, 9, f.color); drawBone(14, 15, 8, f.color); drawBone(15, 16, 7, f.color);
+    // Knee caps
     if (!f.severed.has('leftLeg')) {
-      ctx.fillStyle = f.color; ctx.beginPath(); ctx.arc(p[12].pos.x, p[12].pos.y, 5, 0, Math.PI * 2); ctx.fill();
-      ctx.fillStyle = 'rgba(255,255,255,0.1)'; ctx.beginPath(); ctx.arc(p[12].pos.x - 1, p[12].pos.y - 1, 3, 0, Math.PI * 2); ctx.fill();
-      ctx.fillStyle = '#333'; ctx.beginPath(); ctx.ellipse(p[13].pos.x + 4, Math.min(p[13].pos.y, GY), 8, 4, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = f.color; ctx.beginPath(); ctx.arc(p[12].pos.x, p[12].pos.y, 6, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,0.1)'; ctx.beginPath(); ctx.arc(p[12].pos.x - 1, p[12].pos.y - 1, 3.5, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#333'; ctx.beginPath(); ctx.ellipse(p[13].pos.x + 4, Math.min(p[13].pos.y, GY), 9, 5, 0, 0, Math.PI * 2); ctx.fill();
     }
     if (!f.severed.has('rightLeg')) {
-      ctx.fillStyle = f.color; ctx.beginPath(); ctx.arc(p[15].pos.x, p[15].pos.y, 5, 0, Math.PI * 2); ctx.fill();
-      ctx.fillStyle = 'rgba(255,255,255,0.1)'; ctx.beginPath(); ctx.arc(p[15].pos.x - 1, p[15].pos.y - 1, 3, 0, Math.PI * 2); ctx.fill();
-      ctx.fillStyle = '#333'; ctx.beginPath(); ctx.ellipse(p[16].pos.x + 4, Math.min(p[16].pos.y, GY), 8, 4, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = f.color; ctx.beginPath(); ctx.arc(p[15].pos.x, p[15].pos.y, 6, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,0.1)'; ctx.beginPath(); ctx.arc(p[15].pos.x - 1, p[15].pos.y - 1, 3.5, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#333'; ctx.beginPath(); ctx.ellipse(p[16].pos.x + 4, Math.min(p[16].pos.y, GY), 9, 5, 0, 0, Math.PI * 2); ctx.fill();
     }
 
-    // Torso
+    // Torso (with visible spine bend)
     drawBone(1, 2, 12, f.color); drawBone(2, 3, 11, f.color); drawBone(3, 4, 10, f.color);
     const chestMid = vlerp(p[2].pos, p[3].pos, 0.5);
     ctx.strokeStyle = 'rgba(255,255,255,0.12)'; ctx.lineWidth = 1;
@@ -701,7 +871,7 @@ const RagdollArena = () => {
       }
     });
 
-    // ── SHIELD (left arm) ──
+    // ── SHIELD ──
     if (!f.severed.has('leftArm') && f.shieldHP > 0) {
       const lhand = p[7].pos;
       const lshoulder = p[5].pos;
@@ -709,23 +879,18 @@ const RagdollArena = () => {
       const shieldAlpha = f.state === 'block' ? 1 : 0.7;
       const shieldSize = f.state === 'block' ? 1.2 : 0.9;
       ctx.save(); ctx.translate(lhand.x, lhand.y); ctx.rotate(shieldAng);
-      // Shield body
       ctx.fillStyle = `rgba(80,70,50,${shieldAlpha})`; ctx.beginPath();
       ctx.ellipse(0, 0, 12 * shieldSize, 18 * shieldSize, 0, 0, Math.PI * 2); ctx.fill();
-      // Shield rim
       ctx.strokeStyle = `rgba(160,140,80,${shieldAlpha})`; ctx.lineWidth = 2;
       ctx.beginPath(); ctx.ellipse(0, 0, 12 * shieldSize, 18 * shieldSize, 0, 0, Math.PI * 2); ctx.stroke();
-      // Shield emblem
       ctx.strokeStyle = `rgba(200,180,100,${shieldAlpha * 0.6})`; ctx.lineWidth = 1.5;
       ctx.beginPath(); ctx.moveTo(0, -8 * shieldSize); ctx.lineTo(0, 8 * shieldSize); ctx.stroke();
       ctx.beginPath(); ctx.moveTo(-6 * shieldSize, 0); ctx.lineTo(6 * shieldSize, 0); ctx.stroke();
-      // Shield damage cracks
       if (f.shieldHP < 30) {
         ctx.strokeStyle = `rgba(100,80,40,${shieldAlpha})`; ctx.lineWidth = 1;
         ctx.beginPath(); ctx.moveTo(-4, -8); ctx.lineTo(3, 5); ctx.stroke();
         ctx.beginPath(); ctx.moveTo(5, -5); ctx.lineTo(-2, 8); ctx.stroke();
       }
-      // Shield glow when blocking
       if (f.state === 'block') {
         const sg = ctx.createRadialGradient(0, 0, 5, 0, 0, 25);
         sg.addColorStop(0, 'rgba(200,180,100,0.15)'); sg.addColorStop(1, 'rgba(0,0,0,0)');
@@ -734,7 +899,7 @@ const RagdollArena = () => {
       ctx.restore();
     }
 
-    // ── PISTOL (behind shield / secondary) ──
+    // ── PISTOL ──
     if (!f.severed.has('leftArm') && f.state === 'shoot') {
       const lhand = p[7].pos;
       const gRef = G.current;
@@ -805,7 +970,6 @@ const RagdollArena = () => {
       ctx.fillStyle = f.hair; ctx.beginPath(); ctx.arc(0, 0, 15, Math.PI * 1.1, -0.1 * Math.PI); ctx.fill();
       ctx.fillStyle = f.skin; ctx.beginPath(); ctx.arc(0, 0, 13, 0, Math.PI * 2); ctx.fill();
       ctx.fillStyle = f.color; ctx.fillRect(-14, -8, 28, 5);
-      // Head damage indicator (bruising from kicks)
       if (f.headHits > 0) {
         const bruise = Math.min(f.headHits / 8, 1);
         ctx.fillStyle = `rgba(100,0,100,${bruise * 0.4})`; ctx.beginPath(); ctx.arc(3, -2, 6, 0, Math.PI * 2); ctx.fill();
@@ -831,6 +995,8 @@ const RagdollArena = () => {
 
   // ─── GAME LOOP ────────────────────────────────────────
   useEffect(() => {
+    if (gameScreen !== 'fight') return;
+
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d')!;
@@ -840,6 +1006,17 @@ const RagdollArena = () => {
     window.addEventListener('keydown', kd); window.addEventListener('keyup', ku);
     let fc = 0, aid = 0;
 
+    // Reset for new fight
+    const midX = WORLD_W / 2;
+    g.fighters[0] = mkFighter(midX - 200, 'SIEGFRIED', '#8B0000', '#e8b878', '#2a1a0a', pick(Object.keys(WEAPONS)), true);
+    g.fighters[1] = mkFighter(midX + 200, 'NIGHTMARE', '#1a1a4a', '#c4956a', '#111', pick(Object.keys(WEAPONS)), true);
+    g.blood = []; g.limbs = []; g.pools = []; g.sparks = []; g.gore = [];
+    g.afterimages = []; g.rings = []; g.lightnings = []; g.bullets = []; g.muzzleFlashes = []; g.wallSparks = []; g.fatalityTexts = []; g.thrownSwords = [];
+    g.rs = 'intro'; g.introTimer = 100; g.timer = 99 * 60; g.round = 1;
+    g.camX = midX;
+
+    playSFX('roundStart', sfxVolume);
+
     const ss = (f: Fighter, state: FState, dur?: number) => {
       if (f.state === 'ragdoll' && state !== 'idle' && state !== 'ragdoll') { if (f.ragTimer > 0) return; f.ragdolling = false; }
       if (f.state === 'ko') return;
@@ -847,7 +1024,6 @@ const RagdollArena = () => {
     };
     const ca = (f: Fighter) => ['idle', 'walk', 'walkBack', 'crouch'].includes(f.state);
     const doAtk = (f: Fighter, t: string) => {
-      // If no sword, redirect sword attacks to punches/kicks
       if (!f.hasSword && ['slash', 'heavySlash', 'stab', 'overhead', 'spinSlash', 'dashStab', 'execution'].includes(t)) {
         t = pick(['punch', 'kick', 'headKick', 'kneeStrike', 'headbutt']);
       }
@@ -868,6 +1044,7 @@ const RagdollArena = () => {
       if (t === 'headbutt') { f.vx = f.facing * 8; }
       if (t === 'punch') { f.vx = f.facing * 5; }
       if (t === 'swordThrow') { f.vx = f.facing * 2; }
+      playSFX('whoosh', sfxVolume * 0.5);
       spawnAfterimage(f); return true;
     };
     const doSwordThrow = (f: Fighter, idx: number) => {
@@ -883,6 +1060,7 @@ const RagdollArena = () => {
         ang: ang, angV: f.facing * 0.8, life: 80, dmg: f.weapon.heavyDmg * 1.5,
         owner: idx, weapon: f.weapon, stuck: false,
       });
+      playSFX('whoosh', sfxVolume);
       spawnAfterimage(f);
       return true;
     };
@@ -895,6 +1073,12 @@ const RagdollArena = () => {
       g.slowMo = 0.3; g.slowTimer = FATALITIES[f.fatalityType].frames;
       g.fatalityTexts.push({ text: FATALITIES[f.fatalityType].name, life: 120, maxLife: 120 });
       spawnAfterimage(f);
+      playSFX('heavyHit', sfxVolume * 2);
+      // TTS fatality lines!
+      if (ttsEnabled) {
+        setTimeout(() => speakLine(pick(FATALITY_LINES_WINNER), 0.8, 1.1), 500);
+        setTimeout(() => speakLine(pick(FATALITY_LINES_LOSER), 1.5, 1.3), 2000);
+      }
       return true;
     };
     const doShoot = (f: Fighter, idx: number) => {
@@ -954,9 +1138,8 @@ const RagdollArena = () => {
 
     const pickIntent = (bot: Fighter, pl: Fighter, p2: ReturnType<typeof mkPersonality>, m: ReturnType<typeof mkAiMem>): AIIntent => {
       const d = Math.abs(bot.x - pl.x);
-      const hp = bot.hp / 100, plHp = pl.hp / 100, st = bot.stamina / 100;
+      const hp = bot.hp / MAX_HP, plHp = pl.hp / MAX_HP, st = bot.stamina / 100;
       const r = Math.random();
-      // Fatality opportunity!
       if (pl.hp <= 35 && d < 80 && r < 0.6) return 'fatalityAttempt';
       const nearbyLimb = g.limbs.some(l => l.grounded && Math.abs(l.pts[0].x - bot.x) < 120);
       if (!bot.heldLimb && nearbyLimb && r < 0.2) return 'pickupLimb';
@@ -1030,7 +1213,6 @@ const RagdollArena = () => {
       mem.intentTimer--;
       if (mem.intentTimer <= 0) { mem.intent = pickIntent(bot, pl, pers, mem); mem.intentTimer = 5 + Math.floor(rng(0, 12)); }
 
-      // Reactive: shield block or counter-kick
       if (isPlAtk && d < 120) {
         const r = Math.random();
         if (r < 0.1 && bot.shieldHP > 5) { ss(bot, 'block'); bot.aiTimer = 4 + rng(0, 5) | 0; return; }
@@ -1174,34 +1356,43 @@ const RagdollArena = () => {
         case 'bait': { if (d < 100) { ss(bot, 'walkBack'); bot.aiTimer = 2; } else if (d < 200) { ss(bot, 'idle'); bot.aiTimer = 3; } else { mem.intent = 'pressure'; } if (isPlAtk && d < wr + 20 && ca(bot)) { doAtk(bot, pick(['stab', 'kick'])); mem.intent = 'executeCombo'; } break; }
         case 'rush': {
           mem.rushMomentum += 2;
-          if (d > wr) { ss(bot, 'walk'); bot.vx += bot.facing * (8 + Math.min(mem.rushMomentum * 0.8, 12)); bot.aiTimer = 0; if (d > 200 && rng(0, 1) < 0.3) doShoot(bot, idx); }
-          else if (ca(bot)) { doAtk(bot, pick(['dashStab', 'slash', 'kick', 'uppercut', 'kneeStrike', 'roundhouse'])); bot.aiTimer = 0; mem.comboStep = 1; if (mem.rushMomentum > 15) { mem.intent = 'executeCombo'; mem.comboSeq = [...pick(AI_COMBOS)]; mem.rushMomentum = 0; } }
+          if (d > wr) { bot.vx = bot.facing * (8 + mem.rushMomentum * 0.4); ss(bot, 'walk'); bot.aiTimer = 0; }
+          else if (ca(bot)) { doAtk(bot, pick(['dashStab', 'slash', 'heavySlash', 'kick', 'headKick'])); mem.rushMomentum = 0; bot.aiTimer = 0; mem.intent = 'executeCombo'; mem.comboSeq = [...pick(AI_COMBOS)]; }
+          if (mem.rushMomentum > 20) { mem.rushMomentum = 0; mem.intent = 'pressure'; }
           break;
         }
-        case 'rest': { if (d < 120) { ss(bot, 'walkBack'); bot.aiTimer = 3; } else { ss(bot, 'idle'); bot.aiTimer = 5 + rng(0, 10) | 0; } if (bot.stamina > 50) { mem.intent = 'pressure'; } break; }
+        case 'rest': {
+          if (d < 100) { ss(bot, 'walkBack'); bot.vx = -bot.facing * 3; } else { ss(bot, 'idle'); }
+          bot.aiTimer = 3 + rng(0, 5) | 0;
+          if (bot.stamina > 40) { mem.intent = rng(0, 1) < 0.5 ? 'pressure' : 'circle'; }
+          break;
+        }
         case 'jumpAtk': {
-          if (d > 120) { ss(bot, 'walk'); bot.vx += bot.facing * 6; bot.aiTimer = 1; }
-          else if (bot.grounded && ca(bot)) { bot.vy = -11; bot.grounded = false; bot.vx = bot.facing * 7; ss(bot, 'jump'); bot.aiTimer = 4; setTimeout(() => { if (bot.state === 'jump') doAtk(bot, pick(['jumpAtk', 'divekick'])); }, 100); mem.intent = 'pressure'; }
+          if (bot.grounded) { bot.vy = -11; bot.grounded = false; bot.vx = bot.facing * 8; ss(bot, 'jump'); bot.aiTimer = 4; }
+          else if (!bot.grounded && ca(bot)) { doAtk(bot, 'jumpAtk'); bot.aiTimer = 1; mem.intent = 'executeCombo'; mem.comboSeq = [...pick(AI_COMBOS)]; }
           break;
         }
-        case 'dodgeIn': { if (d > 150) { doDodge(bot, bot.facing); bot.aiTimer = 5; } else if (d < wr && ca(bot)) { doAtk(bot, 'kick'); bot.aiTimer = 2; mem.intent = 'kickCombo'; } else { ss(bot, 'walk'); bot.aiTimer = 2; } break; }
-        case 'taunt': { if (d > 100) { ss(bot, 'taunt', 40); bot.aiTimer = 20; mem.intent = 'pressure'; } else { mem.intent = 'pressure'; } break; }
-        default: { ss(bot, 'walk'); bot.aiTimer = 2; break; }
+        case 'dodgeIn': {
+          if (d > wr + 30) { doDodge(bot, bot.facing); bot.aiTimer = 4; }
+          else if (d < wr + 10 && ca(bot)) { doAtk(bot, pick(['stab', 'slash', 'kick'])); bot.aiTimer = 1; mem.intent = 'executeCombo'; mem.comboSeq = [...pick(AI_COMBOS)]; }
+          else { mem.intent = 'pressure'; mem.intentTimer = 5; }
+          break;
+        }
+        case 'taunt': { if (ca(bot)) { ss(bot, 'taunt', 30); bot.aiTimer = 15; mem.intent = 'pressure'; } break; }
       }
     };
 
-    // ═══════════════════════════════════════════════════════
-    // TICK
-    // ═══════════════════════════════════════════════════════
+    // ── TICK ──
     const tick = () => {
-      fc++; g.bgTime += 0.016;
-      if (g.slowTimer > 0) g.slowTimer--; else g.slowMo = Math.min(1, g.slowMo + 0.06);
+      fc++;
+      if (g.slowTimer > 0) { g.slowTimer--; if (g.slowTimer <= 0) g.slowMo = 1; }
       if (g.flash > 0) g.flash -= 0.5;
+      g.bgTime += 0.016;
       const spd = g.slowMo;
       const [p1, p2] = g.fighters;
 
       if (g.rs === 'intro') {
-        g.introTimer -= spd; if (g.introTimer <= 0) g.rs = 'fight';
+        g.introTimer -= spd; if (g.introTimer <= 0) { g.rs = 'fight'; playSFX('roundStart', sfxVolume); }
         p1.facing = 1; p2.facing = -1;
         if (p1.x < 450) { p1.x += 2; ss(p1, 'walk'); }
         if (p2.x > 830) { p2.x -= 2; ss(p2, 'walk'); }
@@ -1209,57 +1400,50 @@ const RagdollArena = () => {
 
       if (g.rs === 'ko') {
         g.koTimer -= spd;
-        // Winner continues beating on downed opponent for ~5 seconds (300 frames)
         const winner = p1.hp > 0 ? p1 : p2.hp > 0 ? p2 : null;
         const loser = p1.hp <= 0 ? p1 : p2.hp <= 0 ? p2 : null;
         if (winner && loser && g.koTimer > 0) {
           winner.groundBeatTimer += spd;
-          winner.stamina = 100; // unlimited stamina during beatdown
+          winner.stamina = 100;
           winner.facing = loser.x > winner.x ? 1 : -1;
-          // Move toward downed opponent
           const dToLoser = Math.abs(winner.x - loser.rag.pts[4].pos.x);
           if (dToLoser > 50) {
             winner.x += winner.facing * 3 * spd;
             ss(winner, 'walk');
           } else if (ca(winner) || winner.state === 'idle') {
-            // Randomly attack the downed body
             const beatAtk = pick(['kick', 'headKick', 'kneeStrike', 'punch', 'headbutt', 'roundhouse', 'stomp']);
             if (beatAtk === 'stomp') {
-              // Jump stomp
               winner.vy = -8; winner.grounded = false; ss(winner, 'divekick' as FState, 20);
             } else {
               doAtk(winner, beatAtk);
             }
-            // Apply damage to ragdolled loser
             const hitPt = loser.rag.pts[Math.floor(rng(0, loser.rag.pts.length))].pos;
             spawnBlood(hitPt.x, hitPt.y, winner.facing, 20, 3);
             spawnGore(hitPt.x, hitPt.y, 3, winner.facing);
-            // Jolt the ragdoll
             for (let i = 0; i < loser.rag.pts.length; i++) {
               loser.rag.pts[i].old = vsub(loser.rag.pts[i].pos, v(winner.facing * rng(3, 8), -rng(2, 6)));
             }
-            if (fc % 15 === 0) spawnRing(hitPt.x, hitPt.y, 40, '#f80');
+            if (fc % 15 === 0) { spawnRing(hitPt.x, hitPt.y, 40, '#f80'); playSFX('hit', sfxVolume * 0.5); }
           }
-          // Step ragdoll physics for both
           stepRagdoll(winner.rag.pts, winner.rag.sticks, spd, 0.3);
           if (!winner.ragdolling) poseRagdoll(winner);
           stepRagdoll(loser.rag.pts, loser.rag.sticks, spd, 0.3);
-          // Update winner position
           if (!winner.grounded) { winner.vy += GRAV * spd; winner.y += winner.vy * spd; if (winner.y >= GY) { winner.y = GY; winner.vy = 0; winner.grounded = true; } }
           winner.x += winner.vx * spd; winner.vx *= 0.86;
           winner.bob += 0.04 * spd;
         }
         if (g.koTimer <= 0) {
           g.round++;
-          const midX = (p1.x + p2.x) / 2;
-          const f1 = mkFighter(midX - 200, p1.name, p1.color, p1.skin, p1.hair, pick(Object.keys(WEAPONS)), true);
-          const f2 = mkFighter(midX + 200, p2.name, p2.color, p2.skin, p2.hair, pick(Object.keys(WEAPONS)), true);
+          const midX2 = (p1.x + p2.x) / 2;
+          const f1 = mkFighter(midX2 - 200, p1.name, p1.color, p1.skin, p1.hair, pick(Object.keys(WEAPONS)), true);
+          const f2 = mkFighter(midX2 + 200, p2.name, p2.color, p2.skin, p2.hair, pick(Object.keys(WEAPONS)), true);
           f1.wins = p1.wins; f2.wins = p2.wins;
           g.fighters[0] = f1; g.fighters[1] = f2;
           g.blood = []; g.limbs = []; g.pools = []; g.sparks = []; g.gore = [];
           g.afterimages = []; g.rings = []; g.lightnings = []; g.bullets = []; g.muzzleFlashes = []; g.wallSparks = []; g.fatalityTexts = []; g.thrownSwords = [];
           g.rs = 'intro'; g.introTimer = 80; g.timer = 99 * 60;
           aiData[0] = { personality: mkPersonality(), mem: mkAiMem() }; aiData[1] = { personality: mkPersonality(), mem: mkAiMem() };
+          playSFX('roundStart', sfxVolume);
         }
       }
 
@@ -1269,7 +1453,6 @@ const RagdollArena = () => {
         return;
       }
       if (g.rs === 'ko') {
-        // During KO, still update particles
         g.blood = g.blood.filter(b => { if (b.grounded) { b.life -= spd * 0.15; return b.life > 0; } b.x += b.vx * spd; b.y += b.vy * spd; b.vy += 0.35 * spd; b.vx *= 0.99; b.life -= spd; if (b.y >= GY) { b.grounded = true; b.y = GY; b.vy = 0; b.vx = 0; if (g.pools.length < 180) { const ex = g.pools.find(p3 => Math.abs(p3.x - b.x) < 25); if (ex) ex.r = Math.min(55, ex.r + 1.5); else g.pools.push({ x: b.x, y: GY, r: 3 + rng(0, 7), a: 0.85 }); } } return b.life > 0; });
         g.sparks = g.sparks.filter(s2 => { s2.x += s2.vx * spd; s2.y += s2.vy * spd; s2.vy += 0.4 * spd; s2.life -= spd; return s2.life > 0; });
         g.gore = g.gore.filter(gc => { gc.x += gc.vx * spd; gc.y += gc.vy * spd; gc.vy += 0.3 * spd; gc.rot += gc.rotV * spd; if (gc.y >= GY) { gc.y = GY; gc.vy *= -0.3; gc.vx *= 0.6; } gc.life -= spd; return gc.life > 0; });
@@ -1284,6 +1467,8 @@ const RagdollArena = () => {
         if (p1.hp >= p2.hp) { p1.wins++; ss(p2, 'ko'); startRagdoll(p2, v(5, -8), 999); }
         else { p2.wins++; ss(p1, 'ko'); startRagdoll(p1, v(-5, -8), 999); }
         g.rs = 'ko'; g.koTimer = 180;
+        playSFX('ko', sfxVolume);
+        if (ttsEnabled) speakLine(pick(KO_LINES), 0.6, 0.9);
       }
 
       // Player controls
@@ -1330,7 +1515,6 @@ const RagdollArena = () => {
         if (f.gunCooldown > 0) f.gunCooldown -= spd;
         if (f.muzzleFlash > 0) f.muzzleFlash -= spd;
 
-        // Wall run
         if (f.state === 'wallRun') {
           f.wallRunTimer -= spd; f.vy = -4.5; f.y += f.vy * spd; f.walkCycle += 0.25 * spd;
           if (f.wallSide < 0) f.x = WALL_L + 5; else f.x = WALL_R - 5;
@@ -1342,7 +1526,7 @@ const RagdollArena = () => {
         if (!f.grounded && f.state !== 'wallRun') {
           f.vy += GRAV * spd; f.y += f.vy * spd;
           if (f.y >= GY) { f.y = GY; f.vy = 0; f.grounded = true; if (f.state === 'jump') ss(f, 'idle');
-            if (f.state === 'divekick') { spawnRing(f.x, GY, 60, '#fa0'); for (let i = 0; i < 8; i++) g.sparks.push({ x: f.x + rng(-20, 20), y: GY, vx: rng(-6, 6), vy: -rng(3, 10), life: 10 + rng(0, 8), color: '#fa0', sz: 1.5 + rng(0, 2) }); }
+            if (f.state === 'divekick') { spawnRing(f.x, GY, 60, '#fa0'); for (let i = 0; i < 8; i++) g.sparks.push({ x: f.x + rng(-20, 20), y: GY, vx: rng(-6, 6), vy: -rng(3, 10), life: 10 + rng(0, 8), color: '#fa0', sz: 1.5 + rng(0, 2) }); playSFX('heavyHit', sfxVolume); }
           }
         }
         if (f.isAI && !f.grounded && f.state !== 'wallRun' && f.state !== 'wallFlip') {
@@ -1350,7 +1534,7 @@ const RagdollArena = () => {
           else if (f.x >= WALL_R - 10 && rng(0, 1) < 0.4) startWallRun(f, 1);
         }
 
-        f.x += f.vx * spd; f.vx *= 0.88; // Smoother deceleration
+        f.x += f.vx * spd; f.vx *= 0.88;
         if (f.state === 'walk') { f.x += f.facing * 3.0 * spd; f.walkCycle += 0.12 * spd; }
         else if (f.state === 'walkBack') { f.x -= f.facing * 2.2 * spd; f.walkCycle += 0.1 * spd; }
         f.x = clamp(f.x, WALL_L, WALL_R); f.bob += 0.04 * spd;
@@ -1375,7 +1559,7 @@ const RagdollArena = () => {
         else if (f.state === 'kick' || f.state === 'headKick' || f.state === 'kneeStrike' || f.state === 'roundhouse') f.wTarget = -0.8;
         else if (f.state === 'headbutt' || f.state === 'punch' || f.state === 'swordThrow') f.wTarget = -0.5;
         else f.wTarget = -0.5;
-        f.wAngle += (f.wTarget - f.wAngle) * 0.32; // Smoother weapon angle blending
+        f.wAngle += (f.wTarget - f.wAngle) * 0.32;
         if (f.state === 'dodge') f.vx = (f.facing === 1 ? -1 : 1) * 8 * (1 - ap2);
 
         if (f.bleedTimer > 0) { f.bleedTimer -= spd; f.severed.forEach(part => { const pidx = part === 'leftArm' ? 5 : part === 'rightArm' ? 8 : part === 'leftLeg' ? 11 : part === 'rightLeg' ? 14 : 1; if (fc % 4 === 0 && f.rag.pts[pidx]) spawnBlood(f.rag.pts[pidx].pos.x, f.rag.pts[pidx].pos.y, rng(-1, 1), 4, 2.5); }); }
@@ -1391,21 +1575,25 @@ const RagdollArena = () => {
         b.trail.push({ x: b.x, y: b.y }); if (b.trail.length > 8) b.trail.shift(); b.life -= spd;
         const target = g.fighters[1 - b.owner];
         if (target.state !== 'ko' && target.state !== 'dodge') {
-          // Shield blocks bullets!
           if (target.state === 'block' && target.shieldHP > 0) {
             const shieldPos = target.rag.pts[7].pos;
             if (vlen(vsub(v(b.x, b.y), shieldPos)) < 30) {
-              target.shieldHP -= 5; spawnSparks(b.x, b.y, 10); spawnRing(b.x, b.y, 20, '#aa8'); return false;
+              target.shieldHP -= 5; spawnSparks(b.x, b.y, 10); spawnRing(b.x, b.y, 20, '#aa8'); playSFX('block', sfxVolume); return false;
             }
           }
           for (let i = 0; i < target.rag.pts.length; i++) {
             if (vlen(vsub(v(b.x, b.y), target.rag.pts[i].pos)) < 25) {
               const hitDir = vnorm(v(b.vx, b.vy));
               target.hp = Math.max(0, target.hp - b.dmg); target.vx += hitDir.x * 4; target.hitDir = hitDir; target.hitImpact = b.dmg * 0.5;
-              if (i === 0) target.headHits += 2; // Bullet to the head counts extra
+              if (i === 0) target.headHits += 2;
               spawnBlood(b.x, b.y, hitDir.x > 0 ? 1 : -1, 25, 3); spawnSparks(b.x, b.y, 8); spawnRing(b.x, b.y, 30, '#fa0');
+              playSFX('hit', sfxVolume);
               if (b.dmg >= 10) ss(target, 'hit', 12);
-              if (target.hp <= 0) { const shooter = g.fighters[b.owner]; ss(target, 'ko'); startRagdoll(target, vscl(hitDir, 18), 999); shooter.wins++; g.rs = 'ko'; g.koTimer = 340; g.slowMo = 0.05; g.slowTimer = 55; g.flash = 15; g.flashColor = '#fff'; spawnBlood(b.x, b.y, hitDir.x > 0 ? 1 : -1, 80, 6); spawnGore(b.x, b.y, 10, hitDir.x > 0 ? 1 : -1); spawnRing(b.x, b.y, 100, '#f00'); }
+              if (target.hp <= 0) {
+                const shooter = g.fighters[b.owner]; ss(target, 'ko'); startRagdoll(target, vscl(hitDir, 18), 999); shooter.wins++; g.rs = 'ko'; g.koTimer = 340; g.slowMo = 0.05; g.slowTimer = 55; g.flash = 15; g.flashColor = '#fff'; spawnBlood(b.x, b.y, hitDir.x > 0 ? 1 : -1, 80, 6); spawnGore(b.x, b.y, 10, hitDir.x > 0 ? 1 : -1); spawnRing(b.x, b.y, 100, '#f00');
+                playSFX('ko', sfxVolume);
+                if (ttsEnabled) { speakLine(pick(KO_LINES), 0.6, 0.9); setTimeout(() => speakLine(pick(FATALITY_LINES_LOSER), 1.4, 1.2), 2000); }
+              }
               return false;
             }
           }
@@ -1431,17 +1619,14 @@ const RagdollArena = () => {
         if (f.state === 'limbSmash' && f.heldLimb) {
           const lhand = f.rag.pts[7].pos; tipX = lhand.x + Math.cos(f.limbSwingAng * f.facing) * 45; tipY = lhand.y + Math.sin(f.limbSwingAng * f.facing) * 45;
         } else if (isHeadbutt) {
-          // Use head position for headbutt
           tipX = f.rag.pts[0].pos.x + f.facing * 15; tipY = f.rag.pts[0].pos.y;
         } else if (isPunch) {
-          // Use fist position
           tipX = f.rag.pts[10].pos.x + f.facing * 10; tipY = f.rag.pts[10].pos.y;
         } else if (isKickAtk) {
           tipX = f.rag.pts[16].pos.x; tipY = f.rag.pts[16].pos.y;
           if (f.state === 'headKick') { tipY = Math.min(tipY, f.y - 100); }
           if (f.state === 'kneeStrike') { tipX = f.rag.pts[15].pos.x; tipY = f.rag.pts[15].pos.y; }
         } else if (!f.hasSword) {
-          // Unarmed - use fist
           tipX = f.rag.pts[10].pos.x + f.facing * 10; tipY = f.rag.pts[10].pos.y;
         } else {
           const hand = f.rag.pts[10].pos; const ang = f.wAngle * f.facing;
@@ -1450,7 +1635,7 @@ const RagdollArena = () => {
 
         if (o.state === 'dodge') return;
 
-        // Shield block check
+        // Shield block
         if (o.state === 'block' && o.shieldHP > 0 && !isKickAtk) {
           const shieldPos = o.rag.pts[7].pos;
           if (vlen(vsub(v(tipX, tipY), shieldPos)) < 35) {
@@ -1459,6 +1644,7 @@ const RagdollArena = () => {
             o.vx = f.facing * ad.kb.x * 0.2;
             spawnSparks((f.x + o.x) / 2, shieldPos.y, 18);
             spawnRing((f.x + o.x) / 2, shieldPos.y, 40, '#aa8');
+            playSFX('block', sfxVolume);
             if (o.shieldHP <= 0) { spawnSparks(shieldPos.x, shieldPos.y, 30); spawnRing(shieldPos.x, shieldPos.y, 60, '#f80'); g.flash = 5; g.flashColor = '#fa0'; }
             return;
           }
@@ -1477,43 +1663,41 @@ const RagdollArena = () => {
           f.hitDealt = true;
           let dmg = f.weapon[ad.dmgKey];
 
-          // Head kick tracking! Kicks to the head (joint 0 or 1) accumulate
           if (isKickAtk && (hitJoint === 0 || hitJoint === 1)) {
             o.headHits++;
-            dmg *= 1.5; // Head kicks do bonus damage
-            spawnRing(hitPt.x, hitPt.y, 40, '#f80');
-            // After enough head kicks, kick the head clean off!
-            if (o.headHits >= 6 && !o.severed.has('head')) {
-              sever(o, 'head', f.facing);
-              g.flash = 10; g.flashColor = '#f00';
-              g.slowMo = 0.08; g.slowTimer = 50;
-              spawnRing(hitPt.x, hitPt.y, 120, '#f00');
-              spawnLightning(hitPt.x, hitPt.y, hitPt.x + rng(-80, 80), hitPt.y - 100);
-            }
+            dmg *= 1.2;
+            if (o.headHits >= 8 && !o.severed.has('head')) { sever(o, 'head', f.facing); }
           }
+          if (isHeadbutt) { dmg *= 1.3; o.headHits++; }
 
-          // Fatality damage
+          // Fatality special hits
           if (f.state === 'fatality') {
+            const subAp = f.dur > 0 ? (f.frame / f.dur * 4) % 1 : 0;
             dmg *= 3;
-            const subAp = f.dur > 0 ? ((f.frame / f.dur) * 4) % 1 : 0;
-            spawnBlood(hitPt.x, hitPt.y, f.facing, 40, 5);
+            spawnBlood(hitPt.x, hitPt.y, f.facing, 50, 5);
             spawnGore(hitPt.x, hitPt.y, 8, f.facing);
             if (subAp < 0.1) { spawnRing(hitPt.x, hitPt.y, 80, '#f00'); spawnLightning(hitPt.x, hitPt.y - 40, hitPt.x + rng(-50, 50), hitPt.y + 30); }
             g.flash = Math.max(g.flash, 3); g.flashColor = '#a00';
-            // Fatality severs everything
             if (f.frame > f.dur * 0.7) {
               ['leftArm', 'rightArm', 'leftLeg', 'rightLeg', 'head'].forEach(part => { if (!o.severed.has(part) && rng(0, 1) < 0.5) sever(o, part, f.facing); });
             }
           }
 
-          if (f.state === 'limbSmash' && f.heldLimb) { dmg *= 1.5; spawnBlood(hitPt.x, hitPt.y, f.facing, 60, 5); spawnGore(hitPt.x, hitPt.y, 10, f.facing); spawnRing(hitPt.x, hitPt.y, 100, '#f40'); spawnLightning(f.rag.pts[7].pos.x, f.rag.pts[7].pos.y, hitPt.x, hitPt.y); f.heldLimb = null; g.flash = 6; g.flashColor = '#ff4'; }
-          if (f.state === 'execution') { dmg *= 2.5; spawnBlood(hitPt.x, hitPt.y, f.facing, 80, 6); spawnGore(hitPt.x, hitPt.y, 15, f.facing); spawnRing(hitPt.x, hitPt.y, 120, '#f00'); g.flash = 10; g.flashColor = '#a00'; g.slowMo = 0.15; g.slowTimer = 25; }
+          if (f.state === 'limbSmash' && f.heldLimb) { dmg *= 1.5; spawnBlood(hitPt.x, hitPt.y, f.facing, 60, 5); spawnGore(hitPt.x, hitPt.y, 10, f.facing); spawnRing(hitPt.x, hitPt.y, 100, '#f40'); spawnLightning(f.rag.pts[7].pos.x, f.rag.pts[7].pos.y, hitPt.x, hitPt.y); f.heldLimb = null; g.flash = 6; g.flashColor = '#ff4'; playSFX('heavyHit', sfxVolume); }
+          if (f.state === 'execution') { dmg *= 2.5; spawnBlood(hitPt.x, hitPt.y, f.facing, 80, 6); spawnGore(hitPt.x, hitPt.y, 15, f.facing); spawnRing(hitPt.x, hitPt.y, 120, '#f00'); g.flash = 10; g.flashColor = '#a00'; g.slowMo = 0.15; g.slowTimer = 25; playSFX('heavyHit', sfxVolume); }
           if (f.state === 'backflipKick') { dmg *= 1.3; spawnRing(hitPt.x, hitPt.y, 80, '#ff8'); g.slowMo = 0.3; g.slowTimer = 12; }
           if (f.state === 'wallFlip') { dmg *= 1.8; spawnRing(hitPt.x, hitPt.y, 90, '#8ff'); g.slowMo = 0.2; g.slowTimer = 18; g.flash = 6; g.flashColor = '#8af'; }
           if (f.state === 'divekick') { dmg *= 1.6; spawnRing(hitPt.x, hitPt.y, 70, '#fa0'); g.slowMo = 0.25; g.slowTimer = 15; g.flash = 5; g.flashColor = '#fa0'; }
           if (f.state === 'roundhouse') { dmg *= 1.4; spawnRing(hitPt.x, hitPt.y, 60, '#f80'); g.slowMo = 0.3; g.slowTimer = 10; }
-          if (f.state === 'headbutt') { dmg *= 1.3; spawnRing(hitPt.x, hitPt.y, 50, '#ff0'); g.slowMo = 0.4; g.slowTimer = 8; o.headHits++; }
-          if (f.state === 'punch' && !f.hasSword) { dmg *= 0.7; } // Punches do less but are fast
+          if (f.state === 'headbutt') { dmg *= 1.3; spawnRing(hitPt.x, hitPt.y, 50, '#ff0'); g.slowMo = 0.4; g.slowTimer = 8; o.headHits++; playSFX('headbutt', sfxVolume); }
+          if (f.state === 'punch' && !f.hasSword) { dmg *= 0.7; }
+
+          // Play appropriate SFX
+          if (isKickAtk) playSFX('kick', sfxVolume);
+          else if (isHeadbutt) playSFX('headbutt', sfxVolume);
+          else if (isPunch) playSFX('hit', sfxVolume * 0.8);
+          else if (dmg >= 18) playSFX('heavyHit', sfxVolume);
+          else playSFX(f.hasSword ? 'slash' : 'hit', sfxVolume);
 
           const hitDir2 = v(f.facing, -0.3);
           if (aiData[idx]) { aiData[idx].mem.lastAtkLanded = true; aiData[idx].mem.excitement += 2; }
@@ -1522,6 +1706,7 @@ const RagdollArena = () => {
           if (o.state === 'block' && o.stamina > 5 && o.shieldHP > 0) {
             o.vx = f.facing * ad.kb.x * 0.3; o.stamina -= dmg * 0.5; o.shieldHP -= dmg * 0.3;
             spawnSparks((f.x + o.x) / 2, hitPt.y, 15); spawnRing((f.x + o.x) / 2, hitPt.y, 50, '#ff8');
+            playSFX('block', sfxVolume);
           } else {
             f.combo++; f.comboTimer = 80;
             let finalDmg = dmg * 0.55; if (f.combo > 1) finalDmg *= (1 + f.combo * 0.08);
@@ -1551,6 +1736,8 @@ const RagdollArena = () => {
               if (!o.severed.has('head')) sever(o, 'head', f.facing);
               const lp = ['leftArm', 'rightArm', 'leftLeg', 'rightLeg'].filter(p3 => !o.severed.has(p3));
               if (lp.length > 0) sever(o, pick(lp), f.facing);
+              playSFX('ko', sfxVolume);
+              if (ttsEnabled) { speakLine(pick(KO_LINES), 0.6, 0.9); setTimeout(() => speakLine(pick(FATALITY_LINES_LOSER), 1.4, 1.2), 2500); }
             }
           }
         }
@@ -1584,10 +1771,13 @@ const RagdollArena = () => {
               spawnSparks(ts.x, ts.y, 12); spawnRing(ts.x, ts.y, 50, '#fa0');
               if (i === 0) target.headHits += 2;
               ss(target, ts.dmg >= 20 ? 'stagger' : 'hit', ts.dmg >= 20 ? 25 : 14);
+              playSFX('heavyHit', sfxVolume);
               if (target.hp <= 0) {
                 ss(target, 'ko'); startRagdoll(target, vscl(hd, 20), 999);
                 g.fighters[ts.owner].wins++; g.rs = 'ko'; g.koTimer = 340;
                 g.slowMo = 0.05; g.slowTimer = 40; g.flash = 12; g.flashColor = '#fff';
+                playSFX('ko', sfxVolume);
+                if (ttsEnabled) speakLine(pick(KO_LINES), 0.6, 0.9);
               }
               ts.stuck = true; ts.vx = 0; ts.vy = 0; ts.life = 60;
               return true;
@@ -1606,18 +1796,17 @@ const RagdollArena = () => {
     const render = () => {
       tick(); ctx.save();
 
-      // ── CAMERA ── track midpoint between fighters
       const p1 = g.fighters[0], p2 = g.fighters[1];
       const targetCamX = clamp((p1.x + p2.x) / 2, W / 2, WORLD_W - W / 2);
-      g.camX += (targetCamX - g.camX) * 0.06; // smooth follow
-      const camX = g.camX - W / 2; // left edge of camera in world coords
+      g.camX += (targetCamX - g.camX) * 0.06;
+      const camX = g.camX - W / 2;
 
-      // ── SKY (fixed, no parallax) ──
+      // ── SKY ──
       const sky = ctx.createLinearGradient(0, 0, 0, GY);
       sky.addColorStop(0, '#020108'); sky.addColorStop(0.2, '#060318'); sky.addColorStop(0.4, '#0a0520'); sky.addColorStop(0.6, '#10082a'); sky.addColorStop(1, '#141430');
       ctx.fillStyle = sky; ctx.fillRect(0, 0, W, GY);
 
-      // ── STARS (fixed) ──
+      // ── STARS ──
       for (let i = 0; i < 200; i++) {
         const sx2 = ((i * 197 + 53) * 7.3) % W;
         const sy2 = ((i * 131 + 17) * 3.7) % (GY * 0.65);
@@ -1636,41 +1825,32 @@ const RagdollArena = () => {
         }
       }
 
-      // ── MOON (very slow parallax) ──
+      // ── MOON ──
       const moonX = 180 - camX * 0.02, moonY = 100;
       const moonGlow = ctx.createRadialGradient(moonX, moonY, 20, moonX, moonY, 120);
       moonGlow.addColorStop(0, 'rgba(200,180,140,0.15)'); moonGlow.addColorStop(1, 'rgba(0,0,0,0)');
       ctx.fillStyle = moonGlow; ctx.fillRect(moonX - 120, moonY - 120, 240, 240);
       ctx.fillStyle = 'rgba(220,210,180,0.12)'; ctx.beginPath(); ctx.arc(moonX, moonY, 55, 0, Math.PI * 2); ctx.fill();
 
-      // ── CLOUDS (slow parallax) ──
+      // ── CLOUDS ──
       g.clouds.forEach(c => { c.x += c.speed; if (c.x > WORLD_W + 200) c.x = -c.w;
         const sx = c.x - camX * 0.15;
         if (sx > -c.w && sx < W + c.w) { ctx.fillStyle = `rgba(40,30,60,${c.opacity})`; ctx.beginPath(); ctx.ellipse(sx, c.y, c.w, c.w * 0.25, 0, 0, Math.PI * 2); ctx.fill(); }
       });
 
-      // ── FAR MOUNTAINS (0.2 parallax) ──
-      const farPar = 0.2;
+      // ── FAR MOUNTAINS ──
       ctx.fillStyle = '#070512'; ctx.beginPath(); ctx.moveTo(0, GY);
-      for (const m of g.farMountains) {
-        const sx = m.x - camX * farPar;
-        if (sx > -100 && sx < W + 100) ctx.lineTo(sx, GY - m.h);
-      }
+      for (const m of g.farMountains) { const sx = m.x - camX * 0.2; if (sx > -100 && sx < W + 100) ctx.lineTo(sx, GY - m.h); }
       ctx.lineTo(W, GY); ctx.fill();
 
-      // ── NEAR MOUNTAINS (0.4 parallax) ──
-      const nearPar = 0.4;
+      // ── NEAR MOUNTAINS ──
       ctx.fillStyle = '#0a0818'; ctx.beginPath(); ctx.moveTo(0, GY);
-      for (const m of g.nearMountains) {
-        const sx = m.x - camX * nearPar;
-        if (sx > -100 && sx < W + 100) ctx.lineTo(sx, GY - m.h);
-      }
+      for (const m of g.nearMountains) { const sx = m.x - camX * 0.4; if (sx > -100 && sx < W + 100) ctx.lineTo(sx, GY - m.h); }
       ctx.lineTo(W, GY); ctx.fill();
 
-      // ── SCENERY (0.7 parallax - midground) ──
-      const scenePar = 0.7;
+      // ── SCENERY ──
       const drawSceneryItem = (item: { type: string; x: number; scale: number; flip: boolean }) => {
-        const sx = item.x - camX * scenePar;
+        const sx = item.x - camX * 0.7;
         if (sx < -150 || sx > W + 150) return;
         const s = item.scale;
         ctx.save();
@@ -1680,10 +1860,8 @@ const RagdollArena = () => {
 
         switch (item.type) {
           case 'deadTree': {
-            // Trunk
             ctx.strokeStyle = '#1a1210'; ctx.lineWidth = 5; ctx.lineCap = 'round';
             ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(-3, -60); ctx.lineTo(5, -90); ctx.stroke();
-            // Branches
             ctx.lineWidth = 3;
             ctx.beginPath(); ctx.moveTo(-3, -60); ctx.lineTo(-25, -75); ctx.stroke();
             ctx.beginPath(); ctx.moveTo(2, -70); ctx.lineTo(22, -85); ctx.stroke();
@@ -1696,57 +1874,36 @@ const RagdollArena = () => {
           }
           case 'grave': {
             ctx.fillStyle = '#15121a';
-            // Stone
-            ctx.beginPath();
-            ctx.moveTo(-8, 0); ctx.lineTo(-8, -18); ctx.quadraticCurveTo(-8, -25, 0, -25);
-            ctx.quadraticCurveTo(8, -25, 8, -18); ctx.lineTo(8, 0);
-            ctx.fill();
-            // Cross
+            ctx.beginPath(); ctx.moveTo(-8, 0); ctx.lineTo(-8, -18); ctx.quadraticCurveTo(-8, -25, 0, -25); ctx.quadraticCurveTo(8, -25, 8, -18); ctx.lineTo(8, 0); ctx.fill();
             ctx.strokeStyle = '#20181a'; ctx.lineWidth = 2;
             ctx.beginPath(); ctx.moveTo(0, -22); ctx.lineTo(0, -12); ctx.stroke();
             ctx.beginPath(); ctx.moveTo(-4, -18); ctx.lineTo(4, -18); ctx.stroke();
             break;
           }
           case 'pillar': {
-            ctx.fillStyle = '#12101a';
-            ctx.fillRect(-6, -70, 12, 70);
-            // Capital
-            ctx.fillRect(-10, -75, 20, 8);
-            // Cracks
+            ctx.fillStyle = '#12101a'; ctx.fillRect(-6, -70, 12, 70); ctx.fillRect(-10, -75, 20, 8);
             ctx.strokeStyle = '#0a0812'; ctx.lineWidth = 1;
             ctx.beginPath(); ctx.moveTo(-2, -50); ctx.lineTo(3, -30); ctx.lineTo(-1, -10); ctx.stroke();
-            // Broken top
             ctx.beginPath(); ctx.moveTo(-10, -75); ctx.lineTo(-6, -82); ctx.lineTo(0, -78); ctx.lineTo(6, -85); ctx.lineTo(10, -75); ctx.fill();
             break;
           }
           case 'stone': {
             ctx.fillStyle = '#14121a';
-            ctx.beginPath();
-            ctx.moveTo(-15, 0); ctx.lineTo(-12, -20); ctx.lineTo(-3, -30); ctx.lineTo(8, -28);
-            ctx.lineTo(14, -15); ctx.lineTo(15, 0);
-            ctx.fill();
-            // Moss
+            ctx.beginPath(); ctx.moveTo(-15, 0); ctx.lineTo(-12, -20); ctx.lineTo(-3, -30); ctx.lineTo(8, -28); ctx.lineTo(14, -15); ctx.lineTo(15, 0); ctx.fill();
             ctx.fillStyle = '#0a1208'; ctx.fillRect(-8, -5, 10, 5);
             break;
           }
           case 'fence': {
             ctx.strokeStyle = '#1a1510'; ctx.lineWidth = 2; ctx.lineCap = 'round';
-            // Posts
-            for (let i = 0; i < 4; i++) {
-              const fx = -20 + i * 13;
-              ctx.beginPath(); ctx.moveTo(fx, 0); ctx.lineTo(fx, -25 - (i % 2) * 5); ctx.stroke();
-            }
-            // Rails
+            for (let i = 0; i < 4; i++) { const fx = -20 + i * 13; ctx.beginPath(); ctx.moveTo(fx, 0); ctx.lineTo(fx, -25 - (i % 2) * 5); ctx.stroke(); }
             ctx.lineWidth = 1.5;
             ctx.beginPath(); ctx.moveTo(-20, -12); ctx.lineTo(19, -12); ctx.stroke();
             ctx.beginPath(); ctx.moveTo(-20, -20); ctx.lineTo(19, -20); ctx.stroke();
             break;
           }
           case 'skull': {
-            // Stake
             ctx.strokeStyle = '#1a1510'; ctx.lineWidth = 3; ctx.lineCap = 'round';
             ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(0, -50); ctx.stroke();
-            // Skull
             ctx.fillStyle = '#d8d0b8'; ctx.beginPath(); ctx.arc(0, -58, 8, 0, Math.PI * 2); ctx.fill();
             ctx.fillStyle = '#111'; ctx.beginPath(); ctx.arc(-3, -59, 2, 0, Math.PI * 2); ctx.fill();
             ctx.beginPath(); ctx.arc(3, -59, 2, 0, Math.PI * 2); ctx.fill();
@@ -1755,21 +1912,15 @@ const RagdollArena = () => {
           }
           case 'castle': {
             ctx.fillStyle = '#08061a';
-            ctx.fillRect(-40, -220, 80, 220);
-            ctx.fillRect(-55, -260, 25, 260);
-            ctx.fillRect(30, -240, 25, 240);
-            // Battlements
+            ctx.fillRect(-40, -220, 80, 220); ctx.fillRect(-55, -260, 25, 260); ctx.fillRect(30, -240, 25, 240);
             for (let bx = -55; bx < 55; bx += 12) ctx.fillRect(bx, -230, 8, 12);
-            // Tower tops
             ctx.beginPath(); ctx.moveTo(-60, -260); ctx.lineTo(-42, -310); ctx.lineTo(-25, -260); ctx.fill();
             ctx.beginPath(); ctx.moveTo(25, -240); ctx.lineTo(42, -285); ctx.lineTo(60, -240); ctx.fill();
-            // Windows with warm glow
             const castleWindows = [[-20, -180], [10, -180], [-20, -130], [10, -130], [-45, -230], [38, -210]];
             castleWindows.forEach(([cwx, cwy]) => {
               const flicker = 0.6 + Math.sin(g.bgTime * 2.5 + (cwx + item.x) * 0.13) * 0.2 + Math.sin(g.bgTime * 4.3 + cwx * 0.07) * 0.1;
               const glow2 = ctx.createRadialGradient(cwx + 5, cwy + 8, 1, cwx + 5, cwy + 8, 35);
-              glow2.addColorStop(0, `rgba(255,160,50,${flicker * 0.2})`);
-              glow2.addColorStop(1, 'rgba(255,60,10,0)');
+              glow2.addColorStop(0, `rgba(255,160,50,${flicker * 0.2})`); glow2.addColorStop(1, 'rgba(255,60,10,0)');
               ctx.fillStyle = glow2; ctx.fillRect(cwx - 30, cwy - 25, 70, 70);
               ctx.fillStyle = `rgba(255,180,80,${flicker * 0.7})`; ctx.fillRect(cwx, cwy, 10, 16);
               ctx.fillStyle = `rgba(255,220,140,${flicker * 0.5})`; ctx.fillRect(cwx + 2, cwy + 2, 6, 12);
@@ -1782,7 +1933,7 @@ const RagdollArena = () => {
       };
       g.scenery.forEach(drawSceneryItem);
 
-      // ── WORLD-SPACE CAMERA TRANSFORM for gameplay elements ──
+      // ── WORLD-SPACE ──
       ctx.save();
       ctx.translate(-camX, 0);
 
@@ -1790,14 +1941,10 @@ const RagdollArena = () => {
       const gnd = ctx.createLinearGradient(0, GY - 3, 0, H); gnd.addColorStop(0, '#1a1008'); gnd.addColorStop(1, '#0a0604');
       ctx.fillStyle = gnd; ctx.fillRect(camX - 10, GY - 3, W + 20, H - GY + 3);
       ctx.strokeStyle = '#3a2a15'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(camX - 10, GY); ctx.lineTo(camX + W + 10, GY); ctx.stroke();
-      // Fog
       ctx.fillStyle = `rgba(20,15,40,${0.08 + Math.sin(g.bgTime * 0.3) * 0.03})`; ctx.fillRect(camX - 10, GY - 50, W + 20, 60);
 
       // Blood pools
-      g.pools.forEach(p3 => {
-        if (p3.x < camX - 60 || p3.x > camX + W + 60) return;
-        ctx.fillStyle = `rgba(130,0,0,${p3.a})`; ctx.beginPath(); ctx.ellipse(p3.x, p3.y + 2, p3.r, p3.r * 0.3, 0, 0, Math.PI * 2); ctx.fill();
-      });
+      g.pools.forEach(p3 => { if (p3.x < camX - 60 || p3.x > camX + W + 60) return; ctx.fillStyle = `rgba(130,0,0,${p3.a})`; ctx.beginPath(); ctx.ellipse(p3.x, p3.y + 2, p3.r, p3.r * 0.3, 0, 0, Math.PI * 2); ctx.fill(); });
       // Afterimages
       g.afterimages.forEach(ai2 => { ctx.globalAlpha = ai2.alpha * 0.4; ctx.strokeStyle = ai2.color; ctx.lineWidth = 3; ctx.lineCap = 'round';
         const db = (a: number, b: number) => { if (ai2.pts[a] && ai2.pts[b]) { ctx.beginPath(); ctx.moveTo(ai2.pts[a].x, ai2.pts[a].y); ctx.lineTo(ai2.pts[b].x, ai2.pts[b].y); ctx.stroke(); } };
@@ -1839,10 +1986,9 @@ const RagdollArena = () => {
       // Lightning
       g.lightnings.forEach(l => { ctx.globalAlpha = l.life / 8; l.branches.forEach(branch => { ctx.strokeStyle = '#fff'; ctx.lineWidth = 2 + l.life * 0.3; ctx.beginPath(); branch.forEach((p4, i) => { if (i === 0) ctx.moveTo(p4.x, p4.y); else ctx.lineTo(p4.x, p4.y); }); ctx.stroke(); }); }); ctx.globalAlpha = 1;
 
-      ctx.restore(); // end world-space transform
+      ctx.restore(); // end world-space
 
       // ── SCREEN-SPACE EFFECTS ──
-      // Flash
       if (g.flash > 0) { ctx.fillStyle = g.flashColor; ctx.globalAlpha = g.flash / 15 * 0.4; ctx.fillRect(0, 0, W, H); ctx.globalAlpha = 1; }
 
       // Fatality text
@@ -1851,11 +1997,12 @@ const RagdollArena = () => {
         const sc = p3 < 0.1 ? p3 / 0.1 : 1;
         ctx.save(); ctx.translate(W / 2, H / 2 - 80);
         ctx.scale(sc, sc); ctx.globalAlpha = Math.min(1, ft.life / 30);
-        ctx.font = 'bold 50px Georgia, serif'; ctx.textAlign = 'center';
-        ctx.shadowBlur = 20; ctx.shadowColor = '#f00';
+        ctx.font = 'bold 50px "Press Start 2P", Georgia, serif'; ctx.textAlign = 'center';
+        ctx.shadowBlur = 30; ctx.shadowColor = '#f00';
         ctx.fillStyle = '#f00'; ctx.fillText(ft.text, 0, 0);
-        ctx.font = 'bold 20px Georgia, serif'; ctx.fillStyle = '#fa0';
-        ctx.fillText('FATALITY!', 0, 40);
+        ctx.font = 'bold 22px "Orbitron", sans-serif'; ctx.fillStyle = '#fa0';
+        ctx.shadowColor = '#fa0'; ctx.shadowBlur = 20;
+        ctx.fillText('FATALITY!', 0, 50);
         ctx.shadowBlur = 0; ctx.restore();
       });
 
@@ -1864,10 +2011,12 @@ const RagdollArena = () => {
         const p3 = 1 - g.introTimer / 80;
         ctx.fillStyle = `rgba(0,0,0,${0.6 * (1 - p3)})`; ctx.fillRect(0, 0, W, H);
         ctx.save(); ctx.translate(W / 2, H / 2 - 50); ctx.scale(0.5 + p3 * 0.5, 0.5 + p3 * 0.5);
-        ctx.font = 'bold 60px Georgia, serif'; ctx.textAlign = 'center'; ctx.fillStyle = '#a88'; ctx.globalAlpha = Math.min(1, p3 * 3);
+        ctx.font = 'bold 48px "Press Start 2P", Georgia, serif'; ctx.textAlign = 'center';
+        ctx.shadowBlur = 30; ctx.shadowColor = '#f00';
+        ctx.fillStyle = '#c44'; ctx.globalAlpha = Math.min(1, p3 * 3);
         ctx.fillText(`ROUND ${g.round}`, 0, 0);
-        if (p3 > 0.5) { ctx.font = 'bold 40px Georgia, serif'; ctx.fillStyle = '#c44'; ctx.globalAlpha = (p3 - 0.5) * 2; ctx.fillText('FIGHT!', 0, 50); }
-        ctx.restore();
+        if (p3 > 0.5) { ctx.font = 'bold 36px "Orbitron", sans-serif'; ctx.fillStyle = '#ff4'; ctx.shadowColor = '#ff4'; ctx.globalAlpha = (p3 - 0.5) * 2; ctx.fillText('FIGHT!', 0, 55); }
+        ctx.shadowBlur = 0; ctx.restore();
       }
       if (g.rs === 'ko') {
         const p3 = 1 - g.koTimer / 280;
@@ -1876,10 +2025,10 @@ const RagdollArena = () => {
         ctx.fillStyle = vig; ctx.fillRect(0, 0, W, H);
         ctx.save(); ctx.translate(W / 2, H / 2 - 40);
         ctx.scale(p3 < 0.1 ? p3 / 0.1 : 1, p3 < 0.1 ? p3 / 0.1 : 1);
-        ctx.font = 'bold 85px Georgia, serif'; ctx.textAlign = 'center'; ctx.shadowBlur = 30; ctx.shadowColor = '#f00';
+        ctx.font = 'bold 72px "Press Start 2P", Georgia, serif'; ctx.textAlign = 'center'; ctx.shadowBlur = 40; ctx.shadowColor = '#f00';
         ctx.fillStyle = '#a00'; ctx.fillText('K.O.', 0, 0); ctx.shadowBlur = 0;
         const winner = g.fighters.find(f => f.hp > 0);
-        if (winner && winner.combo > 2) { ctx.font = 'bold 30px Georgia, serif'; ctx.fillStyle = '#ff4'; ctx.fillText(`${winner.combo} HIT COMBO!`, 0, 50); }
+        if (winner && winner.combo > 2) { ctx.font = 'bold 24px "Orbitron", sans-serif'; ctx.fillStyle = '#ff4'; ctx.shadowBlur = 15; ctx.shadowColor = '#ff4'; ctx.fillText(`${winner.combo} HIT COMBO!`, 0, 55); ctx.shadowBlur = 0; }
         ctx.restore();
       }
       // Vignette
@@ -1891,49 +2040,380 @@ const RagdollArena = () => {
     };
     aid = requestAnimationFrame(render);
     return () => { cancelAnimationFrame(aid); window.removeEventListener('keydown', kd); window.removeEventListener('keyup', ku); };
-  }, [drawFighter, spawnBlood, spawnSparks, sever, spawnGore, spawnAfterimage, spawnRing, spawnLightning, spawnBullet, spawnWallSparks]);
+  }, [gameScreen, drawFighter, spawnBlood, spawnSparks, sever, spawnGore, spawnAfterimage, spawnRing, spawnLightning, spawnBullet, spawnWallSparks, sfxVolume, ttsEnabled]);
+
+  // ═══════════════════════════════════════════════════════
+  // MAIN MENU
+  // ═══════════════════════════════════════════════════════
+  if (gameScreen === 'menu') {
+    return (
+      <div className="relative w-full h-full flex items-center justify-center bg-black select-none overflow-hidden">
+        {/* Animated background */}
+        <div className="absolute inset-0" style={{
+          background: 'radial-gradient(ellipse at 50% 120%, #1a0000 0%, #000 60%)',
+        }} />
+        <div className="absolute inset-0 opacity-20" style={{
+          backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(255,0,0,0.03) 2px, rgba(255,0,0,0.03) 4px)',
+        }} />
+
+        {/* Dragon emblem glow */}
+        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 rounded-full opacity-10"
+          style={{ background: 'radial-gradient(circle, #f00 0%, transparent 70%)', animation: 'pulse 3s ease-in-out infinite' }} />
+
+        <div className="relative z-10 flex flex-col items-center gap-8">
+          {/* Title */}
+          <div className="text-center mb-4">
+            <h1 className="text-5xl md:text-6xl font-bold tracking-[0.3em] mb-2" style={{
+              fontFamily: '"Press Start 2P", cursive',
+              color: '#c00',
+              textShadow: '0 0 30px #f00, 0 0 60px #a00, 0 0 90px #600, 0 4px 0 #400',
+            }}>
+              MORTAL
+            </h1>
+            <h1 className="text-5xl md:text-6xl font-bold tracking-[0.3em]" style={{
+              fontFamily: '"Press Start 2P", cursive',
+              color: '#ff4',
+              textShadow: '0 0 30px #fa0, 0 0 60px #a60, 0 4px 0 #640',
+            }}>
+              RAGDOLL
+            </h1>
+            <div className="mt-3 text-sm tracking-[0.5em] uppercase" style={{
+              fontFamily: '"Orbitron", sans-serif',
+              color: '#666',
+            }}>
+              Arena of Carnage
+            </div>
+          </div>
+
+          {/* Dragon separator */}
+          <div className="w-64 h-[2px]" style={{ background: 'linear-gradient(90deg, transparent, #800, #f00, #800, transparent)' }} />
+
+          {/* Menu buttons */}
+          <div className="flex flex-col gap-4 items-center">
+            <button
+              onClick={() => setGameScreen('fight')}
+              className="group relative px-12 py-4 text-xl font-bold tracking-[0.2em] uppercase transition-all duration-300 hover:scale-105"
+              style={{
+                fontFamily: '"Orbitron", sans-serif',
+                color: '#fff',
+                background: 'linear-gradient(180deg, rgba(180,0,0,0.8) 0%, rgba(80,0,0,0.9) 100%)',
+                border: '2px solid #a00',
+                clipPath: 'polygon(8% 0%, 100% 0%, 92% 100%, 0% 100%)',
+                textShadow: '0 0 10px #f00',
+              }}
+            >
+              <span className="relative z-10">FIGHT</span>
+              <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity" style={{
+                background: 'linear-gradient(180deg, rgba(255,0,0,0.3) 0%, rgba(180,0,0,0.4) 100%)',
+              }} />
+            </button>
+
+            <button
+              onClick={() => setGameScreen('settings')}
+              className="group relative px-10 py-3 text-base font-bold tracking-[0.2em] uppercase transition-all duration-300 hover:scale-105"
+              style={{
+                fontFamily: '"Orbitron", sans-serif',
+                color: '#aaa',
+                background: 'linear-gradient(180deg, rgba(40,40,40,0.8) 0%, rgba(20,20,20,0.9) 100%)',
+                border: '1px solid #444',
+                clipPath: 'polygon(6% 0%, 100% 0%, 94% 100%, 0% 100%)',
+              }}
+            >
+              SETTINGS
+            </button>
+
+            <button
+              onClick={() => setShowControls(!showControls)}
+              className="group relative px-10 py-3 text-base font-bold tracking-[0.2em] uppercase transition-all duration-300 hover:scale-105"
+              style={{
+                fontFamily: '"Orbitron", sans-serif',
+                color: '#aaa',
+                background: 'linear-gradient(180deg, rgba(40,40,40,0.8) 0%, rgba(20,20,20,0.9) 100%)',
+                border: '1px solid #444',
+                clipPath: 'polygon(6% 0%, 100% 0%, 94% 100%, 0% 100%)',
+              }}
+            >
+              CONTROLS
+            </button>
+          </div>
+
+          {/* Controls panel */}
+          {showControls && (
+            <div className="mt-2 p-4 rounded border max-w-md text-xs" style={{
+              fontFamily: '"Orbitron", sans-serif',
+              background: 'rgba(0,0,0,0.9)',
+              borderColor: '#333',
+              color: '#888',
+            }}>
+              <div className="grid grid-cols-2 gap-x-6 gap-y-1">
+                <span><span className="text-accent">WASD</span> - Move/Jump</span>
+                <span><span className="text-accent">J</span> - Slash</span>
+                <span><span className="text-accent">K</span> - Stab</span>
+                <span><span className="text-accent">L</span> - Heavy</span>
+                <span><span className="text-accent">G</span> - Kick</span>
+                <span><span className="text-accent">H</span> - Head Kick</span>
+                <span><span className="text-accent">N</span> - Knee</span>
+                <span><span className="text-accent">M</span> - Roundhouse</span>
+                <span><span className="text-accent">B</span> - Headbutt</span>
+                <span><span className="text-accent">C</span> - Punch</span>
+                <span><span className="text-accent">F</span> - Shoot</span>
+                <span><span className="text-accent">X</span> - Fatality</span>
+                <span><span className="text-accent">V</span> - Throw Sword</span>
+                <span><span className="text-accent">R</span> - Backflip</span>
+              </div>
+            </div>
+          )}
+
+          {/* Footer */}
+          <div className="mt-4 text-[10px] tracking-[0.3em] uppercase" style={{
+            fontFamily: '"Orbitron", sans-serif',
+            color: '#333',
+          }}>
+            Press FIGHT to begin
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ═══════════════════════════════════════════════════════
+  // SETTINGS SCREEN
+  // ═══════════════════════════════════════════════════════
+  if (gameScreen === 'settings') {
+    return (
+      <div className="relative w-full h-full flex items-center justify-center bg-black select-none overflow-hidden">
+        <div className="absolute inset-0" style={{ background: 'radial-gradient(ellipse at 50% 50%, #0a0008 0%, #000 70%)' }} />
+
+        <div className="relative z-10 flex flex-col items-center gap-6 w-full max-w-md px-8">
+          <h2 className="text-3xl font-bold tracking-[0.3em] mb-6" style={{
+            fontFamily: '"Press Start 2P", cursive',
+            color: '#c00',
+            textShadow: '0 0 20px #a00',
+          }}>
+            SETTINGS
+          </h2>
+
+          <div className="w-full space-y-6">
+            {/* SFX Volume */}
+            <div className="flex flex-col gap-2">
+              <label className="text-sm font-bold tracking-widest uppercase" style={{ fontFamily: '"Orbitron", sans-serif', color: '#888' }}>
+                SFX Volume: {Math.round(sfxVolume * 100)}%
+              </label>
+              <input
+                type="range" min="0" max="100" value={sfxVolume * 100}
+                onChange={e => setSfxVolume(Number(e.target.value) / 100)}
+                className="w-full h-2 rounded-lg appearance-none cursor-pointer"
+                style={{ accentColor: '#c00', background: 'linear-gradient(90deg, #400, #c00)' }}
+              />
+            </div>
+
+            {/* TTS Toggle */}
+            <div className="flex items-center justify-between">
+              <label className="text-sm font-bold tracking-widest uppercase" style={{ fontFamily: '"Orbitron", sans-serif', color: '#888' }}>
+                Voice Lines (TTS)
+              </label>
+              <button
+                onClick={() => setTtsEnabled(!ttsEnabled)}
+                className="px-4 py-2 text-sm font-bold transition-all"
+                style={{
+                  fontFamily: '"Orbitron", sans-serif',
+                  color: ttsEnabled ? '#0f0' : '#f00',
+                  background: ttsEnabled ? 'rgba(0,80,0,0.4)' : 'rgba(80,0,0,0.4)',
+                  border: `1px solid ${ttsEnabled ? '#0a0' : '#a00'}`,
+                }}
+              >
+                {ttsEnabled ? 'ON' : 'OFF'}
+              </button>
+            </div>
+          </div>
+
+          <div className="w-full h-[1px] my-4" style={{ background: 'linear-gradient(90deg, transparent, #333, transparent)' }} />
+
+          <button
+            onClick={() => setGameScreen('menu')}
+            className="px-10 py-3 text-base font-bold tracking-[0.2em] uppercase transition-all hover:scale-105"
+            style={{
+              fontFamily: '"Orbitron", sans-serif',
+              color: '#aaa',
+              background: 'linear-gradient(180deg, rgba(40,40,40,0.8) 0%, rgba(20,20,20,0.9) 100%)',
+              border: '1px solid #444',
+              clipPath: 'polygon(6% 0%, 100% 0%, 94% 100%, 0% 100%)',
+            }}
+          >
+            BACK
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // ═══════════════════════════════════════════════════════
+  // FIGHT SCREEN - MK-STYLE HUD
+  // ═══════════════════════════════════════════════════════
+  const p1Pct = Math.max(0, (hud.p1hp / MAX_HP) * 100);
+  const p2Pct = Math.max(0, (hud.p2hp / MAX_HP) * 100);
 
   return (
     <div className="relative w-full h-full flex items-center justify-center bg-black select-none">
       <canvas ref={canvasRef} width={W} height={H} className="max-w-full max-h-full" />
+
+      {/* MK-STYLE HUD OVERLAY */}
       <div className="absolute top-0 left-0 right-0 pointer-events-none" style={{ maxWidth: W, margin: '0 auto' }}>
-        <div className="flex items-start justify-between p-3 gap-3">
-          <div className="flex-1">
-            <div className="flex items-baseline gap-2 mb-1">
-              <span className="text-xs font-bold text-red-400 font-mono tracking-widest">{hud.n1}</span>
-              <span className="text-[9px] text-red-400/40 font-mono">{hud.w1}</span>
-              {hud.p1limb && <span className="text-[9px] text-yellow-400 font-mono">🦴</span>}
+        {/* Top bar background */}
+        <div className="relative" style={{ height: 72, background: 'linear-gradient(180deg, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.4) 80%, transparent 100%)' }}>
+
+          {/* Timer center */}
+          <div className="absolute left-1/2 -translate-x-1/2 top-1 z-10">
+            <div className="relative">
+              <div className="w-14 h-14 flex items-center justify-center" style={{
+                background: 'linear-gradient(180deg, #222 0%, #111 100%)',
+                border: '2px solid #555',
+                clipPath: 'polygon(15% 0%, 85% 0%, 100% 50%, 85% 100%, 15% 100%, 0% 50%)',
+              }}>
+                <span className="text-2xl font-bold tabular-nums" style={{
+                  fontFamily: '"Press Start 2P", cursive',
+                  color: hud.timer <= 10 ? '#f00' : '#ddd',
+                  textShadow: hud.timer <= 10 ? '0 0 10px #f00' : 'none',
+                }}>{hud.timer}</span>
+              </div>
+              <div className="text-center mt-0.5">
+                <span className="text-[8px] tracking-[0.3em] uppercase" style={{ fontFamily: '"Orbitron", sans-serif', color: '#555' }}>
+                  ROUND {hud.round}
+                </span>
+              </div>
             </div>
-            <div className="h-5 bg-black/80 border border-red-900/50 rounded-sm overflow-hidden">
-              <div className="h-full transition-all duration-300" style={{ width: `${(hud.p1hp / 250) * 100}%`, background: 'linear-gradient(180deg,#b22,#711)' }} />
-            </div>
-            <div className="h-1.5 bg-black/50 border border-yellow-900/30 mt-0.5 rounded-sm overflow-hidden">
-              <div className="h-full transition-all duration-200" style={{ width: `${hud.p1st}%`, background: 'linear-gradient(90deg,#a80,#cc0)' }} />
-            </div>
-            <div className="flex gap-1 mt-1">{[0, 1].map(i => <div key={i} className={`w-2.5 h-2.5 rounded-full border ${i < hud.p1w ? 'bg-red-600 border-red-500' : 'border-red-900/40'}`} />)}</div>
           </div>
-          <div className="text-center px-3">
-            <div className="text-3xl font-bold text-white/80 font-mono tabular-nums min-w-[50px]" style={{ fontFamily: 'Georgia,serif' }}>{hud.timer}</div>
-            <div className="text-[9px] text-white/25 font-mono tracking-widest">ROUND {hud.round}</div>
+
+          {/* P1 Side */}
+          <div className="absolute left-3 top-2 right-1/2 pr-10">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-xs font-bold tracking-[0.15em]" style={{
+                fontFamily: '"Orbitron", sans-serif',
+                color: '#e44',
+                textShadow: '0 0 8px rgba(255,0,0,0.5)',
+              }}>{hud.n1}</span>
+              <span className="text-[8px] ml-1" style={{ fontFamily: '"Orbitron", sans-serif', color: 'rgba(255,100,100,0.4)' }}>{hud.w1}</span>
+              {hud.p1limb && <span className="text-[9px]">🦴</span>}
+            </div>
+            {/* HP Bar - angled MK style */}
+            <div className="relative h-6 overflow-hidden" style={{
+              clipPath: 'polygon(0% 0%, 100% 0%, 97% 100%, 0% 100%)',
+              background: '#111',
+              border: '1px solid #600',
+            }}>
+              <div className="absolute inset-0 transition-all duration-300" style={{
+                width: `${p1Pct}%`,
+                background: p1Pct > 30
+                  ? 'linear-gradient(180deg, #e22 0%, #a00 40%, #800 100%)'
+                  : 'linear-gradient(180deg, #ff4 0%, #f80 40%, #a40 100%)',
+                boxShadow: p1Pct <= 30 ? 'inset 0 0 15px rgba(255,200,0,0.3)' : 'inset 0 0 10px rgba(255,0,0,0.2)',
+              }} />
+              {/* Health bar shine */}
+              <div className="absolute top-0 left-0 right-0 h-[3px] opacity-40" style={{
+                background: 'linear-gradient(180deg, rgba(255,255,255,0.4), transparent)',
+              }} />
+              {/* HP text */}
+              <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[9px] font-bold" style={{
+                fontFamily: '"Orbitron", sans-serif',
+                color: 'rgba(255,255,255,0.5)',
+              }}>{Math.ceil(hud.p1hp)}</span>
+            </div>
+            {/* Stamina */}
+            <div className="h-[5px] mt-[2px] overflow-hidden" style={{
+              clipPath: 'polygon(0% 0%, 100% 0%, 98% 100%, 0% 100%)',
+              background: '#0a0a00',
+            }}>
+              <div className="h-full transition-all duration-200" style={{
+                width: `${hud.p1st}%`,
+                background: 'linear-gradient(90deg, #a80, #ee0)',
+              }} />
+            </div>
+            {/* Win markers */}
+            <div className="flex gap-1.5 mt-1">
+              {[0, 1].map(i => (
+                <div key={i} className="w-3 h-3 transition-all" style={{
+                  background: i < hud.p1w ? 'radial-gradient(circle, #f44, #a00)' : 'transparent',
+                  border: i < hud.p1w ? '1px solid #f66' : '1px solid #400',
+                  boxShadow: i < hud.p1w ? '0 0 6px #f00' : 'none',
+                  clipPath: 'polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%)',
+                }} />
+              ))}
+            </div>
           </div>
-          <div className="flex-1">
-            <div className="flex items-baseline gap-2 mb-1 justify-end">
-              <span className="text-[9px] text-blue-400/40 font-mono">{hud.w2}</span>
-              <span className="text-xs font-bold text-blue-400 font-mono tracking-widest">{hud.n2}</span>
-              {hud.p2limb && <span className="text-[9px] text-yellow-400 font-mono">🦴</span>}
+
+          {/* P2 Side */}
+          <div className="absolute right-3 top-2 left-1/2 pl-10">
+            <div className="flex items-center gap-2 mb-1 justify-end">
+              <span className="text-[8px]" style={{ fontFamily: '"Orbitron", sans-serif', color: 'rgba(100,150,255,0.4)' }}>{hud.w2}</span>
+              <span className="text-xs font-bold tracking-[0.15em]" style={{
+                fontFamily: '"Orbitron", sans-serif',
+                color: '#48f',
+                textShadow: '0 0 8px rgba(0,100,255,0.5)',
+              }}>{hud.n2}</span>
+              {hud.p2limb && <span className="text-[9px]">🦴</span>}
             </div>
-            <div className="h-5 bg-black/80 border border-blue-900/50 rounded-sm overflow-hidden">
-              <div className="h-full transition-all duration-300 ml-auto" style={{ width: `${(hud.p2hp / 250) * 100}%`, background: 'linear-gradient(180deg,#33a,#226)' }} />
+            {/* HP Bar - reversed angle */}
+            <div className="relative h-6 overflow-hidden" style={{
+              clipPath: 'polygon(3% 0%, 100% 0%, 100% 100%, 0% 100%)',
+              background: '#111',
+              border: '1px solid #006',
+            }}>
+              <div className="absolute inset-0 transition-all duration-300 ml-auto" style={{
+                width: `${p2Pct}%`,
+                background: p2Pct > 30
+                  ? 'linear-gradient(180deg, #44e 0%, #00a 40%, #008 100%)'
+                  : 'linear-gradient(180deg, #ff4 0%, #f80 40%, #a40 100%)',
+                boxShadow: p2Pct <= 30 ? 'inset 0 0 15px rgba(255,200,0,0.3)' : 'inset 0 0 10px rgba(0,0,255,0.2)',
+              }} />
+              <div className="absolute top-0 left-0 right-0 h-[3px] opacity-40" style={{
+                background: 'linear-gradient(180deg, rgba(255,255,255,0.4), transparent)',
+              }} />
+              <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[9px] font-bold" style={{
+                fontFamily: '"Orbitron", sans-serif',
+                color: 'rgba(255,255,255,0.5)',
+              }}>{Math.ceil(hud.p2hp)}</span>
             </div>
-            <div className="h-1.5 bg-black/50 border border-yellow-900/30 mt-0.5 rounded-sm overflow-hidden">
-              <div className="h-full transition-all duration-200 ml-auto" style={{ width: `${hud.p2st}%`, background: 'linear-gradient(90deg,#cc0,#a80)' }} />
+            {/* Stamina */}
+            <div className="h-[5px] mt-[2px] overflow-hidden" style={{
+              clipPath: 'polygon(2% 0%, 100% 0%, 100% 100%, 0% 100%)',
+              background: '#0a0a00',
+            }}>
+              <div className="h-full transition-all duration-200 ml-auto" style={{
+                width: `${hud.p2st}%`,
+                background: 'linear-gradient(90deg, #ee0, #a80)',
+              }} />
             </div>
-            <div className="flex gap-1 mt-1 justify-end">{[0, 1].map(i => <div key={i} className={`w-2.5 h-2.5 rounded-full border ${i < hud.p2w ? 'bg-blue-600 border-blue-500' : 'border-blue-900/40'}`} />)}</div>
+            {/* Win markers */}
+            <div className="flex gap-1.5 mt-1 justify-end">
+              {[0, 1].map(i => (
+                <div key={i} className="w-3 h-3 transition-all" style={{
+                  background: i < hud.p2w ? 'radial-gradient(circle, #48f, #00a)' : 'transparent',
+                  border: i < hud.p2w ? '1px solid #68f' : '1px solid #004',
+                  boxShadow: i < hud.p2w ? '0 0 6px #00f' : 'none',
+                  clipPath: 'polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%)',
+                }} />
+              ))}
+            </div>
           </div>
         </div>
       </div>
-      <div className="absolute bottom-3 left-1/2 -translate-x-1/2 text-white/15 text-[10px] font-mono pointer-events-none tracking-wider">
-        WASD Move • J Slash • K Stab • G Kick • H HeadKick • N Knee • M Roundhouse • X Fatality • F Shoot
+
+      {/* Bottom bar */}
+      <div className="absolute bottom-0 left-0 right-0 pointer-events-auto" style={{ maxWidth: W, margin: '0 auto' }}>
+        <div className="flex items-center justify-between px-4 py-2" style={{
+          background: 'linear-gradient(180deg, transparent 0%, rgba(0,0,0,0.6) 50%, rgba(0,0,0,0.8) 100%)',
+        }}>
+          <button
+            onClick={() => setGameScreen('menu')}
+            className="text-[10px] tracking-widest uppercase px-3 py-1 transition-all hover:text-red-400"
+            style={{ fontFamily: '"Orbitron", sans-serif', color: '#444', border: '1px solid #333' }}
+          >
+            ESC MENU
+          </button>
+          <div className="text-[9px] tracking-[0.15em] uppercase" style={{ fontFamily: '"Orbitron", sans-serif', color: '#333' }}>
+            J Slash • K Stab • G Kick • H HeadKick • X Fatality
+          </div>
+        </div>
       </div>
     </div>
   );
