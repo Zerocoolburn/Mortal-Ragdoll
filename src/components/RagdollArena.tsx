@@ -2001,7 +2001,7 @@ const RagdollArena = () => {
                 g.fighters[ts.owner].wins++; g.rs = 'ko'; g.koTimer = 340;
                 g.slowMo = 0.05; g.slowTimer = 40; g.flash = 12; g.flashColor = '#fff';
                 playSFX('ko', sfxVolume);
-                if (ttsEnabled) { speakLine(pick(KO_ANNOUNCER_LINES), 0.5, 0.8); setTimeout(() => speakFighterLine(KO_LOSER_LINES, 1 - ts.owner), 2000); }
+                if (ttsEnabled) { speakAnnouncer(pick(KO_ANNOUNCER_LINES)); setTimeout(() => speakFighterLine(KO_LOSER_LINES, 1 - ts.owner), 2000); }
               }
               ts.stuck = true; ts.vx = 0; ts.vy = 0; ts.life = 60;
               return true;
