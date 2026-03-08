@@ -416,7 +416,7 @@ function isBehind(me: Bot, them: Bot): boolean {
 }
 
 function runAI(b: Bot, s: GameState) {
-  if (!b.alive || b.stun > 0 || b.ragdoll > 0.35) { b.moveX = 0; b.moveY = 0; return; }
+  if (!b.alive || b.stun > 0 || b.ragdoll > 0.18) { b.moveX = 0; b.moveY = 0; return; }
   const dt = s.dt;
   b.aiTimer -= dt;
   const tgt = pickTarget(b, s.bots);
