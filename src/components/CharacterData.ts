@@ -230,7 +230,7 @@ export const CHARACTERS: CharacterDef[] = [
     bodyScale: 1.35, headScale: 1.2,
     armorType: 'none', helmetType: 'spikes',
     capeColor: null, glowColor: null,
-    scarCount: 0, eyeColor: '#fa0', eyeGlow: true,
+    scarCount: 0, eyeColor: '#ffaa00', eyeGlow: true,
     tattooColor: null, trailColor: null,
     koWinnerLines: ["GOLEM CRUSH PUNY HUMAN!", "Stone always wins!", "You hit like a pebble!", "Golem is unbreakable!", "Crushed to dust!", "Rock beats everything!"],
     koLoserLines: ["Golem crumble...", "The stones fall apart...", "Golem not understand losing...", "Rock can break?!", "Golem needs glue...", "The mountain erodes..."],
