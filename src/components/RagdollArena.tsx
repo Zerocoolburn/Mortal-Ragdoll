@@ -1224,15 +1224,15 @@ const RagdollArena = () => {
 
       // Update blood
       g.blood = g.blood.filter(b => {
-        if (b.grounded) { b.life -= spd * 0.3; return b.life > 0; }
+        if (b.grounded) { b.life -= spd * 0.2; return b.life > 0; }
         b.x += b.vx * spd; b.y += b.vy * spd;
-        b.vy += 0.3 * spd; b.vx *= 0.99; b.life -= spd;
+        b.vy += 0.35 * spd; b.vx *= 0.99; b.life -= spd;
         if (b.y >= GY) {
           b.grounded = true; b.y = GY; b.vy = 0; b.vx = 0;
-          if (g.pools.length < 60) {
-            const ex = g.pools.find(p => Math.abs(p.x - b.x) < 15);
-            if (ex) ex.r = Math.min(30, ex.r + 0.5);
-            else g.pools.push({ x: b.x, y: GY, r: 2 + Math.random() * 4, a: 0.5 });
+          if (g.pools.length < 120) {
+            const ex = g.pools.find(p => Math.abs(p.x - b.x) < 20);
+            if (ex) ex.r = Math.min(40, ex.r + 1);
+            else g.pools.push({ x: b.x, y: GY, r: 3 + Math.random() * 6, a: 0.7 });
           }
         }
         return b.life > 0;
