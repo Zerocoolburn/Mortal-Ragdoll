@@ -1294,8 +1294,8 @@ const RagdollArena = () => {
       playSFX('heavyHit', sfxVolume * 2);
       // TTS fatality lines!
       if (ttsEnabled) {
-        setTimeout(() => speakLine(pick(FATALITY_LINES_WINNER), 0.8, 1.1), 500);
-        setTimeout(() => speakLine(pick(FATALITY_LINES_LOSER), 1.5, 1.3), 2000);
+        setTimeout(() => speakFighterLine(KO_WINNER_LINES, g.fighters.indexOf(f)), 500);
+        setTimeout(() => speakFighterLine(KO_LOSER_LINES, g.fighters.indexOf(o)), 2000);
       }
       return true;
     };
