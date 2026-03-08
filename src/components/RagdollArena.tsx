@@ -1595,7 +1595,7 @@ const RagdollArena = () => {
           }
         }
         if (ts.y > GY) { ts.stuck = true; ts.y = GY; ts.life = 120; spawnSparks(ts.x, ts.y, 6); }
-        if (ts.x < 10 || ts.x > W - 10) { ts.stuck = true; ts.life = 60; spawnSparks(ts.x, ts.y, 8); }
+        if (ts.x < 10 || ts.x > WORLD_W - 10) { ts.stuck = true; ts.life = 60; spawnSparks(ts.x, ts.y, 8); }
         return ts.life > 0;
       });
 
