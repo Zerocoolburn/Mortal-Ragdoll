@@ -342,7 +342,8 @@ const RagdollArena = () => {
 };
 
 export default RagdollArena;
-const vsub = (a: V2, b: V2): V2 => ({ x: a.x - b.x, y: a.y - b.y });
+
+
 const vscl = (a: V2, s: number): V2 => ({ x: a.x * s, y: a.y * s });
 const vlen = (a: V2) => Math.sqrt(a.x * a.x + a.y * a.y);
 const vnorm = (a: V2): V2 => { const l = vlen(a) || 1; return { x: a.x / l, y: a.y / l }; };
