@@ -1444,8 +1444,30 @@ const RagdollArena = () => {
       ctx.fillRect(600, GY - 320, 80, 320);
       ctx.beginPath(); ctx.moveTo(590, GY - 320); ctx.lineTo(640, GY - 390); ctx.lineTo(690, GY - 320); ctx.fill();
       // Castle windows
-      const windowGlow = (wx: number, wy: number) => { const fl = 0.3 + Math.sin(g.bgTime * 3 + wx * 0.1) * 0.15; ctx.fillStyle = `rgba(255,120,30,${fl * 0.3})`; ctx.fillRect(wx, wy, 14, 20); };
-      [510, 570, 630, 690, 750].forEach(wx => { windowGlow(wx, GY - 200); windowGlow(wx, GY - 140); });
+      const windowGlow = (wx: number, wy: number, intensity?: number) => {
+        const base = intensity || 1;
+        const flicker = 0.6 + Math.sin(g.bgTime * 2.5 + wx * 0.13) * 0.2 + Math.sin(g.bgTime * 4.3 + wx * 0.07) * 0.1;
+        const fl = flicker * base;
+        // Warm light spill glow
+        const glow = ctx.createRadialGradient(wx + 7, wy + 10, 2, wx + 7, wy + 10, 45);
+        glow.addColorStop(0, `rgba(255,160,50,${fl * 0.25})`);
+        glow.addColorStop(0.4, `rgba(255,100,20,${fl * 0.1})`);
+        glow.addColorStop(1, 'rgba(255,60,10,0)');
+        ctx.fillStyle = glow; ctx.fillRect(wx - 38, wy - 35, 90, 90);
+        // Window pane
+        ctx.fillStyle = `rgba(255,180,80,${fl * 0.7})`; ctx.fillRect(wx, wy, 14, 20);
+        // Bright inner core
+        ctx.fillStyle = `rgba(255,220,140,${fl * 0.5})`; ctx.fillRect(wx + 2, wy + 2, 10, 16);
+        // Window frame
+        ctx.strokeStyle = `rgba(30,20,10,0.6)`; ctx.lineWidth = 1;
+        ctx.strokeRect(wx, wy, 14, 20);
+        ctx.beginPath(); ctx.moveTo(wx + 7, wy); ctx.lineTo(wx + 7, wy + 20); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(wx, wy + 10); ctx.lineTo(wx + 14, wy + 10); ctx.stroke();
+      };
+      [510, 570, 630, 690, 750].forEach(wx => { windowGlow(wx, GY - 200, 0.9 + (wx % 3) * 0.1); windowGlow(wx, GY - 140, 0.7 + (wx % 5) * 0.1); });
+      // Tower windows
+      windowGlow(475, GY - 280, 1.1); windowGlow(785, GY - 260, 0.8);
+      windowGlow(620, GY - 300, 1.0); windowGlow(650, GY - 300, 1.0);
       // Walls
       ctx.fillStyle = '#0c0a1a'; ctx.fillRect(WALL_L - 8, 80, 12, GY - 80); ctx.fillRect(WALL_R - 4, 80, 12, GY - 80);
       // Torches
