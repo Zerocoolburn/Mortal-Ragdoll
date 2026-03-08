@@ -316,15 +316,18 @@ const RagdollArena = () => {
       part === 'leftLeg' ? [11, 12, 13] : part === 'rightLeg' ? [14, 15, 16] : [0];
     indices.forEach(i => { if (f.rag.pts[i]) pts.push({ ...f.rag.pts[i].pos }); });
     g.limbs.push({
-      pts, vel: v(dir * (4 + Math.random() * 8), -(6 + Math.random() * 8)),
-      angV: (Math.random() - 0.5) * 0.4, ang: 0,
+      pts, vel: v(dir * (5 + Math.random() * 12), -(8 + Math.random() * 12)),
+      angV: (Math.random() - 0.5) * 0.6, ang: 0,
       color: part === 'head' ? f.skin : f.color,
-      w: part.includes('Leg') ? 7 : part === 'head' ? 12 : 5,
-      life: 400,
+      w: part.includes('Leg') ? 7 : part === 'head' ? 14 : 5,
+      life: 600,
     });
-    spawnBlood(f.x, f.y - 50, dir, 30, 3);
-    f.bleedTimer = 240;
-    g.shake = 15; g.slowMo = 0.2; g.slowTimer = 25;
+    // Massive blood fountain from severed point
+    spawnBlood(f.x, f.y - 50, dir, 60, 4);
+    spawnBlood(f.x, f.y - 60, -dir * 0.5, 30, 3.5);
+    spawnBlood(f.x, f.y - 55, 0, 20, 3);
+    f.bleedTimer = 400;
+    g.shake = 20; g.slowMo = 0.15; g.slowTimer = 30;
   }, [spawnBlood]);
 
   // ─── DRAW FIGHTER (from ragdoll points) ───────────────
