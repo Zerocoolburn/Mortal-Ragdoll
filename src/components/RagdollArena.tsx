@@ -852,11 +852,11 @@ const RagdollArena = () => {
         }
         case 'rush': {
           mem.rushMomentum += 2;
-          if (d > wr) { ss(bot, 'walk'); bot.vx += bot.facing * (6 + Math.min(mem.rushMomentum * 0.5, 8)); bot.aiTimer = 1; }
+          if (d > wr) { ss(bot, 'walk'); bot.vx += bot.facing * (8 + Math.min(mem.rushMomentum * 0.8, 12)); bot.aiTimer = 0; }
           else if (ca(bot)) {
-            doAtk(bot, pick(['slash', 'slash', 'heavySlash', 'overhead']));
-            bot.aiTimer = 1; mem.comboStep = 1;
-            if (mem.rushMomentum > 10) { mem.intent = 'retreat'; mem.intentTimer = 15; mem.rushMomentum = 0; }
+            doAtk(bot, pick(['dashStab', 'slash', 'slash', 'uppercut', 'spinSlash', 'stab']));
+            bot.aiTimer = 0; mem.comboStep = 1;
+            if (mem.rushMomentum > 15) { mem.intent = 'executeCombo'; mem.comboSeq = [...pick(AI_COMBOS)]; mem.intentTimer = 20; mem.rushMomentum = 0; }
           }
           break;
         }
