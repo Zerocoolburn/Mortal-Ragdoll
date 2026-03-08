@@ -1509,6 +1509,88 @@ const RagdollArena = () => {
   const [campaign, setCampaign] = useState<CampaignState>(initCampaign('siegfried'));
   const [campaignChar, setCampaignChar] = useState<string>('siegfried');
   const campaignRef = useRef<CampaignState>(initCampaign('siegfried'));
+  // Extended settings
+  const [settingsTab, setSettingsTab] = useState<SettingsTab>('general');
+  const [moveSpeed, setMoveSpeed] = useState(1.4);
+  const [gamepadDeadzone, setGamepadDeadzone] = useState(0.15);
+  const [screenShake, setScreenShake] = useState(true);
+  const [bloodAmount, setBloodAmount] = useState(1.0);
+  const [slowMoIntensity, setSlowMoIntensity] = useState(1.0);
+  const [autoFaceEnemy, setAutoFaceEnemy] = useState(true);
+  const [showDamageNumbers, setShowDamageNumbers] = useState(true);
+  const [showComboCounter, setShowComboCounter] = useState(true);
+  const [musicVolume, setMusicVolume] = useState(0.3);
+  const [cameraZoom, setCameraZoom] = useState(1.0);
+  const [menuIndex, setMenuIndex] = useState(0);
+  const [gamepadConnected, setGamepadConnected] = useState(false);
+
+  // Gamepad connection detection
+  useEffect(() => {
+    const onConnect = () => setGamepadConnected(true);
+    const onDisconnect = () => setGamepadConnected(false);
+    window.addEventListener('gamepadconnected', onConnect);
+    window.addEventListener('gamepaddisconnected', onDisconnect);
+    // Check initial
+    if (navigator.getGamepads?.()[0]) setGamepadConnected(true);
+    return () => { window.removeEventListener('gamepadconnected', onConnect); window.removeEventListener('gamepaddisconnected', onDisconnect); };
+  }, []);
+
+  // Gamepad menu navigation
+  useEffect(() => {
+    if (gameScreen === 'fight' || gameScreen === 'campaignFight') return;
+    let rafId: number;
+    const poll = () => {
+      const gp = readGamepad(gamepadDeadzone);
+      const justUp = gp.up && !gpMenuPrev.up;
+      const justDown = gp.down && !gpMenuPrev.down;
+      const justLeft = gp.left && !gpMenuPrev.left;
+      const justRight = gp.right && !gpMenuPrev.right;
+      const justConfirm = gp.confirm && !gpMenuPrev.confirm;
+      const justBack = gp.back && !gpMenuPrev.back;
+      const justStart = gp.start && !gpMenuPrev.start;
+      gpMenuPrev = { up: gp.up, down: gp.down, left: gp.left, right: gp.right, confirm: gp.confirm, back: gp.back, start: gp.start };
+
+      if (gameScreen === 'menu') {
+        if (justUp) setMenuIndex(i => Math.max(0, i - 1));
+        if (justDown) setMenuIndex(i => Math.min(2, i + 1));
+        if (justConfirm) {
+          if (menuIndex === 0) setGameScreen('campaignSelect');
+          else if (menuIndex === 1) setGameScreen('charSelect');
+          else if (menuIndex === 2) setGameScreen('settings');
+        }
+      } else if (gameScreen === 'campaignSelect') {
+        const charIds = CHARACTERS.map(c => c.id);
+        const curIdx = charIds.indexOf(campaignChar);
+        if (justLeft) setCampaignChar(charIds[Math.max(0, curIdx - 1)]);
+        if (justRight) setCampaignChar(charIds[Math.min(charIds.length - 1, curIdx + 1)]);
+        if (justUp) setCampaignChar(charIds[Math.max(0, curIdx - 4)]);
+        if (justDown) setCampaignChar(charIds[Math.min(charIds.length - 1, curIdx + 4)]);
+        if (justConfirm) { const cs = initCampaign(campaignChar); setCampaign(cs); campaignRef.current = cs; setGameScreen('cinematic'); }
+        if (justBack) setGameScreen('menu');
+      } else if (gameScreen === 'charSelect') {
+        const charIds = CHARACTERS.map(c => c.id);
+        const isP1 = selectingFor === 1;
+        const curSel = isP1 ? selectedP1 : selectedP2;
+        const curIdx = charIds.indexOf(curSel);
+        if (justLeft) { const ni = Math.max(0, curIdx - 1); if (isP1) setSelectedP1(charIds[ni]); else setSelectedP2(charIds[ni]); }
+        if (justRight) { const ni = Math.min(charIds.length - 1, curIdx + 1); if (isP1) setSelectedP1(charIds[ni]); else setSelectedP2(charIds[ni]); }
+        if (justUp) { const ni = Math.max(0, curIdx - 6); if (isP1) setSelectedP1(charIds[ni]); else setSelectedP2(charIds[ni]); }
+        if (justDown) { const ni = Math.min(charIds.length - 1, curIdx + 6); if (isP1) setSelectedP1(charIds[ni]); else setSelectedP2(charIds[ni]); }
+        if (justConfirm) { if (isP1) { setSelectingFor(2); } else { setGameScreen('fight'); } }
+        if (justBack) { if (!isP1) { setSelectingFor(1); } else { setGameScreen('menu'); } }
+      } else if (gameScreen === 'cinematic') {
+        if (justConfirm || justStart) setGameScreen('campaignFight');
+        if (justBack) setGameScreen('campaignSelect');
+      } else if (gameScreen === 'victory') {
+        if (justConfirm) setGameScreen('menu');
+      } else if (gameScreen === 'settings') {
+        if (justBack) setGameScreen('menu');
+      }
+      rafId = requestAnimationFrame(poll);
+    };
+    rafId = requestAnimationFrame(poll);
+    return () => cancelAnimationFrame(rafId);
+  }, [gameScreen, menuIndex, campaignChar, selectedP1, selectedP2, selectingFor, gamepadDeadzone]);
 
   const G = useRef({
     fighters: [
