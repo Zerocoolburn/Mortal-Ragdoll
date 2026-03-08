@@ -202,6 +202,26 @@ const LIMB_LOST_LINES = [
   "Oh wonderful now I'm a pirate! Where's my parrot?!",
   "I can feel it! I can still feel it twitching over there!",
   "That was my drinking arm you ANIMAL!",
+  "Oh so THIS is what a phantom limb feels like!",
+  "My Tinder photos are RUINED!",
+  "You tore that off like a receipt from CVS!",
+  "I literally just did push ups with that arm!",
+  "Great now I look like a broken action figure!",
+  "You know arms don't grow back right you IDIOT?!",
+  "I was saving that leg for running away!",
+  "My limb just flew further than I ever could!",
+  "That was load bearing! I needed that to STAND!",
+  "Oh fantastic now I match the Venus de Milo!",
+  "Do you KNOW how long it took to grow that?!",
+  "My ex said I'd fall apart and HERE WE ARE!",
+  "I can see my own shoulder socket and I hate it!",
+  "That used to be connected! It was IMPORTANT!",
+  "You just made me a clearance rack human!",
+  "I'm like a Mr Potato Head but REAL and in PAIN!",
+  "Well there goes my OnlyFans career!",
+  "Five second rule! Someone grab my arm!",
+  "This is the WORST game of Operation ever!",
+  "My limb just ragdolled harder than I did!",
 ];
 
 // Lines when YOUR head gets severed
@@ -221,6 +241,11 @@ const HEAD_LOST_LINES = [
   "Huh. So that's what my neck looks like inside.",
   "Three stars, would not recommend getting decapitated!",
   "Tell my barber he doesn't need to hold the appointment!",
+  "My head is bouncing! That's so disrespectful!",
+  "I just watched my body from a weird angle!",
+  "Return to sender! RETURN TO SENDER!",
+  "Was that a clean cut at least? For the open casket?",
+  "My head just rolled into the cheap seats!",
 ];
 
 // Lines spoken by the WINNER after KO
@@ -300,6 +325,24 @@ const KO_WINNER_LINES = [
   "You should've stayed in bed today champ!",
   "I fight better with my eyes closed! Which I tried!",
   "Thanks for the workout! Barely broke a sweat!",
+  "I just beat you so bad your respawn button is crying!",
+  "Your funeral is gonna be a celebration for ME!",
+  "I'm framing your skull as a conversation piece!",
+  "You got deleted from existence! Ctrl Z won't save you!",
+  "I just made you the BEFORE in a before and after ad!",
+  "Even your shadow is embarrassed right now!",
+  "You got annihilated so hard the replay skipped!",
+  "I broke you like a Kit Kat and I'm not sharing!",
+  "You're not even a worthy sacrifice to my ego!",
+  "I've seen better fights at a kindergarten!",
+  "Your fighting license should be revoked!",
+  "I just turned you into a PSA about fighting me!",
+  "That was surgical! I should bill your insurance!",
+  "You brought dishonor to your entire bloodline!",
+  "I'd feel bad but I physically can't!",
+  "Consider that a free anatomy lesson!",
+  "You expired faster than gas station sushi!",
+  "I'm not even your biggest problem now. Gravity is.",
 ];
 
 // Lines spoken by the LOSER during/after KO
@@ -380,6 +423,21 @@ const KO_LOSER_LINES = [
   "This is bullshit! I call hacks!",
   "I've been absolutely violated in every conceivable way!",
   "My ghost is already filing a police report!",
+  "I just saw my own skeleton and it looked disappointed!",
+  "My soul just left my body and flipped me off!",
+  "I got hit so hard I time traveled to my own funeral!",
+  "My ancestors just unfollowed me!",
+  "I just experienced death and the reviews are terrible!",
+  "I can see the loading screen for the afterlife!",
+  "That last punch sent me to a different zip code!",
+  "I just got turned into a motivational poster about failure!",
+  "My death certificate is writing itself right now!",
+  "I got destroyed so thoroughly my obituary just auto-generated!",
+  "Even the grim reaper said that was excessive!",
+  "My ghost already applied for witness protection!",
+  "I died so hard my health bar filed a restraining order!",
+  "I just became the Wikipedia entry for getting wrecked!",
+  "My corpse is trending on social media for all the wrong reasons!",
 ];
 
 // Lines during the ground beatdown
@@ -404,6 +462,16 @@ const BEATDOWN_LINES_WINNER = [
   "This is therapeutic! For ME not for you!",
   "Your face was ugly anyway I'm doing you a favor!",
   "I'm redecorating the floor with your skull!",
+  "I'm turning you into MODERN ART!",
+  "Every punch is a love letter from my fist!",
+  "I'm not hitting you, I'm sculpting your face!",
+  "This is what happens when you show up to MY arena!",
+  "I bet you wish you called in sick today!",
+  "You're my stress ball now!",
+  "I'm writing my name on your face with my fists!",
+  "Oh does that hurt? GOOD! Here's MORE!",
+  "I'm giving you a free dental rearrangement!",
+  "You picked the wrong day to have a face!",
 ];
 
 const BEATDOWN_LINES_LOSER = [
@@ -427,6 +495,16 @@ const BEATDOWN_LINES_LOSER = [
   "You know I'm dead right?! RIGHT?!",
   "This is gonna be a closed casket for sure!",
   "I'm starting to think you have anger issues!",
+  "I'm literally a corpse! What are you PROVING?!",
+  "My insurance lapsed three punches ago!",
+  "This is the most personal death I've ever had!",
+  "I'm already dead just let me decompose in peace!",
+  "You're punching a GHOST at this point!",
+  "I'd cry but my tear ducts are in a different area code!",
+  "This is NOT in the Geneva Convention!",
+  "My soul is watching this from above and cringing!",
+  "Stop! I'll tell you where the treasure is! There IS no treasure!",
+  "My afterlife just sent a noise complaint!",
 ];
 
 // Announcer lines
@@ -436,61 +514,84 @@ const KO_ANNOUNCER_LINES = [
   "BRUTAL!", "SAVAGE!", "FATALITY!", "TOASTY!",
   "DEVASTATION!", "TOTAL ANNIHILATION!", "SLAUGHTERED!",
   "BUTCHERED!", "MASSACRED!", "EVISCERATED!",
+  "WHAT A BLOODBATH!", "UNBELIEVABLE CARNAGE!", "ABSOLUTE DESTRUCTION!",
+  "HE'S DONE! HE'S ABSOLUTELY DONE!", "THAT MAN HAD A FAMILY!",
+  "SOMEBODY STOP THE FIGHT!", "LIGHTS OUT!", "DOWN GOES THE CHALLENGER!",
 ];
 
-// 3 distinct male English voices: Fighter 1, Fighter 2, Commentator
-// We pick voices by name preference for clarity and distinction
-const MALE_VOICE_PREFS = [
-  // Fighter 1 - deeper, authoritative
-  ['Google UK English Male', 'Microsoft George', 'Daniel', 'Google US English', 'Alex', 'Fred', 'Male'],
-  // Fighter 2 - slightly different character
-  ['Microsoft David', 'Google US English', 'Aaron', 'Tom', 'Rishi', 'Male'],
-  // Commentator/Announcer - clear, energetic
-  ['Microsoft Mark', 'Google UK English Male', 'Samantha', 'Karen', 'Google US English', 'Male'],
+// ═══════════════════════════════════════════════════════
+// TTS VOICE SYSTEM - 3 distinct male English voices
+// ═══════════════════════════════════════════════════════
+
+// Strict male English voice selection
+// We want 3 DIFFERENT male voices - prioritize known male voice names
+const VOICE_ROLE_PREFS: string[][] = [
+  // Fighter 1 - deep, gruff male
+  ['Daniel', 'Google UK English Male', 'Microsoft George', 'Microsoft David Desktop', 'James', 'Arthur', 'Fred'],
+  // Fighter 2 - lighter, different male  
+  ['Microsoft David', 'Google US English', 'Aaron', 'Tom', 'Alex', 'Rishi', 'Albert'],
+  // Commentator - clear, distinct male
+  ['Microsoft Mark', 'Microsoft Zira Desktop', 'Google UK English Male', 'Ralph', 'Bruce', 'Junior'],
 ];
 
-// Voice settings per role - all kept natural and clear
-const VOICE_SETTINGS = [
-  { pitch: 0.85, rate: 0.92 },   // Fighter 1: slightly deep, steady pace
-  { pitch: 1.05, rate: 0.95 },   // Fighter 2: natural, slightly different
-  { pitch: 0.95, rate: 1.0 },    // Commentator: clear, normal speed
+// Each role gets distinct pitch/rate for guaranteed timbre difference
+const VOICE_CONFIGS = [
+  { pitch: 0.75, rate: 0.88 },   // Fighter 1: deep and slow - clearly distinct
+  { pitch: 1.15, rate: 1.02 },   // Fighter 2: higher and slightly faster  
+  { pitch: 0.95, rate: 1.1 },    // Commentator: mid-range, energetic pace
 ];
 
 let lastTTSTime = 0;
 let lastTTSByFighter = [0, 0, 0];
 let cachedVoices: SpeechSynthesisVoice[] = [];
 let voicesLoaded = false;
+let assignedVoices: (SpeechSynthesisVoice | null)[] = [null, null, null];
+
+// Known female voice names to exclude
+const FEMALE_NAMES = ['samantha', 'karen', 'victoria', 'zira', 'susan', 'hazel', 'fiona', 'moira', 'tessa', 'allison', 'ava', 'joana', 'nicky', 'sandy', 'shelley', 'kate', 'serena', 'veena', 'catherine', 'princess'];
+
+const isMaleEnglish = (v: SpeechSynthesisVoice): boolean => {
+  if (!v.lang.startsWith('en')) return false;
+  const name = v.name.toLowerCase();
+  // Exclude known female names
+  for (const f of FEMALE_NAMES) {
+    if (name.includes(f)) return false;
+  }
+  return true;
+};
 
 // Preload voices
 if (typeof window !== 'undefined' && window.speechSynthesis) {
   const loadVoices = () => {
     cachedVoices = speechSynthesis.getVoices();
-    if (cachedVoices.length > 0) voicesLoaded = true;
+    if (cachedVoices.length > 0) {
+      voicesLoaded = true;
+      // Assign 3 distinct male English voices
+      const maleEn = cachedVoices.filter(isMaleEnglish);
+      const pool = maleEn.length >= 3 ? maleEn : cachedVoices.filter(v => v.lang.startsWith('en'));
+      
+      const used = new Set<string>();
+      for (let role = 0; role < 3; role++) {
+        let found: SpeechSynthesisVoice | null = null;
+        // Try preferences first
+        for (const pref of VOICE_ROLE_PREFS[role]) {
+          const match = pool.find(v => v.name.toLowerCase().includes(pref.toLowerCase()) && !used.has(v.name));
+          if (match) { found = match; break; }
+        }
+        // Fallback: pick any unused voice from pool
+        if (!found) {
+          found = pool.find(v => !used.has(v.name)) || pool[role % pool.length] || null;
+        }
+        if (found) used.add(found.name);
+        assignedVoices[role] = found;
+      }
+    }
   };
   loadVoices();
   speechSynthesis.onvoiceschanged = loadVoices;
 }
 
-const findBestVoice = (roleIdx: number): SpeechSynthesisVoice | null => {
-  if (!voicesLoaded) cachedVoices = speechSynthesis.getVoices();
-  if (cachedVoices.length === 0) return null;
-  
-  const prefs = MALE_VOICE_PREFS[roleIdx] || MALE_VOICE_PREFS[0];
-  const enVoices = cachedVoices.filter(v2 => v2.lang.startsWith('en'));
-  const pool = enVoices.length > 0 ? enVoices : cachedVoices;
-  
-  // Try to match by name preference
-  for (const pref of prefs) {
-    const match = pool.find(v2 => v2.name.toLowerCase().includes(pref.toLowerCase()));
-    if (match) return match;
-  }
-  
-  // Fallback: pick different voices by index for each role
-  const idx = roleIdx % pool.length;
-  return pool[idx];
-};
-
-const speakLine = (text: string, pitch = 1, rate = 1, roleIdx = 2) => {
+const speakLine = (text: string, roleIdx = 2) => {
   try {
     const now = Date.now();
     if (now - lastTTSTime < 1500) return;
@@ -501,12 +602,13 @@ const speakLine = (text: string, pitch = 1, rate = 1, roleIdx = 2) => {
     speechSynthesis.cancel();
     
     const u = new SpeechSynthesisUtterance(text);
-    const settings = VOICE_SETTINGS[roleIdx] || VOICE_SETTINGS[2];
-    u.pitch = settings.pitch;
-    u.rate = settings.rate;
+    const cfg = VOICE_CONFIGS[roleIdx] || VOICE_CONFIGS[2];
+    u.pitch = cfg.pitch;
+    u.rate = cfg.rate;
     u.volume = 0.85;
     
-    const voice = findBestVoice(roleIdx);
+    // Use pre-assigned voice for this role
+    const voice = assignedVoices[roleIdx];
     if (voice) u.voice = voice;
     
     speechSynthesis.speak(u);
@@ -514,12 +616,11 @@ const speakLine = (text: string, pitch = 1, rate = 1, roleIdx = 2) => {
 };
 
 const speakFighterLine = (lines: string[], fighterIdx: number) => {
-  // fighterIdx 0 or 1 maps to role 0 or 1
-  speakLine(pick(lines), 1, 1, Math.min(fighterIdx, 1));
+  speakLine(pick(lines), Math.min(fighterIdx, 1));
 };
 
 const speakAnnouncer = (text: string) => {
-  speakLine(text, 1, 1, 2);
+  speakLine(text, 2);
 };
 
 // ═══════════════════════════════════════════════════════
