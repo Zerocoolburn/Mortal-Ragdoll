@@ -925,12 +925,14 @@ function poseRagdoll(f: Fighter) {
     if (f.y + targets[i].y > GY) targets[i].y = GY - f.y;
   }
 
-  const blend = f.ragdolling ? 0 : 0.35;
+  // Use softer blend for smoother transitions, especially during KO/fatality
+  const isKoState = f.state === 'ko' || f.state === 'fatality';
+  const blend = f.ragdolling ? 0 : isKoState ? 0.2 : 0.3;
   for (let i = 0; i < r.pts.length && i < targets.length; i++) {
     const target = vadd(v(f.x, f.y), targets[i]);
-    const b = (i >= 11) ? Math.min(blend * 1.3, 0.5) : blend;
+    const b = (i >= 11) ? Math.min(blend * 1.2, 0.45) : blend;
     r.pts[i].pos = vlerp(r.pts[i].pos, target, b);
-    if (!f.ragdolling) r.pts[i].old = vlerp(r.pts[i].old, target, b * 0.8);
+    if (!f.ragdolling) r.pts[i].old = vlerp(r.pts[i].old, target, b * 0.7);
   }
 }
 
