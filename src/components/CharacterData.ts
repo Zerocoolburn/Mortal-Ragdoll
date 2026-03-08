@@ -204,7 +204,7 @@ export const CHARACTERS: CharacterDef[] = [
     color: '#5a0a0a', color2: '#ff0000',
     skin: '#c8a888', hair: '#8a1a1a',
     weaponKey: 'greatsword', specialType: 'bloodFrenzy',
-    specialName: 'BLOOD FRENZY', specialColor: '#f00', specialGlow: '#f44',
+    specialName: 'BLOOD FRENZY', specialColor: '#ff0000', specialGlow: '#ff4444',
     aiStyles: ['berserker', 'wild', 'showboat'],
     voicePitch: 0.8, voiceRate: 1.0,
     bodyScale: 1.2, headScale: 1.05,
