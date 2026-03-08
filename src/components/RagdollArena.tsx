@@ -167,6 +167,8 @@ interface FatalityText { text: string; life: number; maxLife: number }
 
 let limbIdCounter = 0;
 
+interface ThrownSword { x: number; y: number; vx: number; vy: number; ang: number; angV: number; life: number; dmg: number; owner: number; weapon: Weapon; stuck: boolean }
+
 interface Fighter {
   x: number; y: number; vx: number; vy: number;
   hp: number; stamina: number;
@@ -190,9 +192,11 @@ interface Fighter {
   wallSide: -1 | 0 | 1;
   gunCooldown: number;
   muzzleFlash: number;
-  headHits: number; // kicks to the head accumulate
-  shieldHP: number; // shield durability
-  fatalityType: number; // which fatality is playing
+  headHits: number;
+  shieldHP: number;
+  fatalityType: number;
+  hasSword: boolean; // whether fighter still has their sword
+  groundBeatTimer: number; // post-KO beatdown timer
 }
 
 function mkFighter(x: number, name: string, color: string, skin: string, hair: string, wKey: string, isAI: boolean): Fighter {
