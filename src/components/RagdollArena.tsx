@@ -1351,7 +1351,7 @@ const RagdollArena = () => {
             spawnSparks((f.x + o.x) / 2, hitPt.y, 15); spawnRing((f.x + o.x) / 2, hitPt.y, 50, '#ff8');
           } else {
             f.combo++; f.comboTimer = 80;
-            let finalDmg = dmg; if (f.combo > 1) finalDmg *= (1 + f.combo * 0.15);
+            let finalDmg = dmg * 0.55; if (f.combo > 1) finalDmg *= (1 + f.combo * 0.08);
             o.hp = Math.max(0, o.hp - finalDmg); o.vx = f.facing * ad.kb.x; o.vy = ad.kb.y;
             if (ad.kb.y < -4) o.grounded = false;
             o.hitDir = vnorm(hitDir2); o.hitImpact = dmg * 0.6;
