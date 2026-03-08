@@ -84,7 +84,7 @@ export const CHARACTERS: CharacterDef[] = [
     color: '#cc3300', color2: '#ff6600',
     skin: '#8b3a2a', hair: '#ff4400',
     weaponKey: 'longsword', specialType: 'meteorRain',
-    specialName: 'METEOR STORM', specialColor: '#f60', specialGlow: '#f80',
+    specialName: 'METEOR STORM', specialColor: '#ff6600', specialGlow: '#ff8800',
     aiStyles: ['berserker', 'wild', 'showboat'],
     voicePitch: 0.7, voiceRate: 0.95,
     bodyScale: 1.05, headScale: 0.95,
