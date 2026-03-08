@@ -264,7 +264,7 @@ export const CHARACTERS: CharacterDef[] = [
     color: '#aa5500', color2: '#ffcc00',
     skin: '#e8c888', hair: '#ff6600',
     weaponKey: 'longsword', specialType: 'fireTornado',
-    specialName: 'FIRE VORTEX', specialColor: '#f80', specialGlow: '#fc0',
+    specialName: 'FIRE VORTEX', specialColor: '#ff8800', specialGlow: '#ffcc00',
     aiStyles: ['showboat', 'acrobat', 'wild'],
     voicePitch: 1.0, voiceRate: 1.05,
     bodyScale: 0.95, headScale: 1.0,
