@@ -184,7 +184,7 @@ export const CHARACTERS: CharacterDef[] = [
     color: '#4a4a1a', color2: '#ffff00',
     skin: '#e8d8a8', hair: '#eee060',
     weaponKey: 'spear', specialType: 'lightningStorm',
-    specialName: 'THUNDER REIGN', specialColor: '#ff0', specialGlow: '#ffa',
+    specialName: 'THUNDER REIGN', specialColor: '#ffff00', specialGlow: '#ffffaa',
     aiStyles: ['acrobat', 'berserker', 'showboat'],
     voicePitch: 1.15, voiceRate: 1.15,
     bodyScale: 0.95, headScale: 1.0,
