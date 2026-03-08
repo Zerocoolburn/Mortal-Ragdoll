@@ -165,8 +165,8 @@ function poseRagdoll(f: Fighter) {
   const wk = f.state === 'walk' || f.state === 'walkBack' ? f.walkCycle : 0;
   const ap = f.dur > 0 ? f.frame / f.dur : 0;
   const jmp = !f.grounded ? -10 : 0;
-  const legSwing = Math.sin(wk) * 12;
-  const legBend = Math.abs(Math.sin(wk)) * 6;
+  const legSwing = Math.sin(wk) * 12 * S;
+  const legBend = Math.abs(Math.sin(wk)) * 6 * S;
 
   // Leg IK: hips stay fixed, knees bend naturally, feet stay on ground
   const lHipX = -9 * s, rHipX = 9 * s;
