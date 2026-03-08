@@ -517,12 +517,12 @@ function poseRagdoll(f: Fighter) {
     if (f.y + targets[i].y > GY) targets[i].y = GY - f.y;
   }
 
-  const blend = f.ragdolling ? 0 : 0.45;
+  const blend = f.ragdolling ? 0 : 0.35; // Smoother blending
   for (let i = 0; i < r.pts.length && i < targets.length; i++) {
     const target = vadd(v(f.x, f.y), targets[i]);
-    const b = (i >= 11) ? Math.min(blend * 1.4, 0.6) : blend;
+    const b = (i >= 11) ? Math.min(blend * 1.3, 0.5) : blend;
     r.pts[i].pos = vlerp(r.pts[i].pos, target, b);
-    if (!f.ragdolling) r.pts[i].old = vlerp(r.pts[i].old, target, b * 0.85);
+    if (!f.ragdolling) r.pts[i].old = vlerp(r.pts[i].old, target, b * 0.8);
   }
 }
 
