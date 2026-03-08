@@ -516,13 +516,14 @@ function runAI(b: Bot, s: GameState, dt: number) {
             comboAttack(b);
           } else {
             b.combo = 0;
-            const picks: AtkType[] = {
+            const picksMap: Record<Style, AtkType[]> = {
               aggro: ['slash_r','slash_l','overhead'],
               def: ['thrust','slash_r'],
               zerk: ['slash_r','slash_l','spin','overhead'],
               tact: ['thrust','sweep','slash_l'],
               assassin: ['thrust','overhead','slash_r'],
-            }[b.style];
+            };
+            const picks = picksMap[b.style];
             startAttack(b, picks[Math.floor(Math.random() * picks.length)]);
           }
         }
