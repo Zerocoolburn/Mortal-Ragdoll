@@ -1657,19 +1657,19 @@ const RagdollArena = () => {
             winner.x += winner.facing * 3 * spd;
             ss(winner, 'walk');
           } else if (ca(winner) || winner.state === 'idle') {
-            const beatAtk = pick(['kick', 'headKick', 'kneeStrike', 'punch', 'headbutt', 'roundhouse', 'stomp']);
-            if (beatAtk === 'stomp') {
-              winner.vy = -8; winner.grounded = false; ss(winner, 'divekick' as FState, 20);
-            } else {
+            // Only attack every ~20 frames to prevent jitter
+            if (winner.groundBeatTimer % 20 < spd) {
+              const beatAtk = pick(['kick', 'headKick', 'kneeStrike', 'punch', 'headbutt', 'roundhouse']);
               doAtk(winner, beatAtk);
+              const hitPt = loser.rag.pts[Math.floor(rng(0, loser.rag.pts.length))].pos;
+              spawnBlood(hitPt.x, hitPt.y, winner.facing, 15, 2.5);
+              spawnGore(hitPt.x, hitPt.y, 2, winner.facing);
+              // Gentle push on loser ragdoll (not every frame!)
+              for (let i = 0; i < loser.rag.pts.length; i++) {
+                loser.rag.pts[i].old = vsub(loser.rag.pts[i].pos, v(winner.facing * rng(1, 4), -rng(1, 3)));
+              }
+              spawnRing(hitPt.x, hitPt.y, 40, '#f80'); playSFX('hit', sfxVolume * 0.5);
             }
-            const hitPt = loser.rag.pts[Math.floor(rng(0, loser.rag.pts.length))].pos;
-            spawnBlood(hitPt.x, hitPt.y, winner.facing, 20, 3);
-            spawnGore(hitPt.x, hitPt.y, 3, winner.facing);
-            for (let i = 0; i < loser.rag.pts.length; i++) {
-              loser.rag.pts[i].old = vsub(loser.rag.pts[i].pos, v(winner.facing * rng(3, 8), -rng(2, 6)));
-            }
-            if (fc % 15 === 0) { spawnRing(hitPt.x, hitPt.y, 40, '#f80'); playSFX('hit', sfxVolume * 0.5); }
             // Beatdown TTS
             if (ttsEnabled && winner.groundBeatTimer > 60 && fc % 90 === 0) {
               const wIdx = g.fighters.indexOf(winner);
@@ -1678,12 +1678,18 @@ const RagdollArena = () => {
               else speakFighterLine(BEATDOWN_LINES_LOSER, lIdx);
             }
           }
+          // Smooth ragdoll stepping for both
           stepRagdoll(winner.rag.pts, winner.rag.sticks, spd, 0.3);
           if (!winner.ragdolling) poseRagdoll(winner);
-          stepRagdoll(loser.rag.pts, loser.rag.sticks, spd, 0.3);
+          stepRagdoll(loser.rag.pts, loser.rag.sticks, spd, 0.4);
           if (!winner.grounded) { winner.vy += GRAV * spd; winner.y += winner.vy * spd; if (winner.y >= GY) { winner.y = GY; winner.vy = 0; winner.grounded = true; } }
           winner.x += winner.vx * spd; winner.vx *= 0.86;
           winner.bob += 0.04 * spd;
+          // Dampen loser velocity to prevent jitter
+          for (const pt of loser.rag.pts) {
+            const vel = vsub(pt.pos, pt.old);
+            pt.old = vlerp(pt.old, pt.pos, 0.15); // heavy damping
+          }
         }
         if (g.koTimer <= 0) {
           g.round++;
