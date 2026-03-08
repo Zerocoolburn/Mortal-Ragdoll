@@ -2672,11 +2672,13 @@ const RagdollArena = () => {
 
       // ── DRAGON SPECIAL ──
       g.specials.filter(s => s.type === 'dragonStrike').forEach(dr => {
-        const alpha = dr.phase === 'flyAway' ? Math.max(0, dr.life / (dr.maxLife * 0.3)) : 1;
-        // Trail
-        dr.trail.forEach(t => {
-          if (t.alpha > 0) {
-            ctx.fillStyle = `rgba(0,150,255,${t.alpha * 0.3})`;
+        const progress = 1 - dr.life / dr.maxLife;
+        const alpha = progress > 0.7 ? Math.max(0, dr.life / (dr.maxLife * 0.3)) : 1;
+        // Trail from particles
+        dr.particles.forEach(t => {
+          const tAlpha = t.life / 20;
+          if (tAlpha > 0) {
+            ctx.fillStyle = `rgba(0,150,255,${tAlpha * 0.3})`;
             ctx.beginPath(); ctx.arc(t.x, t.y, 8, 0, Math.PI * 2); ctx.fill();
           }
         });
