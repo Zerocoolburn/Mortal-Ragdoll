@@ -173,6 +173,21 @@ const RagdollArena = () => {
         if(f.state==='walk'){f.x+=f.facing*WALK_SPEED;f.walkCycle+=0.15;}
         else if(f.state==='walkBack'){f.x-=f.facing*WALK_SPEED*0.7;f.walkCycle+=0.12;}
         f.x=Math.max(40,Math.min(W-40,f.x));f.idleBob+=0.06;
+      });
+      // Body collision - push fighters apart
+      const minDist=60;
+      const dx=s.fighters[1].x-s.fighters[0].x;
+      const dist=Math.abs(dx);
+      if(dist<minDist){
+        const push=(minDist-dist)/2;
+        const dir=dx>0?1:dx<0?-1:1;
+        s.fighters[0].x-=push*dir;
+        s.fighters[1].x+=push*dir;
+        s.fighters[0].x=Math.max(40,Math.min(W-40,s.fighters[0].x));
+        s.fighters[1].x=Math.max(40,Math.min(W-40,s.fighters[1].x));
+      }
+      s.fighters.forEach((f,idx)=>{
+        const o=s.fighters[1-idx];
         if(f.comboTimer>0){f.comboTimer--;if(f.comboTimer<=0)f.combo=0;}
         const ad=ATTACKS[f.state];
         if(ad&&f.frame===ad.hitFrame){
