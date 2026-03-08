@@ -288,10 +288,10 @@ const RagdollArena = () => {
     const g = G.current;
     for (let i = 0; i < count; i++) {
       g.blood.push({
-        x: x + (Math.random() - 0.5) * 8, y: y - Math.random() * 8,
-        vx: dir * (1 + Math.random() * power * 4) + (Math.random() - 0.5) * power * 3,
-        vy: -(1 + Math.random() * power * 5) + Math.random() * 2,
-        life: 80 + Math.random() * 100, maxLife: 180, sz: 1 + Math.random() * 3 * power,
+        x: x + (Math.random() - 0.5) * 12, y: y - Math.random() * 10,
+        vx: dir * (2 + Math.random() * power * 6) + (Math.random() - 0.5) * power * 5,
+        vy: -(2 + Math.random() * power * 7) + Math.random() * 3,
+        life: 120 + Math.random() * 160, maxLife: 280, sz: 1.5 + Math.random() * 4 * power,
         grounded: false,
       });
     }
@@ -652,26 +652,28 @@ const RagdollArena = () => {
     };
 
     const ai = (bot: Fighter, pl: Fighter) => {
-      if (bot.state === 'ko' || bot.state === 'ragdoll' || bot.state === 'hit' || bot.state === 'stagger') return;
-
+      if (bot.state === 'ko' || bot.state === 'ragdoll') return;
+      // Can still think during hit/stagger but can't act until ca() is true
+      
       bot.aiTimer--;
       aiMem.dashCooldown = Math.max(0, aiMem.dashCooldown - 1);
       aiMem.feintTimer = Math.max(0, aiMem.feintTimer - 1);
       aiMem.retreatTimer = Math.max(0, aiMem.retreatTimer - 1);
 
-      // Style shift mid-fight for unpredictability
+      // Style shift mid-fight
       aiMem.styleShiftTimer--;
       if (aiMem.styleShiftTimer <= 0) {
         aiPersonality.style = (['aggressive', 'defensive', 'counter', 'wild', 'calculated'] as AIStyle[])[Math.floor(Math.random() * 5)];
-        aiPersonality.aggression = 0.3 + Math.random() * 0.7;
+        aiPersonality.aggression = 0.4 + Math.random() * 0.6;
         aiPersonality.patience = 0.2 + Math.random() * 0.8;
-        aiPersonality.riskTaking = 0.1 + Math.random() * 0.9;
+        aiPersonality.riskTaking = 0.2 + Math.random() * 0.8;
         aiPersonality.preferredAtk = (['slash', 'stab', 'heavySlash', 'overhead'] as const)[Math.floor(Math.random() * 4)];
-        aiMem.styleShiftTimer = 200 + Math.random() * 500;
+        aiMem.styleShiftTimer = 120 + Math.random() * 300;
         aiMem.circleDir *= -1;
       }
 
       if (bot.aiTimer > 0) return;
+      if (bot.state === 'hit' || bot.state === 'stagger') return;
 
       const d = Math.abs(bot.x - pl.x);
       const wr = bot.weapon.len + 25;
@@ -681,58 +683,45 @@ const RagdollArena = () => {
       const stRatio = bot.stamina / 100;
       const atWall = bot.x < 100 || bot.x > W - 100;
 
-      // Pick new intent when timer expires
+      // Pick new intent
       aiMem.intentTimer--;
       if (aiMem.intentTimer <= 0) {
         aiMem.intent = pickNewIntent(bot, pl);
-        aiMem.intentTimer = 30 + Math.floor(Math.random() * 60);
+        aiMem.intentTimer = 20 + Math.floor(Math.random() * 40);
       }
 
-      // ── REACTIVE LAYER (overrides intent) ──
-
-      // Dodge/block incoming attacks
-      if (isPlAttacking && d < 140) {
+      // ── REACTIVE LAYER ──
+      if (isPlAttacking && d < 130) {
         const reaction = Math.random();
-        if (reaction < 0.25 * aiPersonality.patience && bot.stamina > 10) {
-          // Block
+        if (reaction < 0.15 && bot.stamina > 10) {
           ss(bot, 'block');
           aiMem.consecutiveBlocks++;
-          bot.aiTimer = 8 + Math.random() * 15 | 0;
-          // After blocking, sometimes counter
-          if (aiMem.consecutiveBlocks >= 2 && Math.random() < 0.6) {
+          bot.aiTimer = 5 + Math.random() * 8 | 0;
+          if (aiMem.consecutiveBlocks >= 2 && Math.random() < 0.7) {
             aiMem.intent = 'punish';
-            aiMem.intentTimer = 20;
+            aiMem.intentTimer = 15;
             aiMem.consecutiveBlocks = 0;
           }
           return;
-        } else if (reaction < 0.5 && aiMem.dashCooldown <= 0) {
-          // Backdash
-          bot.vx = -bot.facing * (7 + Math.random() * 4);
-          if (Math.random() < 0.3) bot.vy = -5; // jump back sometimes
-          bot.grounded = bot.vy >= 0;
-          aiMem.dashCooldown = 25;
-          bot.aiTimer = 8 + Math.random() * 6 | 0;
+        } else if (reaction < 0.25 && aiMem.dashCooldown <= 0) {
+          bot.vx = -bot.facing * (6 + Math.random() * 3);
+          aiMem.dashCooldown = 15;
+          bot.aiTimer = 4 + Math.random() * 4 | 0;
           return;
-        } else if (reaction < 0.65 && d < 80) {
-          // Step through / dodge into them
-          bot.vx = bot.facing * 8;
-          bot.aiTimer = 5;
-          return;
-        }
-        // Sometimes just take the hit and trade (wild style)
-        if (aiPersonality.style === 'wild' && Math.random() < 0.3 && ca(bot)) {
-          const picks = ['heavySlash', 'overhead'];
+        } else if (reaction < 0.55 && ca(bot) && stRatio > 0.15) {
+          // Trade hits! Attack into their attack
+          const picks = ['slash', 'stab', 'heavySlash', 'overhead'];
           doAtk(bot, picks[Math.floor(Math.random() * picks.length)]);
-          bot.aiTimer = 5;
+          bot.aiTimer = 2 + Math.random() * 4 | 0;
           return;
         }
       }
 
-      // Punish recovery frames
-      if (isPlRecovering && d < wr + 20 && ca(bot)) {
-        const fast = ['slash', 'stab'];
-        doAtk(bot, fast[Math.floor(Math.random() * fast.length)]);
-        bot.aiTimer = 5;
+      // Punish recovery
+      if (isPlRecovering && d < wr + 30 && ca(bot)) {
+        const picks = ['slash', 'stab', 'heavySlash'];
+        doAtk(bot, picks[Math.floor(Math.random() * picks.length)]);
+        bot.aiTimer = 2 + Math.random() * 4 | 0;
         aiMem.comboStep = 1;
         return;
       }
@@ -740,109 +729,101 @@ const RagdollArena = () => {
       // ── INTENT EXECUTION ──
       switch (aiMem.intent) {
         case 'pressure': {
-          if (d > wr + 30) {
-            // Close distance - vary speed
+          if (d > wr + 20) {
             ss(bot, 'walk');
-            bot.aiTimer = 4 + Math.random() * 8 | 0;
-            // Sometimes dash in
-            if (d > 200 && Math.random() < 0.3 * aiPersonality.aggression && aiMem.dashCooldown <= 0) {
-              bot.vx = bot.facing * (6 + Math.random() * 5);
-              aiMem.dashCooldown = 20;
+            bot.aiTimer = 2 + Math.random() * 4 | 0;
+            if (d > 150 && Math.random() < 0.4 && aiMem.dashCooldown <= 0) {
+              bot.vx = bot.facing * (7 + Math.random() * 5);
+              aiMem.dashCooldown = 12;
             }
-          } else if (ca(bot) && stRatio > 0.15) {
-            // In range - attack with variety
+          } else if (ca(bot) && stRatio > 0.1) {
             const r = Math.random();
-            const pref = aiPersonality.preferredAtk;
-            if (r < 0.35) doAtk(bot, pref);
-            else if (r < 0.55) doAtk(bot, 'slash');
-            else if (r < 0.7) doAtk(bot, 'stab');
-            else if (r < 0.85 && bot.stamina > 25) doAtk(bot, 'heavySlash');
-            else if (bot.stamina > 20) doAtk(bot, 'overhead');
-            else doAtk(bot, 'slash');
-            bot.aiTimer = 8 + Math.random() * 14 | 0;
+            if (r < 0.3) doAtk(bot, 'slash');
+            else if (r < 0.5) doAtk(bot, 'stab');
+            else if (r < 0.7 && bot.stamina > 25) doAtk(bot, 'heavySlash');
+            else if (r < 0.85 && bot.stamina > 20) doAtk(bot, 'overhead');
+            else doAtk(bot, aiPersonality.preferredAtk);
+            bot.aiTimer = 3 + Math.random() * 6 | 0;
             aiMem.comboStep++;
-            // Combo follow-up
-            if (aiMem.comboStep > 0 && aiMem.comboStep < 3 && Math.random() < aiPersonality.comboChance) {
-              bot.aiTimer = 3 + Math.random() * 5 | 0; // Quick follow-up
+            if (aiMem.comboStep < 4 && Math.random() < 0.5) {
+              bot.aiTimer = 1 + Math.random() * 3 | 0;
             } else {
               aiMem.comboStep = 0;
             }
           } else {
             ss(bot, 'walk');
-            bot.aiTimer = 5 + Math.random() * 10 | 0;
+            bot.aiTimer = 2 + Math.random() * 5 | 0;
           }
           break;
         }
 
         case 'retreat': {
-          if (d < 200) {
+          if (d < 180) {
             ss(bot, 'walkBack');
-            bot.aiTimer = 6 + Math.random() * 12 | 0;
-            if (Math.random() < 0.2 && aiMem.dashCooldown <= 0) {
-              bot.vx = -bot.facing * 8;
-              aiMem.dashCooldown = 20;
+            bot.aiTimer = 3 + Math.random() * 6 | 0;
+            if (Math.random() < 0.25 && aiMem.dashCooldown <= 0) {
+              bot.vx = -bot.facing * 7;
+              aiMem.dashCooldown = 12;
             }
           } else {
-            // Safe distance - switch intent
-            aiMem.intent = Math.random() < 0.5 ? 'circle' : 'bait';
-            aiMem.intentTimer = 40 + Math.random() * 40;
+            aiMem.intent = Math.random() < 0.6 ? 'pressure' : 'circle';
+            aiMem.intentTimer = 25 + Math.random() * 30;
           }
-          // Punish if they chase recklessly
-          if (isPlAttacking && d < wr && ca(bot)) {
-            doAtk(bot, 'stab');
-            bot.aiTimer = 10;
+          if (d < wr && ca(bot) && Math.random() < 0.4) {
+            doAtk(bot, Math.random() < 0.5 ? 'stab' : 'slash');
+            bot.aiTimer = 3;
           }
           break;
         }
 
         case 'circle': {
-          // Lateral movement - strafe around opponent
-          const lateral = aiMem.circleDir * 3;
+          const lateral = aiMem.circleDir * 3.5;
           bot.vx = lateral;
-          // Maintain medium distance
-          if (d < 100) { bot.vx += -bot.facing * 2; }
-          else if (d > 250) { ss(bot, 'walk'); }
-          else { ss(bot, Math.random() > 0.5 ? 'walk' : 'walkBack'); }
-          bot.aiTimer = 6 + Math.random() * 10 | 0;
-          // Random direction change
-          if (Math.random() < 0.15) aiMem.circleDir *= -1;
-          // Opportunistic strike
-          if (d < wr && Math.random() < 0.25 * aiPersonality.aggression && ca(bot)) {
-            doAtk(bot, Math.random() < 0.6 ? 'stab' : 'slash');
-            bot.aiTimer = 12;
+          if (d < 90) bot.vx += -bot.facing * 2;
+          else if (d > 200) ss(bot, 'walk');
+          else ss(bot, Math.random() > 0.5 ? 'walk' : 'walkBack');
+          bot.aiTimer = 3 + Math.random() * 6 | 0;
+          if (Math.random() < 0.12) aiMem.circleDir *= -1;
+          if (d < wr + 10 && Math.random() < 0.4 * aiPersonality.aggression && ca(bot)) {
+            const picks = ['slash', 'stab', 'heavySlash', 'overhead'];
+            doAtk(bot, picks[Math.floor(Math.random() * picks.length)]);
+            bot.aiTimer = 3 + Math.random() * 5 | 0;
           }
           break;
         }
 
         case 'feint': {
-          if (d > wr + 50) {
+          if (d > wr + 40) {
             ss(bot, 'walk');
-            bot.aiTimer = 5 + Math.random() * 8 | 0;
-          } else if (d < wr + 30 && aiMem.feintTimer <= 0) {
-            // Feint: walk in then quickly back off
+            bot.aiTimer = 2 + Math.random() * 4 | 0;
+          } else if (aiMem.feintTimer <= 0) {
             if (!aiMem.feinting) {
               aiMem.feinting = true;
-              bot.vx = bot.facing * 4;
+              bot.vx = bot.facing * 5;
               ss(bot, 'walk');
-              bot.aiTimer = 4;
+              bot.aiTimer = 3;
             } else {
               aiMem.feinting = false;
-              aiMem.feintTimer = 30 + Math.random() * 30;
-              bot.vx = -bot.facing * 6;
-              bot.aiTimer = 6;
-              // If opponent reacted (started blocking/attacking), punish
+              aiMem.feintTimer = 15 + Math.random() * 20;
+              // After feint, immediately attack
+              if (ca(bot) && Math.random() < 0.6) {
+                doAtk(bot, Math.random() < 0.5 ? 'slash' : 'stab');
+                bot.aiTimer = 2;
+              } else {
+                bot.vx = -bot.facing * 5;
+                bot.aiTimer = 3;
+              }
               if (isPlBlocking || isPlAttacking) {
                 aiMem.intent = 'punish';
-                aiMem.intentTimer = 30;
+                aiMem.intentTimer = 20;
               }
             }
           } else {
-            // Mix up with jab
-            if (Math.random() < 0.2 && ca(bot)) {
+            if (Math.random() < 0.3 && ca(bot) && d < wr) {
               doAtk(bot, 'stab');
-              bot.aiTimer = 15;
+              bot.aiTimer = 4;
             } else {
-              bot.aiTimer = 8 + Math.random() * 10 | 0;
+              bot.aiTimer = 3 + Math.random() * 5 | 0;
             }
           }
           break;
@@ -850,130 +831,114 @@ const RagdollArena = () => {
 
         case 'punish': {
           if (d > wr + 10) {
-            // Close in fast
             ss(bot, 'walk');
-            bot.vx += bot.facing * 3;
-            bot.aiTimer = 3 + Math.random() * 5 | 0;
+            bot.vx += bot.facing * 4;
+            bot.aiTimer = 2 + Math.random() * 3 | 0;
           } else if (ca(bot)) {
-            // Heavy punish when opponent is open
-            if (isPlRecovering || isPlBlocking) {
-              // Guard break with heavy or go for damage
-              if (isPlBlocking && bot.stamina > 25) {
-                doAtk(bot, Math.random() < 0.5 ? 'heavySlash' : 'overhead');
-              } else {
-                const r = Math.random();
-                if (r < 0.3) doAtk(bot, 'slash');
-                else if (r < 0.5) doAtk(bot, 'heavySlash');
-                else if (r < 0.7) doAtk(bot, 'overhead');
-                else doAtk(bot, 'stab');
-              }
-            } else {
-              doAtk(bot, aiPersonality.preferredAtk);
-            }
-            bot.aiTimer = 10 + Math.random() * 12 | 0;
-            aiMem.comboStep = 1;
+            const r = Math.random();
+            if (r < 0.3) doAtk(bot, 'heavySlash');
+            else if (r < 0.5) doAtk(bot, 'overhead');
+            else if (r < 0.75) doAtk(bot, 'slash');
+            else doAtk(bot, 'stab');
+            bot.aiTimer = 2 + Math.random() * 5 | 0;
           }
           break;
         }
 
         case 'bait': {
-          // Stand just outside range, look vulnerable
-          if (d > wr + 80) {
+          if (d > 250) {
             ss(bot, 'walk');
-            bot.aiTimer = 5 + Math.random() * 8 | 0;
-          } else if (d < wr - 10) {
+            bot.aiTimer = 3 + Math.random() * 4 | 0;
+          } else if (d < 100) {
             ss(bot, 'walkBack');
-            bot.aiTimer = 4 + Math.random() * 6 | 0;
+            bot.aiTimer = 3 + Math.random() * 5 | 0;
           } else {
-            // Stand and wait - idle at bait range
-            ss(bot, 'idle');
-            bot.aiTimer = 10 + Math.random() * 20 | 0;
-            // Counter if they attack
-            if (isPlAttacking && ca(bot)) {
-              if (Math.random() < 0.5) {
-                ss(bot, 'block');
-                bot.aiTimer = 6;
-                aiMem.intent = 'punish';
-                aiMem.intentTimer = 20;
-              } else {
-                bot.vx = -bot.facing * 5;
-                bot.aiTimer = 4;
-                aiMem.intent = 'punish';
-                aiMem.intentTimer = 15;
-              }
+            // Hold position, wait for opening
+            if (Math.random() < 0.3) {
+              ss(bot, Math.random() < 0.5 ? 'walk' : 'walkBack');
+            } else {
+              ss(bot, 'idle');
+            }
+            bot.aiTimer = 3 + Math.random() * 6 | 0;
+            // Strike if opponent does something
+            if ((isPlAttacking || isPlRecovering) && ca(bot)) {
+              doAtk(bot, Math.random() < 0.4 ? 'heavySlash' : 'slash');
+              bot.aiTimer = 2;
+              aiMem.intent = 'pressure';
+              aiMem.intentTimer = 25;
             }
           }
           break;
         }
 
         case 'rush': {
-          // All-in aggressive rush
           aiMem.rushMomentum = Math.min(aiMem.rushMomentum + 1, 10);
           if (d > wr) {
             ss(bot, 'walk');
-            bot.vx += bot.facing * (3 + aiMem.rushMomentum * 0.3);
-            if (aiMem.dashCooldown <= 0 && d > 150) {
-              bot.vx = bot.facing * 10;
-              aiMem.dashCooldown = 15;
+            bot.vx += bot.facing * (4 + aiMem.rushMomentum * 0.4);
+            if (aiMem.dashCooldown <= 0 && d > 120) {
+              bot.vx = bot.facing * 11;
+              aiMem.dashCooldown = 10;
             }
-            bot.aiTimer = 2 + Math.random() * 4 | 0;
+            bot.aiTimer = 1 + Math.random() * 3 | 0;
           } else if (ca(bot)) {
-            // Rapid attacks - prefer fast ones
             const r = Math.random();
-            if (r < 0.4) doAtk(bot, 'slash');
-            else if (r < 0.65) doAtk(bot, 'stab');
-            else if (r < 0.8 && bot.stamina > 30) doAtk(bot, 'heavySlash');
+            if (r < 0.3) doAtk(bot, 'slash');
+            else if (r < 0.5) doAtk(bot, 'stab');
+            else if (r < 0.7 && bot.stamina > 25) doAtk(bot, 'heavySlash');
             else doAtk(bot, 'overhead');
-            bot.aiTimer = 3 + Math.random() * 8 | 0;
-            // Keep rushing
-            if (Math.random() < 0.6 && bot.stamina > 20) {
-              bot.aiTimer = 2 + Math.random() * 4 | 0;
+            bot.aiTimer = 1 + Math.random() * 4 | 0;
+            if (Math.random() < 0.65 && bot.stamina > 15) {
+              bot.aiTimer = 1 + Math.random() * 2 | 0;
             }
           }
-          // Bail if stamina drops
-          if (stRatio < 0.15) {
+          if (stRatio < 0.12) {
             aiMem.intent = 'retreat';
-            aiMem.intentTimer = 40;
+            aiMem.intentTimer = 30;
             aiMem.rushMomentum = 0;
           }
           break;
         }
 
         case 'rest': {
-          // Back off and recover stamina
-          if (d < 200) {
+          if (d < 160) {
             ss(bot, 'walkBack');
-            if (Math.random() < 0.1 && aiMem.dashCooldown <= 0) {
-              bot.vx = -bot.facing * 6;
-              aiMem.dashCooldown = 25;
+            if (Math.random() < 0.15 && aiMem.dashCooldown <= 0) {
+              bot.vx = -bot.facing * 5;
+              aiMem.dashCooldown = 15;
             }
           } else {
             ss(bot, 'idle');
           }
-          bot.aiTimer = 10 + Math.random() * 15 | 0;
-          // Block if pressured
-          if (isPlAttacking && d < 130) {
-            ss(bot, 'block');
-            bot.aiTimer = 10;
+          bot.aiTimer = 4 + Math.random() * 8 | 0;
+          if (isPlAttacking && d < 120 && ca(bot)) {
+            // Counter-attack instead of just blocking
+            if (Math.random() < 0.4) {
+              doAtk(bot, 'slash');
+              bot.aiTimer = 3;
+            } else {
+              ss(bot, 'block');
+              bot.aiTimer = 6;
+            }
           }
-          // Done resting
-          if (stRatio > 0.6) {
+          if (stRatio > 0.5) {
             aiMem.intent = pickNewIntent(bot, pl);
-            aiMem.intentTimer = 40;
+            aiMem.intentTimer = 30;
           }
           break;
         }
       }
 
-      // Wall escape - don't get cornered
-      if (atWall && d < 150) {
-        if (Math.random() < 0.4) {
-          bot.vy = -8; bot.grounded = false;
-          bot.vx = bot.x < W / 2 ? 6 : -6;
-          bot.aiTimer = 8;
-        } else if (ca(bot) && Math.random() < 0.3 * aiPersonality.riskTaking) {
-          doAtk(bot, 'heavySlash'); // Desperation swing
-          bot.aiTimer = 5;
+      // Wall escape
+      if (atWall && d < 140) {
+        if (Math.random() < 0.5) {
+          bot.vy = -9; bot.grounded = false;
+          bot.vx = bot.x < W / 2 ? 7 : -7;
+          bot.aiTimer = 4;
+        } else if (ca(bot)) {
+          const picks = ['heavySlash', 'overhead', 'slash'];
+          doAtk(bot, picks[Math.floor(Math.random() * picks.length)]);
+          bot.aiTimer = 2;
         }
       }
     };
@@ -1213,29 +1178,45 @@ const RagdollArena = () => {
               g.shake = 5;
             }
 
-            // Blood
-            spawnBlood(hitPt.x, hitPt.y, f.facing, Math.round(dmg * 0.6), dmg / 12);
+            // Blood - MUCH more visible
+            spawnBlood(hitPt.x, hitPt.y, f.facing, Math.round(dmg * 1.5), dmg / 8);
+            spawnBlood(hitPt.x, hitPt.y - 10, f.facing * -0.5, Math.round(dmg * 0.8), dmg / 10);
 
-            // Joint-specific blood from hit point
+            // Joint-specific blood spray
             if (hitJoint >= 0 && hitJoint < o.rag.pts.length) {
-              spawnBlood(o.rag.pts[hitJoint].pos.x, o.rag.pts[hitJoint].pos.y, f.facing, 5, 1.5);
+              spawnBlood(o.rag.pts[hitJoint].pos.x, o.rag.pts[hitJoint].pos.y, f.facing, 12, 2);
+              spawnBlood(o.rag.pts[hitJoint].pos.x, o.rag.pts[hitJoint].pos.y - 5, 0, 6, 1.8);
             }
 
-            // Dismemberment
-            if (ad.canSever && o.hp < 20 && Math.random() < 0.4) {
+            // Dismemberment - much more frequent
+            if (ad.canSever && o.hp < 45 && Math.random() < 0.65) {
               const parts = ['leftArm', 'rightArm'].filter(p => !o.severed.has(p));
-              if (o.hp < 8) parts.push(...['leftLeg', 'rightLeg'].filter(p => !o.severed.has(p)));
+              if (o.hp < 30) parts.push(...['leftLeg', 'rightLeg'].filter(p => !o.severed.has(p)));
               if (o.hp <= 0) parts.push('head');
+              if (parts.length > 0) {
+                sever(o, parts[Math.floor(Math.random() * parts.length)], f.facing);
+                if (o.hp <= 0 && parts.length > 1 && Math.random() < 0.5) {
+                  const remaining = parts.filter(p => !o.severed.has(p));
+                  if (remaining.length > 0) sever(o, remaining[Math.floor(Math.random() * remaining.length)], f.facing);
+                }
+              }
+            }
+            if (!ad.canSever && o.hp < 10 && Math.random() < 0.3) {
+              const parts = ['leftArm', 'rightArm'].filter(p => !o.severed.has(p));
               if (parts.length > 0) sever(o, parts[Math.floor(Math.random() * parts.length)], f.facing);
             }
 
             // KO
             if (o.hp <= 0) {
               ss(o, 'ko');
-              startRagdoll(o, vscl(hitDir2, 15), 999);
+              startRagdoll(o, vscl(hitDir2, 18), 999);
               f.wins++; g.rs = 'ko'; g.koTimer = 200;
-              g.shake = 18; g.slowMo = 0.15; g.slowTimer = 30;
-              spawnBlood(hitPt.x, hitPt.y, f.facing, 35, 3);
+              g.shake = 22; g.slowMo = 0.12; g.slowTimer = 35;
+              spawnBlood(hitPt.x, hitPt.y, f.facing, 50, 4);
+              spawnBlood(hitPt.x, hitPt.y - 20, -f.facing, 25, 3);
+              if (!o.severed.has('head') && Math.random() < 0.4) sever(o, 'head', f.facing);
+              const limbParts = ['leftArm', 'rightArm', 'leftLeg', 'rightLeg'].filter(p => !o.severed.has(p));
+              if (limbParts.length > 0 && Math.random() < 0.6) sever(o, limbParts[Math.floor(Math.random() * limbParts.length)], f.facing);
             }
           }
         }
@@ -1243,15 +1224,15 @@ const RagdollArena = () => {
 
       // Update blood
       g.blood = g.blood.filter(b => {
-        if (b.grounded) { b.life -= spd * 0.3; return b.life > 0; }
+        if (b.grounded) { b.life -= spd * 0.2; return b.life > 0; }
         b.x += b.vx * spd; b.y += b.vy * spd;
-        b.vy += 0.3 * spd; b.vx *= 0.99; b.life -= spd;
+        b.vy += 0.35 * spd; b.vx *= 0.99; b.life -= spd;
         if (b.y >= GY) {
           b.grounded = true; b.y = GY; b.vy = 0; b.vx = 0;
-          if (g.pools.length < 60) {
-            const ex = g.pools.find(p => Math.abs(p.x - b.x) < 15);
-            if (ex) ex.r = Math.min(30, ex.r + 0.5);
-            else g.pools.push({ x: b.x, y: GY, r: 2 + Math.random() * 4, a: 0.5 });
+          if (g.pools.length < 120) {
+            const ex = g.pools.find(p => Math.abs(p.x - b.x) < 20);
+            if (ex) ex.r = Math.min(40, ex.r + 1);
+            else g.pools.push({ x: b.x, y: GY, r: 3 + Math.random() * 6, a: 0.7 });
           }
         }
         return b.life > 0;
@@ -1313,8 +1294,11 @@ const RagdollArena = () => {
 
       // Blood pools
       g.pools.forEach(p => {
-        ctx.fillStyle = `rgba(70,0,0,${p.a})`;
-        ctx.beginPath(); ctx.ellipse(p.x, p.y + 2, p.r, p.r * 0.25, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = `rgba(120,0,0,${p.a})`;
+        ctx.beginPath(); ctx.ellipse(p.x, p.y + 2, p.r, p.r * 0.3, 0, 0, Math.PI * 2); ctx.fill();
+        // Darker center
+        ctx.fillStyle = `rgba(80,0,0,${p.a * 0.6})`;
+        ctx.beginPath(); ctx.ellipse(p.x, p.y + 2, p.r * 0.5, p.r * 0.15, 0, 0, Math.PI * 2); ctx.fill();
       });
 
       // Severed limbs
@@ -1338,11 +1322,17 @@ const RagdollArena = () => {
       // Blood
       g.blood.forEach(b => {
         if (b.grounded) {
-          ctx.fillStyle = `rgba(100,0,0,${(b.life / b.maxLife) * 0.3})`;
-          ctx.beginPath(); ctx.ellipse(b.x, b.y + 1, b.sz, b.sz * 0.3, 0, 0, Math.PI * 2); ctx.fill();
+          ctx.fillStyle = `rgba(150,0,0,${(b.life / b.maxLife) * 0.5})`;
+          ctx.beginPath(); ctx.ellipse(b.x, b.y + 1, b.sz * 1.2, b.sz * 0.4, 0, 0, Math.PI * 2); ctx.fill();
         } else {
-          ctx.fillStyle = `rgba(140,0,0,${b.life / b.maxLife * 0.8})`;
-          ctx.beginPath(); ctx.arc(b.x, b.y, b.sz * (0.5 + (b.life / b.maxLife) * 0.5), 0, Math.PI * 2); ctx.fill();
+          const a = b.life / b.maxLife;
+          ctx.fillStyle = `rgba(200,10,10,${a * 0.9})`;
+          ctx.beginPath(); ctx.arc(b.x, b.y, b.sz * (0.6 + a * 0.4), 0, Math.PI * 2); ctx.fill();
+          // Bright core
+          if (b.sz > 2) {
+            ctx.fillStyle = `rgba(255,50,30,${a * 0.4})`;
+            ctx.beginPath(); ctx.arc(b.x, b.y, b.sz * 0.3, 0, Math.PI * 2); ctx.fill();
+          }
         }
       });
 
