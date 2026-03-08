@@ -101,7 +101,7 @@ export const CHARACTERS: CharacterDef[] = [
   // ── 4. FROST — Ice Assassin ──
   {
     id: 'frost', name: 'FROST', title: 'Ice Assassin',
-    color: '#1a4a6a', color2: '#8ef',
+    color: '#1a4a6a', color2: '#88eeff',
     skin: '#d4cee8', hair: '#e0e8ff',
     weaponKey: 'spear', specialType: 'iceBlast',
     specialName: 'FROZEN TOMB', specialColor: '#0df', specialGlow: '#8ef',
