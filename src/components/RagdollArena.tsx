@@ -3479,56 +3479,93 @@ const RagdollArena = () => {
   if (gameScreen === 'cinematic') {
     const cState = campaignRef.current;
     const boss = getBoss(cState.level);
+    const playerChar = getCharacter(cState.playerCharId);
     const prevBoss = cState.level > 1 ? getBoss(cState.level - 1) : null;
     const showDefeatText = cState.level > 1 && cState.levelsComplete[cState.level - 2];
     return (
       <div className="relative w-full h-full flex items-center justify-center bg-black select-none overflow-hidden">
         <div className="absolute inset-0" style={{ background: `radial-gradient(ellipse at 50% 80%, ${boss.color}44 0%, #000 70%)` }} />
         <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(255,255,255,0.02) 3px, rgba(255,255,255,0.02) 4px)' }} />
-        <div className="relative z-10 flex flex-col items-center gap-6 max-w-2xl px-8 text-center">
+        
+        <div className="relative z-10 flex flex-col items-center gap-4 max-w-4xl px-8 text-center">
           {/* Previous boss defeat text */}
           {showDefeatText && prevBoss && (
-            <div className="mb-4 p-4 rounded" style={{ background: 'rgba(0,60,0,0.3)', border: '1px solid #0a0' }}>
-              <p className="text-sm italic" style={{ fontFamily: '"Orbitron", sans-serif', color: '#8a8' }}>
-                — {prevBoss.name} —
-              </p>
-              <p className="text-sm mt-2" style={{ fontFamily: 'Georgia, serif', color: '#aaa', lineHeight: '1.6' }}>
-                "{prevBoss.storyDefeat}"
-              </p>
+            <div className="mb-2 p-3 rounded" style={{ background: 'rgba(0,60,0,0.3)', border: '1px solid #0a0' }}>
+              <p className="text-xs italic" style={{ fontFamily: '"Orbitron", sans-serif', color: '#8a8' }}>— {prevBoss.name} Defeated —</p>
+              <p className="text-xs mt-1" style={{ fontFamily: 'Georgia, serif', color: '#aaa', lineHeight: '1.6' }}>"{prevBoss.storyDefeat}"</p>
             </div>
           )}
           {/* Level header */}
           <div>
-            <p className="text-sm tracking-[0.5em] uppercase" style={{ fontFamily: '"Orbitron", sans-serif', color: '#666' }}>
+            <p className="text-xs tracking-[0.5em] uppercase" style={{ fontFamily: '"Orbitron", sans-serif', color: '#666' }}>
               Level {cState.level} of 12
             </p>
-            <h2 className="text-2xl font-bold tracking-[0.2em] mt-1" style={{ fontFamily: '"Press Start 2P", cursive', color: boss.color2, textShadow: `0 0 20px ${boss.color2}88` }}>
+            <h2 className="text-xl font-bold tracking-[0.2em] mt-1" style={{ fontFamily: '"Press Start 2P", cursive', color: boss.color2, textShadow: `0 0 20px ${boss.color2}88` }}>
               {boss.arenaName}
             </h2>
           </div>
-          {/* Boss intro */}
-          <div className="p-4 rounded" style={{ background: 'rgba(40,0,0,0.4)', border: `1px solid ${boss.color2}44` }}>
-            <p className="text-lg font-bold mb-2" style={{ fontFamily: '"Orbitron", sans-serif', color: boss.color2 }}>
-              {boss.name} — {boss.title}
-            </p>
-            <p className="text-sm" style={{ fontFamily: 'Georgia, serif', color: '#bbb', lineHeight: '1.8' }}>
+
+          {/* VS Layout: Player vs Boss with canvases */}
+          <div className="flex items-center gap-6 my-2">
+            {/* Player character preview */}
+            <div className="flex flex-col items-center">
+              <canvas ref={(cvs) => { if (cvs) { const ctx2 = cvs.getContext('2d'); if (ctx2) { ctx2.clearRect(0, 0, 140, 180); drawCharPreview(ctx2, playerChar, 70, 145, 1.2, false); } } }} width={140} height={180} className="pointer-events-none" />
+              <p className="text-xs font-bold mt-1" style={{ fontFamily: '"Orbitron", sans-serif', color: '#fa0' }}>{playerChar.name}</p>
+              <p className="text-[8px]" style={{ fontFamily: '"Orbitron", sans-serif', color: '#886' }}>{playerChar.title}</p>
+            </div>
+
+            {/* VS badge */}
+            <div className="flex flex-col items-center gap-1">
+              <span className="text-3xl font-black" style={{ fontFamily: '"Press Start 2P", cursive', color: '#fff', textShadow: '0 0 20px rgba(255,0,0,0.5), 0 0 40px rgba(255,100,0,0.3)' }}>VS</span>
+              <div className="w-16 h-[1px]" style={{ background: 'linear-gradient(90deg, transparent, #f44, transparent)' }} />
+            </div>
+
+            {/* Boss preview - bigger and more menacing */}
+            <div className="flex flex-col items-center">
+              <div className="relative">
+                {/* Boss aura backdrop */}
+                <div className="absolute inset-0 rounded-full animate-pulse" style={{ background: `radial-gradient(circle, ${boss.color}33 0%, transparent 70%)`, transform: 'scale(1.5)', animationDuration: '2s' }} />
+                <canvas ref={(cvs) => { if (cvs) { const ctx2 = cvs.getContext('2d'); if (ctx2) {
+                  ctx2.clearRect(0, 0, 180, 220);
+                  const bossScale = 1.4 * (boss.bodyScale || 1);
+                  drawCharPreview(ctx2, boss, 90, 175, bossScale, false);
+                } } }} width={180} height={220} className="pointer-events-none relative z-10" />
+              </div>
+              <p className="text-sm font-bold mt-1" style={{ fontFamily: '"Orbitron", sans-serif', color: boss.color2, textShadow: `0 0 10px ${boss.color2}88` }}>{boss.name}</p>
+              <p className="text-[9px]" style={{ fontFamily: '"Orbitron", sans-serif', color: '#a88' }}>{boss.title}</p>
+            </div>
+          </div>
+
+          {/* Boss story intro */}
+          <div className="p-3 rounded max-w-lg" style={{ background: 'rgba(40,0,0,0.4)', border: `1px solid ${boss.color2}33` }}>
+            <p className="text-xs" style={{ fontFamily: 'Georgia, serif', color: '#bbb', lineHeight: '1.8', fontStyle: 'italic' }}>
               {boss.storyIntro}
             </p>
           </div>
+
           {/* Boss stats */}
-          <div className="flex gap-6 text-[10px]" style={{ fontFamily: '"Orbitron", sans-serif', color: '#888' }}>
-            <span>HP: {'█'.repeat(Math.ceil(boss.hpMultiplier * 5))}<span style={{ color: '#333' }}>{'█'.repeat(10 - Math.ceil(boss.hpMultiplier * 5))}</span></span>
-            <span>DMG: {'█'.repeat(Math.ceil(boss.dmgMultiplier * 5))}<span style={{ color: '#333' }}>{'█'.repeat(10 - Math.ceil(boss.dmgMultiplier * 5))}</span></span>
-            <span>SPD: {'█'.repeat(Math.ceil(boss.speedMultiplier * 5))}<span style={{ color: '#333' }}>{'█'.repeat(10 - Math.ceil(boss.speedMultiplier * 5))}</span></span>
+          <div className="flex gap-4 text-[10px]" style={{ fontFamily: '"Orbitron", sans-serif' }}>
+            {[
+              { label: 'HP', val: boss.hpMultiplier, max: 2, color: '#f44' },
+              { label: 'DMG', val: boss.dmgMultiplier, max: 2, color: '#f84' },
+              { label: 'SPD', val: boss.speedMultiplier, max: 2, color: '#4af' },
+            ].map(stat => (
+              <div key={stat.label} className="flex items-center gap-1">
+                <span style={{ color: '#666' }}>{stat.label}</span>
+                <div className="w-16 h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.05)' }}>
+                  <div className="h-full rounded-full" style={{ width: `${(stat.val / stat.max) * 100}%`, background: stat.color, boxShadow: `0 0 4px ${stat.color}88` }} />
+                </div>
+              </div>
+            ))}
           </div>
-          {/* Score so far */}
+
+          {/* Score */}
           {cState.totalScore > 0 && (
-            <p className="text-[10px]" style={{ fontFamily: '"Orbitron", sans-serif', color: '#555' }}>
-              Total Score: {cState.totalScore}
-            </p>
+            <p className="text-[10px]" style={{ fontFamily: '"Orbitron", sans-serif', color: '#555' }}>Total Score: {cState.totalScore}</p>
           )}
+
           <button onClick={() => setGameScreen('campaignFight')}
-            className="px-12 py-4 text-xl font-bold tracking-[0.2em] uppercase transition-all hover:scale-105 mt-2"
+            className="px-12 py-3 text-lg font-bold tracking-[0.2em] uppercase transition-all hover:scale-105 mt-1"
             style={{ fontFamily: '"Orbitron", sans-serif', color: '#fff', background: `linear-gradient(180deg, ${boss.color2}cc 0%, ${boss.color}cc 100%)`, border: `2px solid ${boss.color2}`, clipPath: 'polygon(8% 0%, 100% 0%, 92% 100%, 0% 100%)', textShadow: `0 0 10px ${boss.color2}` }}>
             FIGHT {boss.name}
           </button>
