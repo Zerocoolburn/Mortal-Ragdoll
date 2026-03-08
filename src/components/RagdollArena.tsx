@@ -568,19 +568,23 @@ if (typeof window !== 'undefined' && window.speechSynthesis) {
       voicesLoaded = true;
       // Assign 3 distinct male English voices
       const maleEn = cachedVoices.filter(isMaleEnglish);
-      const pool = maleEn.length >= 3 ? maleEn : cachedVoices.filter(v => v.lang.startsWith('en'));
+      // NEVER fall back to female voices - only use confirmed male English voices
+      // If we don't have enough, reuse male voices with different pitch/rate configs
+      const pool = maleEn.length > 0 ? maleEn : [];
       
       const used = new Set<string>();
       for (let role = 0; role < 3; role++) {
         let found: SpeechSynthesisVoice | null = null;
-        // Try preferences first
+        // Try preferences first - only from male pool
         for (const pref of VOICE_ROLE_PREFS[role]) {
           const match = pool.find(v => v.name.toLowerCase().includes(pref.toLowerCase()) && !used.has(v.name));
           if (match) { found = match; break; }
         }
-        // Fallback: pick any unused voice from pool
-        if (!found) {
-          found = pool.find(v => !used.has(v.name)) || pool[role % pool.length] || null;
+        // Fallback: pick any unused MALE voice from pool only
+        if (!found && pool.length > 0) {
+          found = pool.find(v => !used.has(v.name)) || null;
+          // If all male voices used, reuse from pool (pitch/rate will differentiate)
+          if (!found) found = pool[role % pool.length];
         }
         if (found) used.add(found.name);
         assignedVoices[role] = found;
