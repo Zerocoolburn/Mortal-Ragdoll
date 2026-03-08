@@ -927,7 +927,7 @@ const RagdollArena = () => {
       }
 
       if (bot.aiTimer > 0) return;
-      if (bot.state === 'hit' || bot.state === 'stagger' || bot.state === 'pickup' || bot.state === 'wallRun') return;
+      if (bot.state === 'hit' || bot.state === 'stagger' || bot.state === 'pickup' || bot.state === 'wallRun' as FState) return;
 
       const d = Math.abs(bot.x - pl.x);
       const wr = bot.weapon.len + 25;
