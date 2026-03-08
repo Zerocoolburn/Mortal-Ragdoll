@@ -877,6 +877,7 @@ interface Fighter {
   fatalityType: number;
   hasSword: boolean;
   groundBeatTimer: number;
+  specialCooldown: number;
 }
 
 function mkFighter(x: number, name: string, color: string, skin: string, hair: string, wKey: string, isAI: boolean): Fighter {
