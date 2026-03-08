@@ -1331,17 +1331,37 @@ const RagdollArena = () => {
   // ─── DRAW FIGHTER ──────────────────────────────────────
   const drawFighter = useCallback((ctx: CanvasRenderingContext2D, f: Fighter, t: number) => {
     const p = f.rag.pts;
+    const charDef = getCharacter(f.charId);
     const drawBone = (a: number, b: number, w: number, col: string) => {
       if (f.severed.has('leftArm') && [5, 6, 7].includes(a) && [5, 6, 7].includes(b)) return;
       if (f.severed.has('rightArm') && [8, 9, 10].includes(a) && [8, 9, 10].includes(b)) return;
       if (f.severed.has('leftLeg') && [11, 12, 13].includes(a) && [11, 12, 13].includes(b)) return;
       if (f.severed.has('rightLeg') && [14, 15, 16].includes(a) && [14, 15, 16].includes(b)) return;
-      ctx.strokeStyle = col; ctx.lineWidth = w; ctx.lineCap = 'round';
+      ctx.strokeStyle = col; ctx.lineWidth = w * (charDef.bodyScale ?? 1); ctx.lineCap = 'round';
       ctx.beginPath(); ctx.moveTo(p[a].pos.x, p[a].pos.y); ctx.lineTo(p[b].pos.x, p[b].pos.y); ctx.stroke();
     };
 
+    // Aura glow
+    if (charDef.glowColor) {
+      const glow = ctx.createRadialGradient(f.x, f.y - 50, 5, f.x, f.y - 50, 60);
+      glow.addColorStop(0, charDef.glowColor + '18'); glow.addColorStop(0.6, charDef.glowColor + '08'); glow.addColorStop(1, 'transparent');
+      ctx.fillStyle = glow; ctx.beginPath(); ctx.arc(f.x, f.y - 50, 60, 0, Math.PI * 2); ctx.fill();
+    }
+
+    // Cape
+    if (charDef.capeColor && !f.ragdolling) {
+      const spine = p[2].pos; const hip = p[4].pos;
+      const windOff = Math.sin(t * 0.03 + f.bob) * 8;
+      ctx.fillStyle = charDef.capeColor + 'cc';
+      ctx.beginPath();
+      ctx.moveTo(spine.x - 5 * f.facing, spine.y);
+      ctx.quadraticCurveTo(hip.x - 20 * f.facing + windOff, hip.y + 15, hip.x - 15 * f.facing + windOff * 1.5, hip.y + 40);
+      ctx.lineTo(hip.x - 5 * f.facing, hip.y);
+      ctx.fill();
+    }
+
     // Shadow
-    ctx.fillStyle = 'rgba(0,0,0,0.25)'; ctx.beginPath(); ctx.ellipse(p[4].pos.x, GY + 2, 30, 7, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = 'rgba(0,0,0,0.25)'; ctx.beginPath(); ctx.ellipse(p[4].pos.x, GY + 2, 30 * (charDef.bodyScale ?? 1), 7, 0, 0, Math.PI * 2); ctx.fill();
 
     // Wall run dust
     if (f.state === 'wallRun') {
