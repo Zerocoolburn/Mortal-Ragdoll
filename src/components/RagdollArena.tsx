@@ -1084,18 +1084,21 @@ const RagdollArena = () => {
           if (d > wr + 15) { ss(bot, 'walk'); bot.aiTimer = 1; if (d > 100 && rng(0, 1) < 0.5 && mem.dashCooldown <= 0) { bot.vx = bot.facing * (10 + rng(0, 6)); mem.dashCooldown = 8; } if (d > 150 && rng(0, 1) < 0.25) doShoot(bot, idx); }
           else if (ca(bot) && st > 0.06) {
             const r = Math.random();
-            if (r < 0.1) doAtk(bot, 'kick');
-            else if (r < 0.18) doAtk(bot, 'headKick');
-            else if (r < 0.24) doAtk(bot, 'kneeStrike');
-            else if (r < 0.3) doAtk(bot, 'roundhouse');
-            else if (r < 0.38) doAtk(bot, 'slash');
-            else if (r < 0.46) doAtk(bot, 'stab');
-            else if (r < 0.52) doAtk(bot, 'dashStab');
+            if (r < 0.08) doAtk(bot, 'kick');
+            else if (r < 0.14) doAtk(bot, 'headKick');
+            else if (r < 0.19) doAtk(bot, 'kneeStrike');
+            else if (r < 0.24) doAtk(bot, 'roundhouse');
+            else if (r < 0.30) doAtk(bot, 'headbutt');
+            else if (r < 0.35) doAtk(bot, 'punch');
+            else if (r < 0.42) doAtk(bot, 'slash');
+            else if (r < 0.48) doAtk(bot, 'stab');
+            else if (r < 0.53) doAtk(bot, 'dashStab');
             else if (r < 0.58) doAtk(bot, 'uppercut');
-            else if (r < 0.64) doAtk(bot, 'spinSlash');
-            else if (r < 0.70) doAtk(bot, 'heavySlash');
-            else if (r < 0.76) doAtk(bot, 'backflipKick');
-            else if (r < 0.82) { doShoot(bot, idx); }
+            else if (r < 0.63) doAtk(bot, 'spinSlash');
+            else if (r < 0.68) doAtk(bot, 'heavySlash');
+            else if (r < 0.73) doAtk(bot, 'backflipKick');
+            else if (r < 0.78) { doShoot(bot, idx); }
+            else if (r < 0.82 && bot.hasSword && d > 120) { doSwordThrow(bot, idx); }
             else doAtk(bot, pers.preferredAtk);
             bot.aiTimer = 1; mem.comboStep++;
             if (mem.comboStep < 8 && rng(0, 1) < 0.85) bot.aiTimer = 0; else mem.comboStep = 0;
