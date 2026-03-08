@@ -1363,7 +1363,7 @@ const RagdollArena = () => {
             if (hitJoint >= 0 && hitJoint < o.rag.pts.length) spawnBlood(o.rag.pts[hitJoint].pos.x, o.rag.pts[hitJoint].pos.y, f.facing, 18, 3);
             if (dmg >= 15) spawnGore(hitPt.x, hitPt.y, Math.round(dmg / 4), f.facing);
             // Dismemberment
-            if (o.hp < 65 && rng(0, 1) < 0.5) {
+            if (o.hp < 100 && rng(0, 1) < 0.35) {
               const parts = ['leftArm', 'rightArm'].filter(p3 => !o.severed.has(p3));
               if (o.hp < 40) parts.push(...['leftLeg', 'rightLeg'].filter(p3 => !o.severed.has(p3)));
               if (o.hp < 12) parts.push('head');
