@@ -687,7 +687,9 @@ const RagdollArena = () => {
       if (bot.heldLimb && r < 0.3) return d < 100 ? 'limbAttack' : r < 0.15 ? 'throwLimb' : 'rush';
 
       if (hp < 0.15) return r < 0.5 * p2.riskTaking ? 'rush' : r < 0.8 ? 'dodgeIn' : 'retreat';
-      if (plHp < 0.2) return r < 0.5 ? 'rush' : r < 0.7 ? 'executeCombo' : 'pressure';
+      if (plHp < 0.2) return r < 0.4 ? 'rush' : r < 0.6 ? 'executeCombo' : 'pressure';
+      // Try execution when opponent is very low
+      if (plHp < 0.3 && d < 80 && r < 0.35) return 'executeCombo';
       if (st < 0.15) return 'rest';
       if (m.lastAtkLanded && r < 0.6) return r < 0.3 ? 'executeCombo' : 'pressure';
       if (m.excitement > 5) return r < 0.4 ? 'rush' : r < 0.6 ? 'jumpAtk' : 'pressure';
