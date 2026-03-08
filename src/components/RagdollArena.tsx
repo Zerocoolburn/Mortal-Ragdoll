@@ -1685,6 +1685,8 @@ const RagdollArena = () => {
       const d = Math.abs(bot.x - pl.x);
       const hp = bot.hp / MAX_HP, plHp = pl.hp / MAX_HP, st = bot.stamina / 100;
       const r = Math.random();
+      // Special attack check - use when cooldown is ready and enough stamina
+      if (bot.specialCooldown <= 0 && st > 0.4 && r < 0.3 && d < 250) return 'specialAttack';
       if (pl.hp <= 35 && d < 80 && r < 0.6) return 'fatalityAttempt';
       const nearbyLimb = g.limbs.some(l => l.grounded && Math.abs(l.pts[0].x - bot.x) < 120);
       if (!bot.heldLimb && nearbyLimb && r < 0.2) return 'pickupLimb';
