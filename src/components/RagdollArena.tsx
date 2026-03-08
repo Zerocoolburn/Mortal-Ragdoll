@@ -199,6 +199,20 @@ function doDodge(b: Bot, dx: number, dy: number, power = 220) {
 // ═══════════════════════════════════════════════════════════════
 // ANIMATION
 // ═══════════════════════════════════════════════════════════════
+function snapToUprightPose(b: Bot, blend = 1) {
+  const baseRot = b.facing - Math.PI / 2;
+  for (let i = 0; i < JOINT_COUNT; i++) {
+    const rot = vrot(REST[i], baseRot);
+    const tx = b.pos.x + rot.x;
+    const ty = b.pos.y + rot.y;
+    b.joints[i].x = lerp(b.joints[i].x, tx, blend);
+    b.joints[i].y = lerp(b.joints[i].y, ty, blend);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// ANIMATION
+// ═══════════════════════════════════════════════════════════════
 function animBot(b: Bot, dt: number) {
   if (!b.alive && b.ragdoll <= 0) return;
   const spd = vlen(b.vel);
@@ -290,12 +304,12 @@ function animBot(b: Bot, dt: number) {
       }
     }
 
-    // Ragdoll
-    if (b.ragdoll > 0) {
-      const w = clamp(b.ragdoll * 3, 0, 1);
+    // Ragdoll (dead bodies only)
+    if (!b.alive && b.ragdoll > 0) {
+      const w = clamp(b.ragdoll * 5, 0, 1);
       b.joints[i].x += b.jvel[i].x * dt;
       b.joints[i].y += b.jvel[i].y * dt;
-      b.jvel[i].x *= 0.96; b.jvel[i].y *= 0.96;
+      b.jvel[i].x *= 0.9; b.jvel[i].y *= 0.9;
       b.joints[i].x = lerp(tx, b.joints[i].x, w);
       b.joints[i].y = lerp(ty, b.joints[i].y, w);
     } else {
@@ -321,9 +335,15 @@ function updatePhys(b: Bot, dt: number) {
   if (b.bleed > 0) { b.bleedTick -= dt; if (b.bleedTick <= 0) { b.hp -= b.bleed; b.bleedTick = 0.4; b.bleed = Math.max(0, b.bleed - 0.4); } }
   if (b.comboTimer > 0) { b.comboTimer -= dt; if (b.comboTimer <= 0) { b.combo = 0; b.comboChain = null; b.comboIdx = 0; } }
 
-  if (b.ragdoll > 0) {
-    b.ragdoll -= dt; b.vel.x *= 0.92; b.vel.y *= 0.92;
-    if (b.ragdoll <= 0) { b.ragdoll = 0; for (const jv of b.jvel) { jv.x = 0; jv.y = 0; } }
+  // Dead bodies keep ragdoll; living fighters stay upright
+  if (b.ragdoll > 0 && !b.alive) {
+    b.ragdoll -= dt; b.vel.x *= 0.88; b.vel.y *= 0.88;
+    if (b.ragdoll <= 0) {
+      b.ragdoll = 0;
+      for (const jv of b.jvel) { jv.x = 0; jv.y = 0; }
+      b.vel.x *= 0.45; b.vel.y *= 0.45;
+      snapToUprightPose(b, 1);
+    }
     b.pos.x += b.vel.x * dt; b.pos.y += b.vel.y * dt;
   } else {
     const base = b.sprint ? 170 : 110;
@@ -334,6 +354,8 @@ function updatePhys(b: Bot, dt: number) {
     b.pos.x += b.vel.x * dt; b.pos.y += b.vel.y * dt;
     b.vel.x *= (1 - 10 * dt); b.vel.y *= (1 - 10 * dt);
     if (b.sprint) b.stamina -= 12 * dt;
+    // If a living bot had ragdoll leftover from earlier, clear it immediately
+    if (b.ragdoll > 0) b.ragdoll = 0;
   }
 
   // Facing
@@ -396,7 +418,7 @@ function isBehind(me: Bot, them: Bot): boolean {
 }
 
 function runAI(b: Bot, s: GameState) {
-  if (!b.alive || b.stun > 0 || b.ragdoll > 0.35) { b.moveX = 0; b.moveY = 0; return; }
+  if (!b.alive || b.stun > 0 || b.ragdoll > 0.18) { b.moveX = 0; b.moveY = 0; return; }
   const dt = s.dt;
   b.aiTimer -= dt;
   const tgt = pickTarget(b, s.bots);
@@ -469,7 +491,7 @@ function runAI(b: Bot, s: GameState) {
       }
       if (!b.atk) strafe(b.circleDir, wRange * 0.6);
       else { if (d > wRange * 0.5) { b.moveX = Math.cos(b.facing) * 0.65; b.moveY = Math.sin(b.facing) * 0.65; } else { b.moveX *= 0.25; b.moveY *= 0.25; } }
-      if (b.rage > 80 && b.stamina > 35 && d < wRange && rng() < 0.06) { startAtk(b, 'spin'); b.rage = 0; }
+      if (b.rage > 90 && b.stamina > 45 && d < wRange * 0.9 && rng() < 0.02) { startAtk(b, 'spin'); b.rage = 0; }
       if (d > engRange + 50) b.aiState = 'approach';
       break;
     }
@@ -565,8 +587,13 @@ function applyHit(s: GameState, atk: Bot, def: Bot) {
   const dd = Math.sqrt(dx * dx + dy * dy) || 1;
   def.vel.x += (dx / dd) * a.kb * w.kb; def.vel.y += (dy / dd) * a.kb * w.kb;
   if (dmg > 15 || atk.atkType === 'overhead' || atk.atkType === 'spin') {
-    def.ragdoll = clamp(0.25 + dmg * 0.018, 0.2, 1.2); def.stun = def.ragdoll * 0.7;
-    for (const jv of def.jvel) { jv.x += (dx / dd) * a.kb * w.kb * rng(0.3, 0.7); jv.y += (dy / dd) * a.kb * w.kb * rng(0.3, 0.7); }
+    // Living fighters get stagger only (no floor ragdoll)
+    def.ragdoll = 0;
+    def.stun = clamp(0.1 + dmg * 0.006, 0.12, 0.32);
+    for (const jv of def.jvel) {
+      jv.x += (dx / dd) * a.kb * w.kb * rng(0.08, 0.18);
+      jv.y += (dy / dd) * a.kb * w.kb * rng(0.08, 0.18);
+    }
   } else def.stun = 0.08;
 
   const hx = (atk.tipPos.x + def.pos.x) / 2, hy = (atk.tipPos.y + def.pos.y) / 2;
