@@ -1175,6 +1175,46 @@ const RagdollArena = () => {
 
       if (g.rs === 'ko') {
         g.koTimer -= spd;
+        // Winner continues beating on downed opponent for ~5 seconds (300 frames)
+        const winner = p1.hp > 0 ? p1 : p2.hp > 0 ? p2 : null;
+        const loser = p1.hp <= 0 ? p1 : p2.hp <= 0 ? p2 : null;
+        if (winner && loser && g.koTimer > 0) {
+          winner.groundBeatTimer += spd;
+          winner.stamina = 100; // unlimited stamina during beatdown
+          winner.facing = loser.x > winner.x ? 1 : -1;
+          // Move toward downed opponent
+          const dToLoser = Math.abs(winner.x - loser.rag.pts[4].pos.x);
+          if (dToLoser > 50) {
+            winner.x += winner.facing * 3 * spd;
+            ss(winner, 'walk');
+          } else if (ca(winner) || winner.state === 'idle') {
+            // Randomly attack the downed body
+            const beatAtk = pick(['kick', 'headKick', 'kneeStrike', 'punch', 'headbutt', 'roundhouse', 'stomp']);
+            if (beatAtk === 'stomp') {
+              // Jump stomp
+              winner.vy = -8; winner.grounded = false; ss(winner, 'divekick' as FState, 20);
+            } else {
+              doAtk(winner, beatAtk);
+            }
+            // Apply damage to ragdolled loser
+            const hitPt = loser.rag.pts[Math.floor(rng(0, loser.rag.pts.length))].pos;
+            spawnBlood(hitPt.x, hitPt.y, winner.facing, 20, 3);
+            spawnGore(hitPt.x, hitPt.y, 3, winner.facing);
+            // Jolt the ragdoll
+            for (let i = 0; i < loser.rag.pts.length; i++) {
+              loser.rag.pts[i].old = vsub(loser.rag.pts[i].pos, v(winner.facing * rng(3, 8), -rng(2, 6)));
+            }
+            if (fc % 15 === 0) spawnRing(hitPt.x, hitPt.y, 40, '#f80');
+          }
+          // Step ragdoll physics for both
+          stepRagdoll(winner.rag.pts, winner.rag.sticks, spd, 0.3);
+          if (!winner.ragdolling) poseRagdoll(winner);
+          stepRagdoll(loser.rag.pts, loser.rag.sticks, spd, 0.3);
+          // Update winner position
+          if (!winner.grounded) { winner.vy += GRAV * spd; winner.y += winner.vy * spd; if (winner.y >= GY) { winner.y = GY; winner.vy = 0; winner.grounded = true; } }
+          winner.x += winner.vx * spd; winner.vx *= 0.86;
+          winner.bob += 0.04 * spd;
+        }
         if (g.koTimer <= 0) {
           g.round++;
           const f1 = mkFighter(350, p1.name, p1.color, p1.skin, p1.hair, pick(Object.keys(WEAPONS)), true);
@@ -1182,16 +1222,26 @@ const RagdollArena = () => {
           f1.wins = p1.wins; f2.wins = p2.wins;
           g.fighters[0] = f1; g.fighters[1] = f2;
           g.blood = []; g.limbs = []; g.pools = []; g.sparks = []; g.gore = [];
-          g.afterimages = []; g.rings = []; g.lightnings = []; g.bullets = []; g.muzzleFlashes = []; g.wallSparks = []; g.fatalityTexts = [];
+          g.afterimages = []; g.rings = []; g.lightnings = []; g.bullets = []; g.muzzleFlashes = []; g.wallSparks = []; g.fatalityTexts = []; g.thrownSwords = [];
           g.rs = 'intro'; g.introTimer = 80; g.timer = 99 * 60;
           aiData[0] = { personality: mkPersonality(), mem: mkAiMem() }; aiData[1] = { personality: mkPersonality(), mem: mkAiMem() };
         }
       }
 
-      if (g.rs !== 'fight') {
+      if (g.rs !== 'fight' && g.rs !== 'ko') {
         g.fighters.forEach(f => { if (f.ragdolling) stepRagdoll(f.rag.pts, f.rag.sticks, spd, 0.3); });
         if (fc % 3 === 0) setHud({ p1hp: p1.hp, p2hp: p2.hp, timer: Math.ceil(g.timer / 60), round: g.round, p1st: p1.stamina, p2st: p2.stamina, p1w: p1.wins, p2w: p2.wins, rs: g.rs, n1: p1.name, n2: p2.name, w1: p1.weapon.name, w2: p2.weapon.name, p1limb: !!p1.heldLimb, p2limb: !!p2.heldLimb });
         return;
+      }
+      if (g.rs === 'ko') {
+        // During KO, still update particles
+        g.blood = g.blood.filter(b => { if (b.grounded) { b.life -= spd * 0.15; return b.life > 0; } b.x += b.vx * spd; b.y += b.vy * spd; b.vy += 0.35 * spd; b.vx *= 0.99; b.life -= spd; if (b.y >= GY) { b.grounded = true; b.y = GY; b.vy = 0; b.vx = 0; if (g.pools.length < 180) { const ex = g.pools.find(p3 => Math.abs(p3.x - b.x) < 25); if (ex) ex.r = Math.min(55, ex.r + 1.5); else g.pools.push({ x: b.x, y: GY, r: 3 + rng(0, 7), a: 0.85 }); } } return b.life > 0; });
+        g.sparks = g.sparks.filter(s2 => { s2.x += s2.vx * spd; s2.y += s2.vy * spd; s2.vy += 0.4 * spd; s2.life -= spd; return s2.life > 0; });
+        g.gore = g.gore.filter(gc => { gc.x += gc.vx * spd; gc.y += gc.vy * spd; gc.vy += 0.3 * spd; gc.rot += gc.rotV * spd; if (gc.y >= GY) { gc.y = GY; gc.vy *= -0.3; gc.vx *= 0.6; } gc.life -= spd; return gc.life > 0; });
+        g.afterimages = g.afterimages.filter(a => { a.alpha -= 0.03; return a.alpha > 0; });
+        g.rings = g.rings.filter(r => { r.r += (r.maxR - r.r) * 0.15; r.life -= 0.06; return r.life > 0; });
+        if (fc % 3 === 0) setHud({ p1hp: p1.hp, p2hp: p2.hp, timer: Math.ceil(g.timer / 60), round: g.round, p1st: p1.stamina, p2st: p2.stamina, p1w: p1.wins, p2w: p2.wins, rs: g.rs, n1: p1.name, n2: p2.name, w1: p1.weapon.name, w2: p2.weapon.name, p1limb: !!p1.heldLimb, p2limb: !!p2.heldLimb });
+        if (g.rs === 'ko') return;
       }
 
       g.timer--;
