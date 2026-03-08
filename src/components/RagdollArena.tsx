@@ -1145,7 +1145,6 @@ const RagdollArena = () => {
               spawnRing(hitPt.x, hitPt.y, 70, '#a00');
             } else {
               ss(o, dmg >= 13 ? 'stagger' : 'hit', dmg >= 13 ? 25 : 14);
-              g.shake = 7;
             }
 
             // Blood
