@@ -3371,36 +3371,93 @@ const RagdollArena = () => {
   // CAMPAIGN CHARACTER SELECT
   // ═══════════════════════════════════════════════════════
   if (gameScreen === 'campaignSelect') {
+    const selChar = getCharacter(campaignChar);
+    const weaponLabels: Record<string, string> = {
+      greatsword: '⚔ Greatsword', axe: '🪓 Battle Axe', longsword: '🗡 Longsword', spear: '🔱 Spear',
+      dagger: '🗡 Twin Daggers', hammer: '🔨 War Hammer', scythe: '⚰ Scythe', staff: '✨ Arcane Staff',
+      katana: '⚔ Katana', claws: '🐾 Claws', flail: '⛓ Flail', fists: '👊 Fists',
+    };
     return (
       <div className="relative w-full h-full flex flex-col items-center justify-center bg-black select-none overflow-hidden">
         <div className="absolute inset-0" style={{ background: 'radial-gradient(ellipse at center, rgba(60,40,0,0.4) 0%, rgba(0,0,0,0.95) 70%)' }} />
-        <div className="relative z-10 mb-4">
-          <h2 className="text-3xl font-bold tracking-[0.3em] uppercase text-center" style={{ fontFamily: '"Orbitron", sans-serif', color: '#fa0', textShadow: '0 0 20px rgba(255,150,0,0.5)' }}>
+        {/* Animated background particles */}
+        <div className="absolute inset-0 overflow-hidden opacity-20">
+          {Array.from({ length: 20 }).map((_, i) => (
+            <div key={i} className="absolute rounded-full animate-pulse" style={{
+              width: 2 + Math.random() * 4, height: 2 + Math.random() * 4,
+              left: `${Math.random() * 100}%`, top: `${Math.random() * 100}%`,
+              background: '#fa0', animationDelay: `${Math.random() * 3}s`, animationDuration: `${2 + Math.random() * 3}s`,
+            }} />
+          ))}
+        </div>
+        <div className="relative z-10 mb-2">
+          <h2 className="text-2xl font-bold tracking-[0.3em] uppercase text-center" style={{ fontFamily: '"Press Start 2P", cursive', color: '#fa0', textShadow: '0 0 20px rgba(255,150,0,0.5), 0 0 40px rgba(255,100,0,0.2)' }}>
             CHOOSE YOUR WARRIOR
           </h2>
-          <p className="text-center text-sm mt-1" style={{ fontFamily: '"Orbitron", sans-serif', color: '#886' }}>
+          <p className="text-center text-xs mt-1" style={{ fontFamily: '"Orbitron", sans-serif', color: '#886' }}>
             12 bosses await. Each deadlier than the last.
           </p>
         </div>
-        <div className="relative z-10 grid grid-cols-6 gap-2 px-4 max-w-5xl">
-          {CHARACTERS.map((char) => {
-            const isSel = campaignChar === char.id;
-            return (
-              <button key={char.id} onClick={() => setCampaignChar(char.id)}
-                className="relative flex flex-col items-center p-2 rounded transition-all duration-200 hover:scale-110"
-                style={{
-                  background: isSel ? 'rgba(255,150,0,0.25)' : 'rgba(30,30,30,0.6)',
-                  border: isSel ? '2px solid #fa0' : '1px solid #333',
-                  boxShadow: isSel ? '0 0 15px rgba(255,150,0,0.3)' : 'none',
-                }}>
-                <canvas ref={(cvs) => { if (cvs) { const ctx2 = cvs.getContext('2d'); if (ctx2) { ctx2.clearRect(0, 0, 80, 100); /* simplified preview */ ctx2.fillStyle = char.color; ctx2.beginPath(); ctx2.arc(40, 50, 20, 0, Math.PI * 2); ctx2.fill(); ctx2.fillStyle = char.skin; ctx2.beginPath(); ctx2.arc(40, 30, 12, 0, Math.PI * 2); ctx2.fill(); } } }} width={80} height={100} className="pointer-events-none" />
-                <span className="text-[9px] font-bold tracking-wider mt-1" style={{ fontFamily: '"Orbitron", sans-serif', color: isSel ? '#fa0' : '#aaa' }}>{char.name}</span>
-                <span className="text-[7px]" style={{ fontFamily: '"Orbitron", sans-serif', color: '#666' }}>{char.title}</span>
-              </button>
-            );
-          })}
+
+        <div className="relative z-10 flex gap-6 w-full max-w-6xl px-4">
+          {/* Character Grid - left side */}
+          <div className="grid grid-cols-4 gap-2 flex-shrink-0" style={{ width: '55%' }}>
+            {CHARACTERS.map((char) => {
+              const isSel = campaignChar === char.id;
+              return (
+                <button key={char.id} onClick={() => setCampaignChar(char.id)}
+                  className="relative flex flex-col items-center p-1.5 rounded transition-all duration-200 hover:scale-105"
+                  style={{
+                    background: isSel ? 'rgba(255,150,0,0.3)' : 'rgba(20,20,20,0.7)',
+                    border: isSel ? '2px solid #fa0' : '1px solid #333',
+                    boxShadow: isSel ? '0 0 20px rgba(255,150,0,0.4), inset 0 0 15px rgba(255,150,0,0.1)' : 'none',
+                  }}>
+                  <canvas ref={(cvs) => { if (cvs) { const ctx2 = cvs.getContext('2d'); if (ctx2) { ctx2.clearRect(0, 0, 100, 120); drawCharPreview(ctx2, char, 50, 95, 0.85, false); } } }} width={100} height={120} className="pointer-events-none" />
+                  <span className="text-[8px] font-bold tracking-wider" style={{ fontFamily: '"Orbitron", sans-serif', color: isSel ? '#fa0' : '#aaa' }}>{char.name}</span>
+                  <span className="text-[6px]" style={{ fontFamily: '"Orbitron", sans-serif', color: '#555' }}>{char.title}</span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Selected Character Detail Panel - right side */}
+          <div className="flex flex-col items-center gap-3 flex-1 p-4 rounded-lg" style={{ background: 'rgba(30,25,10,0.6)', border: '1px solid #553300', boxShadow: '0 0 30px rgba(255,150,0,0.1)' }}>
+            <canvas ref={(cvs) => { if (cvs) { const ctx2 = cvs.getContext('2d'); if (ctx2) { ctx2.clearRect(0, 0, 200, 240); drawCharPreview(ctx2, selChar, 100, 190, 1.7, true); } } }} width={200} height={240} className="pointer-events-none" />
+            <h3 className="text-lg font-bold tracking-[0.2em]" style={{ fontFamily: '"Press Start 2P", cursive', color: selChar.color2, textShadow: `0 0 15px ${selChar.color2}66` }}>
+              {selChar.name}
+            </h3>
+            <p className="text-xs italic" style={{ fontFamily: '"Orbitron", sans-serif', color: '#aa8' }}>{selChar.title}</p>
+            {/* Weapon */}
+            <div className="text-xs px-3 py-1 rounded" style={{ background: 'rgba(255,200,100,0.1)', border: '1px solid #553', fontFamily: '"Orbitron", sans-serif', color: '#ca8' }}>
+              {weaponLabels[selChar.weaponKey] || selChar.weaponKey}
+            </div>
+            {/* Special */}
+            <div className="text-[10px] text-center" style={{ fontFamily: '"Orbitron", sans-serif', color: selChar.specialColor }}>
+              ★ {selChar.specialName}
+            </div>
+            {/* Stats */}
+            <div className="w-full space-y-1 mt-1">
+              {[
+                { label: 'BODY', val: selChar.bodyScale, color: '#f84' },
+                { label: 'HEAD', val: selChar.headScale, color: '#8af' },
+                { label: 'ARMOR', val: selChar.armorType === 'heavy' ? 1.0 : selChar.armorType === 'medium' ? 0.7 : selChar.armorType === 'light' ? 0.4 : selChar.armorType === 'robe' ? 0.3 : 0.1, color: '#8f8' },
+              ].map(stat => (
+                <div key={stat.label} className="flex items-center gap-2 text-[9px]" style={{ fontFamily: '"Orbitron", sans-serif' }}>
+                  <span style={{ color: '#666', width: 44 }}>{stat.label}</span>
+                  <div className="flex-1 h-2 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.05)' }}>
+                    <div className="h-full rounded-full" style={{ width: `${Math.min(stat.val * 75, 100)}%`, background: stat.color, boxShadow: `0 0 6px ${stat.color}88` }} />
+                  </div>
+                </div>
+              ))}
+            </div>
+            {/* Taunt line */}
+            <p className="text-[9px] italic text-center mt-1" style={{ fontFamily: 'Georgia, serif', color: '#776' }}>
+              "{selChar.tauntLines[0]}"
+            </p>
+          </div>
         </div>
-        <div className="relative z-10 flex gap-4 mt-6">
+
+        <div className="relative z-10 flex gap-4 mt-4">
           <button onClick={() => { const cs = initCampaign(campaignChar); setCampaign(cs); campaignRef.current = cs; setGameScreen('cinematic'); }}
             className="px-10 py-3 text-lg font-bold tracking-[0.2em] uppercase transition-all hover:scale-105"
             style={{ fontFamily: '"Orbitron", sans-serif', color: '#fff', background: 'linear-gradient(180deg, rgba(200,120,0,0.8) 0%, rgba(100,50,0,0.9) 100%)', border: '2px solid #da0', clipPath: 'polygon(8% 0%, 100% 0%, 92% 100%, 0% 100%)', textShadow: '0 0 10px #fa0' }}>
