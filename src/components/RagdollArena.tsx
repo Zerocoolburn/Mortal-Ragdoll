@@ -1528,10 +1528,12 @@ const RagdollArena = () => {
 
     // Reset for new fight
     const midX = WORLD_W / 2;
-    g.fighters[0] = mkFighter(midX - 200, 'SIEGFRIED', '#8B0000', '#e8b878', '#2a1a0a', pick(Object.keys(WEAPONS)), true);
-    g.fighters[1] = mkFighter(midX + 200, 'NIGHTMARE', '#1a1a4a', '#c4956a', '#111', pick(Object.keys(WEAPONS)), true);
+    const char1 = getCharacter(selectedP1);
+    const char2 = getCharacter(selectedP2);
+    g.fighters[0] = mkFighterFromChar(midX - 200, char1, true);
+    g.fighters[1] = mkFighterFromChar(midX + 200, char2, true);
     g.blood = []; g.limbs = []; g.pools = []; g.sparks = []; g.gore = [];
-    g.afterimages = []; g.rings = []; g.lightnings = []; g.bullets = []; g.muzzleFlashes = []; g.wallSparks = []; g.fatalityTexts = []; g.thrownSwords = []; g.skullFires = []; g.dragons = [];
+    g.afterimages = []; g.rings = []; g.lightnings = []; g.bullets = []; g.muzzleFlashes = []; g.wallSparks = []; g.fatalityTexts = []; g.thrownSwords = []; g.specials = [];
     g.rs = 'intro'; g.introTimer = 100; g.timer = 99 * 60; g.round = 1;
     g.camX = midX;
 
