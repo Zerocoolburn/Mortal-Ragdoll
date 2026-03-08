@@ -981,20 +981,22 @@ const RagdollArena = () => {
         g.rs = 'ko'; g.koTimer = 180;
       }
 
-      // Player input
+      // Player input (can override AI for p1 if keys pressed)
+      let p1HasInput = false;
       if (ca(p1) || p1.state === 'block') {
-        if (g.keys.has('j')) doAtk(p1, 'slash');
-        else if (g.keys.has('k')) doAtk(p1, 'stab');
-        else if (g.keys.has('l')) doAtk(p1, 'heavySlash');
-        else if (g.keys.has('u')) doAtk(p1, 'overhead');
-        else if (g.keys.has('s') && g.keys.has('shift')) ss(p1, 'block');
-        else if (g.keys.has('s')) ss(p1, 'crouch');
-        else if (g.keys.has('w') && p1.grounded) { p1.vy = -11; p1.grounded = false; ss(p1, 'jump'); }
-        else if (g.keys.has('a')) { p1.vx = -3.5; if (p1.grounded) ss(p1, p1.facing === -1 ? 'walk' : 'walkBack'); }
-        else if (g.keys.has('d')) { p1.vx = 3.5; if (p1.grounded) ss(p1, p1.facing === 1 ? 'walk' : 'walkBack'); }
-        else if (p1.grounded) ss(p1, 'idle');
+        if (g.keys.has('j')) { doAtk(p1, 'slash'); p1HasInput = true; }
+        else if (g.keys.has('k')) { doAtk(p1, 'stab'); p1HasInput = true; }
+        else if (g.keys.has('l')) { doAtk(p1, 'heavySlash'); p1HasInput = true; }
+        else if (g.keys.has('u')) { doAtk(p1, 'overhead'); p1HasInput = true; }
+        else if (g.keys.has('s') && g.keys.has('shift')) { ss(p1, 'block'); p1HasInput = true; }
+        else if (g.keys.has('s')) { ss(p1, 'crouch'); p1HasInput = true; }
+        else if (g.keys.has('w') && p1.grounded) { p1.vy = -11; p1.grounded = false; ss(p1, 'jump'); p1HasInput = true; }
+        else if (g.keys.has('a')) { p1.vx = -3.5; if (p1.grounded) ss(p1, p1.facing === -1 ? 'walk' : 'walkBack'); p1HasInput = true; }
+        else if (g.keys.has('d')) { p1.vx = 3.5; if (p1.grounded) ss(p1, p1.facing === 1 ? 'walk' : 'walkBack'); p1HasInput = true; }
       }
 
+      // Both fighters use AI (p1 only when no keyboard input)
+      if (!p1HasInput) ai(p1, p2);
       ai(p2, p1);
 
       // Update fighters
