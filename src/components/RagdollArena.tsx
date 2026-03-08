@@ -1075,7 +1075,7 @@ const RagdollArena = () => {
         if (f.hp <= 0 && f.state !== 'ko') {
           f.hp = 0; ss(f, 'ko');
           startRagdoll(f, v(f.facing * -5, -6), 999);
-          o.wins++; g.rs = 'ko'; g.koTimer = 280; g.shake = 15;
+          o.wins++; g.rs = 'ko'; g.koTimer = 280;
         }
       });
 
