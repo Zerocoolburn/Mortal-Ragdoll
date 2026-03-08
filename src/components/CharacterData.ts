@@ -201,7 +201,7 @@ export const CHARACTERS: CharacterDef[] = [
   // ── 9. CRIMSON — Blood Berserker ──
   {
     id: 'crimson', name: 'CRIMSON', title: 'Blood Berserker',
-    color: '#5a0a0a', color2: '#f00',
+    color: '#5a0a0a', color2: '#ff0000',
     skin: '#c8a888', hair: '#8a1a1a',
     weaponKey: 'greatsword', specialType: 'bloodFrenzy',
     specialName: 'BLOOD FRENZY', specialColor: '#f00', specialGlow: '#f44',
