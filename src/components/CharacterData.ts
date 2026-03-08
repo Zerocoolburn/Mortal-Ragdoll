@@ -224,7 +224,7 @@ export const CHARACTERS: CharacterDef[] = [
     color: '#5a5a5a', color2: '#8a8a6a',
     skin: '#8a8a7a', hair: '#4a4a3a',
     weaponKey: 'axe', specialType: 'boulderThrow',
-    specialName: 'BOULDER CRUSH', specialColor: '#a96', specialGlow: '#ca8',
+    specialName: 'BOULDER CRUSH', specialColor: '#aa9966', specialGlow: '#ccaa88',
     aiStyles: ['juggernaut', 'guardian', 'berserker'],
     voicePitch: 0.55, voiceRate: 0.72,
     bodyScale: 1.35, headScale: 1.2,
