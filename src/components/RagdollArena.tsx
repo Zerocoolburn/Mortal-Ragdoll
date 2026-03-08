@@ -1122,7 +1122,7 @@ const RagdollArena = () => {
             o.vx = f.facing * ad.kb.x * 0.3; o.stamina -= dmg * 0.7;
             spawnSparks((f.x + o.x) / 2, hitPt.y, 15);
             spawnRing((f.x + o.x) / 2, hitPt.y, 50, '#ff8');
-            g.shake = 5;
+            // no shake on block - only dismemberments shake
             for (let i = 0; i < 5; i++) o.rag.pts[i].old = vsub(o.rag.pts[i].pos, vscl(hitDir2, -2.5));
           } else {
             f.combo++; f.comboTimer = 80;
