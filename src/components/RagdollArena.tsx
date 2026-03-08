@@ -87,20 +87,23 @@ interface Weapon {
 }
 
 const WEAPONS: Record<string, Weapon> = {
-  longsword:  { name: 'Longsword',  len: 70,  weight: 1,   slashDmg: 14, stabDmg: 11, heavyDmg: 24, speed: 1,   color: '#888', blade: '#ccd', type: 'sword' },
-  greatsword: { name: 'Greatsword', len: 95,  weight: 1.8, slashDmg: 20, stabDmg: 14, heavyDmg: 38, speed: 0.6, color: '#777', blade: '#aab', type: 'greatsword' },
-  axe:        { name: 'Battle Axe', len: 65,  weight: 1.5, slashDmg: 18, stabDmg: 8,  heavyDmg: 34, speed: 0.7, color: '#654', blade: '#999', type: 'axe' },
-  spear:      { name: 'Spear',      len: 110, weight: 0.8, slashDmg: 9,  stabDmg: 20, heavyDmg: 16, speed: 1.2, color: '#876', blade: '#bbc', type: 'spear' },
+  longsword:  { name: 'Longsword',  len: 70,  weight: 1,   slashDmg: 12, stabDmg: 9,  heavyDmg: 20, speed: 1.3, color: '#888', blade: '#ccd', type: 'sword' },
+  greatsword: { name: 'Greatsword', len: 95,  weight: 1.8, slashDmg: 16, stabDmg: 11, heavyDmg: 30, speed: 0.8, color: '#777', blade: '#aab', type: 'greatsword' },
+  axe:        { name: 'Battle Axe', len: 65,  weight: 1.5, slashDmg: 14, stabDmg: 7,  heavyDmg: 28, speed: 0.9, color: '#654', blade: '#999', type: 'axe' },
+  spear:      { name: 'Spear',      len: 110, weight: 0.8, slashDmg: 7,  stabDmg: 16, heavyDmg: 14, speed: 1.4, color: '#876', blade: '#bbc', type: 'spear' },
 };
 
 interface AtkDef { frames: number; hitStart: number; hitEnd: number; dmgKey: 'slashDmg' | 'stabDmg' | 'heavyDmg'; kb: V; stCost: number; canSever: boolean }
 const ATK: Record<string, AtkDef> = {
-  slash:      { frames: 32, hitStart: 9,  hitEnd: 17, dmgKey: 'slashDmg', kb: v(8, -2),  stCost: 14, canSever: true },
-  heavySlash: { frames: 50, hitStart: 18, hitEnd: 30, dmgKey: 'heavyDmg', kb: v(16, -8), stCost: 28, canSever: true },
-  stab:       { frames: 26, hitStart: 10, hitEnd: 16, dmgKey: 'stabDmg',  kb: v(6, -1),  stCost: 10, canSever: false },
-  overhead:   { frames: 46, hitStart: 20, hitEnd: 28, dmgKey: 'heavyDmg', kb: v(12, -14),stCost: 24, canSever: true },
-  jumpAtk:    { frames: 30, hitStart: 8,  hitEnd: 20, dmgKey: 'heavyDmg', kb: v(10, -10),stCost: 20, canSever: true },
-  limbSmash:  { frames: 36, hitStart: 10, hitEnd: 22, dmgKey: 'heavyDmg', kb: v(14, -12),stCost: 18, canSever: true },
+  slash:      { frames: 18, hitStart: 5,  hitEnd: 11, dmgKey: 'slashDmg', kb: v(5, -1),   stCost: 8,  canSever: true },
+  heavySlash: { frames: 32, hitStart: 12, hitEnd: 22, dmgKey: 'heavyDmg', kb: v(12, -6),  stCost: 18, canSever: true },
+  stab:       { frames: 14, hitStart: 5,  hitEnd: 10, dmgKey: 'stabDmg',  kb: v(4, 0),    stCost: 6,  canSever: false },
+  overhead:   { frames: 30, hitStart: 14, hitEnd: 22, dmgKey: 'heavyDmg', kb: v(8, -10),  stCost: 16, canSever: true },
+  jumpAtk:    { frames: 22, hitStart: 6,  hitEnd: 16, dmgKey: 'heavyDmg', kb: v(8, -8),   stCost: 14, canSever: true },
+  uppercut:   { frames: 20, hitStart: 6,  hitEnd: 14, dmgKey: 'slashDmg', kb: v(3, -16),  stCost: 12, canSever: true },
+  spinSlash:  { frames: 24, hitStart: 6,  hitEnd: 18, dmgKey: 'heavyDmg', kb: v(10, -4),  stCost: 15, canSever: true },
+  dashStab:   { frames: 16, hitStart: 4,  hitEnd: 12, dmgKey: 'stabDmg',  kb: v(14, -2),  stCost: 10, canSever: false },
+  limbSmash:  { frames: 26, hitStart: 8,  hitEnd: 18, dmgKey: 'heavyDmg', kb: v(14, -12), stCost: 14, canSever: true },
 };
 
 interface Blood { x: number; y: number; vx: number; vy: number; life: number; maxLife: number; sz: number; grounded: boolean }
