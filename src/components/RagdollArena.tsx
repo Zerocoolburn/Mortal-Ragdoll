@@ -226,11 +226,13 @@ function poseRagdoll(f: Fighter) {
     if (f.y + targets[i].y > GY) targets[i].y = GY - f.y;
   }
 
-  const blend = f.ragdolling ? 0 : 0.35;
+  const blend = f.ragdolling ? 0 : 0.45;
   for (let i = 0; i < r.pts.length && i < targets.length; i++) {
     const target = vadd(v(f.x, f.y), targets[i]);
-    r.pts[i].pos = vlerp(r.pts[i].pos, target, blend);
-    if (!f.ragdolling) r.pts[i].old = vlerp(r.pts[i].old, target, blend * 0.8);
+    // Legs get stronger blend for snappier IK
+    const b = (i >= 11) ? Math.min(blend * 1.4, 0.6) : blend;
+    r.pts[i].pos = vlerp(r.pts[i].pos, target, b);
+    if (!f.ragdolling) r.pts[i].old = vlerp(r.pts[i].old, target, b * 0.85);
   }
 }
 
