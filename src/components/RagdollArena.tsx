@@ -1015,7 +1015,16 @@ const RagdollArena = () => {
     spawnGore(f.x, f.y - 55, 12, dir); spawnRing(f.x, f.y - 50, 80, '#a00');
     f.bleedTimer = 600; g.slowMo = 0.1; g.slowTimer = 40; g.flash = 8; g.flashColor = '#600';
     playSFX('sever', sfxVolume);
-  }, [spawnBlood, spawnGore, spawnRing, sfxVolume]);
+    // TTS: victim reacts to losing a limb
+    if (ttsEnabled) {
+      const fIdx = g.fighters.indexOf(f);
+      if (part === 'head') {
+        speakFighterLine(HEAD_LOST_LINES, fIdx >= 0 ? fIdx : 0);
+      } else {
+        speakFighterLine(LIMB_LOST_LINES, fIdx >= 0 ? fIdx : 0);
+      }
+    }
+  }, [spawnBlood, spawnGore, spawnRing, sfxVolume, ttsEnabled]);
 
   // ─── DRAW FIGHTER ──────────────────────────────────────
   const drawFighter = useCallback((ctx: CanvasRenderingContext2D, f: Fighter, t: number) => {
