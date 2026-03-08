@@ -23,12 +23,13 @@ interface RPoint { pos: V; old: V; acc: V; mass: number; pinned: boolean }
 interface RStick { a: number; b: number; len: number; stiff: number }
 
 function createRagdoll(x: number, y: number) {
+  const S = 1.35; // character scale
   const offsets: V[] = [
-    v(0, -108), v(0, -93), v(0, -72), v(0, -52), v(0, -36),
-    v(-15, -86), v(-28, -64), v(-35, -46),
-    v(15, -86), v(28, -64), v(35, -46),
-    v(-9, -33), v(-11, -16), v(-9, -1),
-    v(9, -33), v(11, -16), v(9, -1),
+    v(0, -108*S), v(0, -93*S), v(0, -72*S), v(0, -52*S), v(0, -36*S),
+    v(-15*S, -86*S), v(-28*S, -64*S), v(-35*S, -46*S),
+    v(15*S, -86*S), v(28*S, -64*S), v(35*S, -46*S),
+    v(-9*S, -33*S), v(-11*S, -16*S), v(-9*S, -1),
+    v(9*S, -33*S), v(11*S, -16*S), v(9*S, -1),
   ];
   const pts: RPoint[] = offsets.map(o => ({
     pos: v(x + o.x, y + o.y), old: v(x + o.x, y + o.y),
@@ -77,7 +78,7 @@ function stepRagdoll(pts: RPoint[], sticks: RStick[], dt: number, bounce: number
 // ═══════════════════════════════════════════════════════
 // FIGHTER
 // ═══════════════════════════════════════════════════════
-type FState = 'idle' | 'walk' | 'walkBack' | 'jump' | 'crouch' | 'slash' | 'heavySlash' | 'stab' | 'overhead' | 'jumpAtk' | 'uppercut' | 'spinSlash' | 'dashStab' | 'limbSmash' | 'block' | 'hit' | 'stagger' | 'ko' | 'ragdoll' | 'dodge' | 'taunt' | 'pickup';
+type FState = 'idle' | 'walk' | 'walkBack' | 'jump' | 'crouch' | 'slash' | 'heavySlash' | 'stab' | 'overhead' | 'jumpAtk' | 'uppercut' | 'spinSlash' | 'dashStab' | 'limbSmash' | 'backflipKick' | 'execution' | 'block' | 'hit' | 'stagger' | 'ko' | 'ragdoll' | 'dodge' | 'taunt' | 'pickup';
 
 interface Weapon {
   name: string; len: number; weight: number;
@@ -103,7 +104,9 @@ const ATK: Record<string, AtkDef> = {
   uppercut:   { frames: 20, hitStart: 6,  hitEnd: 14, dmgKey: 'slashDmg', kb: v(3, -16),  stCost: 12, canSever: true },
   spinSlash:  { frames: 24, hitStart: 6,  hitEnd: 18, dmgKey: 'heavyDmg', kb: v(10, -4),  stCost: 15, canSever: true },
   dashStab:   { frames: 16, hitStart: 4,  hitEnd: 12, dmgKey: 'stabDmg',  kb: v(14, -2),  stCost: 10, canSever: false },
-  limbSmash:  { frames: 26, hitStart: 8,  hitEnd: 18, dmgKey: 'heavyDmg', kb: v(14, -12), stCost: 14, canSever: true },
+  limbSmash:    { frames: 26, hitStart: 8,  hitEnd: 18, dmgKey: 'heavyDmg', kb: v(14, -12), stCost: 14, canSever: true },
+  backflipKick: { frames: 28, hitStart: 8,  hitEnd: 20, dmgKey: 'heavyDmg', kb: v(8, -18),  stCost: 16, canSever: true },
+  execution:    { frames: 50, hitStart: 15, hitEnd: 40, dmgKey: 'heavyDmg', kb: v(4, -4),   stCost: 20, canSever: true },
 };
 
 interface Blood { x: number; y: number; vx: number; vy: number; life: number; maxLife: number; sz: number; grounded: boolean }
@@ -156,31 +159,31 @@ function mkFighter(x: number, name: string, color: string, skin: string, hair: s
 function poseRagdoll(f: Fighter) {
   const r = f.rag;
   const s = f.facing;
+  const S = 1.35;
   const bob2 = f.state === 'idle' ? Math.sin(f.bob) * 2 : 0;
   const co = f.state === 'crouch' ? 15 : 0;
   const wk = f.state === 'walk' || f.state === 'walkBack' ? f.walkCycle : 0;
   const ap = f.dur > 0 ? f.frame / f.dur : 0;
   const jmp = !f.grounded ? -10 : 0;
-  const legSwing = Math.sin(wk) * 12;
-  const legBend = Math.abs(Math.sin(wk)) * 6;
+  const legSwing = Math.sin(wk) * 12 * S;
+  const legBend = Math.abs(Math.sin(wk)) * 6 * S;
 
   // Leg IK: hips stay fixed, knees bend naturally, feet stay on ground
-  const lHipX = -9 * s, rHipX = 9 * s;
-  const hipY = -33 + jmp;
-  const footY = -1; // always on ground plane
+  const lHipX = -9 * s * S, rHipX = 9 * s * S;
+  const hipY = -33 * S + jmp;
+  const footY = -1;
   const lFootX = (lHipX - legSwing * 0.8 * s);
   const rFootX = (rHipX + legSwing * 0.8 * s);
-  // Knees: midpoint between hip and foot, pushed forward
-  const lKneeX = (lHipX + lFootX) / 2 + s * 4;
-  const lKneeY = (hipY + footY) / 2 - legBend - 4;
-  const rKneeX = (rHipX + rFootX) / 2 + s * 4;
-  const rKneeY = (hipY + footY) / 2 - legBend - 4;
+  const lKneeX = (lHipX + lFootX) / 2 + s * 4 * S;
+  const lKneeY = (hipY + footY) / 2 - legBend - 4 * S;
+  const rKneeX = (rHipX + rFootX) / 2 + s * 4 * S;
+  const rKneeY = (hipY + footY) / 2 - legBend - 4 * S;
 
   const targets: V[] = [
-    v(0, -108 + bob2 + co + jmp), v(0, -93 + bob2 + co + jmp),
-    v(0, -72 + bob2 + co + jmp), v(0, -52 + co + jmp), v(0, hipY),
-    v(-15 * s, -86 + bob2 + co + jmp), v(-28 * s, -64 + bob2 + co + jmp), v(-35 * s, -46 + bob2 + co + jmp),
-    v(15 * s, -86 + bob2 + co + jmp), v(28 * s, -64 + bob2 + co + jmp), v(35 * s, -46 + bob2 + co + jmp),
+    v(0, -108 * S + bob2 + co + jmp), v(0, -93 * S + bob2 + co + jmp),
+    v(0, -72 * S + bob2 + co + jmp), v(0, -52 * S + co + jmp), v(0, hipY),
+    v(-15 * s * S, -86 * S + bob2 + co + jmp), v(-28 * s * S, -64 * S + bob2 + co + jmp), v(-35 * s * S, -46 * S + bob2 + co + jmp),
+    v(15 * s * S, -86 * S + bob2 + co + jmp), v(28 * s * S, -64 * S + bob2 + co + jmp), v(35 * s * S, -46 * S + bob2 + co + jmp),
     v(lHipX, hipY), v(lKneeX, lKneeY + jmp), v(lFootX, footY),
     v(rHipX, hipY), v(rKneeX, rKneeY + jmp), v(rFootX, footY),
   ];
@@ -195,31 +198,56 @@ function poseRagdoll(f: Fighter) {
     for (let i = 0; i < targets.length; i++) { targets[i].y += Math.sin(roll) * 20; targets[i].x += Math.cos(roll) * 5 * s; }
   }
 
-  if (['slash', 'heavySlash', 'stab', 'overhead', 'jumpAtk', 'uppercut', 'spinSlash', 'dashStab', 'limbSmash'].includes(f.state)) {
+  if (['slash', 'heavySlash', 'stab', 'overhead', 'jumpAtk', 'uppercut', 'spinSlash', 'dashStab', 'limbSmash', 'backflipKick', 'execution'].includes(f.state)) {
     const reach = ap < 0.3 ? -15 : ap < 0.6 ? 28 : 10;
     const lift = ap < 0.3 ? -25 : ap < 0.6 ? 5 : -5;
-    targets[9] = v((28 + reach) * s, -64 + lift + bob2 + co + jmp);
-    targets[10] = v((35 + reach * 1.3) * s, -46 + lift + bob2 + co + jmp);
+    targets[9] = v((28 + reach) * s * S, (-64 + lift) * S + bob2 + co + jmp);
+    targets[10] = v((35 + reach * 1.3) * s * S, (-46 + lift) * S + bob2 + co + jmp);
     if (f.state === 'uppercut') {
       const uLift = ap < 0.25 ? 0 : ap < 0.5 ? -30 : -15;
-      targets[9] = v((20 + reach * 0.6) * s, -74 + uLift + bob2 + jmp);
-      targets[10] = v((25 + reach * 0.8) * s, -56 + uLift + bob2 + jmp);
+      targets[9] = v((20 + reach * 0.6) * s * S, (-74 + uLift) * S + bob2 + jmp);
+      targets[10] = v((25 + reach * 0.8) * s * S, (-56 + uLift) * S + bob2 + jmp);
     }
     if (f.state === 'spinSlash') {
       const spinAng = ap * Math.PI * 2;
       const sx2 = Math.cos(spinAng) * 30, sy2 = Math.sin(spinAng) * 15;
-      targets[9] = v((28 + sx2) * s, -64 + sy2 + bob2 + jmp);
-      targets[10] = v((35 + sx2 * 1.2) * s, -46 + sy2 + bob2 + jmp);
+      targets[9] = v((28 + sx2) * s * S, (-64 + sy2) * S + bob2 + jmp);
+      targets[10] = v((35 + sx2 * 1.2) * s * S, (-46 + sy2) * S + bob2 + jmp);
     }
     if (f.state === 'dashStab') {
-      targets[9] = v((30 + reach * 1.5) * s, -70 + bob2 + jmp);
-      targets[10] = v((40 + reach * 1.8) * s, -62 + bob2 + jmp);
+      targets[9] = v((30 + reach * 1.5) * s * S, -70 * S + bob2 + jmp);
+      targets[10] = v((40 + reach * 1.8) * s * S, -62 * S + bob2 + jmp);
     }
     if (f.state === 'limbSmash' && f.heldLimb) {
       const limbReach = ap < 0.25 ? -20 : ap < 0.55 ? 35 : 5;
       const limbLift = ap < 0.25 ? -35 : ap < 0.55 ? 10 : -10;
-      targets[6] = v((-28 + limbReach) * s, -64 + limbLift + bob2 + co + jmp);
-      targets[7] = v((-35 + limbReach * 1.3) * s, -46 + limbLift + bob2 + co + jmp);
+      targets[6] = v((-28 + limbReach) * s * S, (-64 + limbLift) * S + bob2 + co + jmp);
+      targets[7] = v((-35 + limbReach * 1.3) * s * S, (-46 + limbLift) * S + bob2 + co + jmp);
+    }
+    // Backflip kick: full body rotation in air
+    if (f.state === 'backflipKick') {
+      const flipAng = ap * Math.PI * 2;
+      const flipH = Math.sin(flipAng) * 70;
+      const flipX = -Math.cos(flipAng) * 25 * s;
+      for (let i = 0; i < targets.length; i++) {
+        const cx = 0, cy = -60 * S;
+        const dx2 = targets[i].x - cx, dy2 = targets[i].y - cy;
+        targets[i].x = cx + dx2 * Math.cos(flipAng) - dy2 * Math.sin(flipAng) + flipX;
+        targets[i].y = cy + dx2 * Math.sin(flipAng) + dy2 * Math.cos(flipAng) + flipH - 50;
+      }
+      if (ap > 0.3 && ap < 0.7) {
+        targets[16] = v(s * 55 * S, -90 * S + flipH);
+        targets[15] = v(s * 35 * S, -70 * S + flipH);
+      }
+    }
+    // Execution: repeated ground slams
+    if (f.state === 'execution') {
+      const subAp = (ap * 5) % 1;
+      const slamDown = subAp < 0.4 ? -40 + subAp * 100 : subAp < 0.6 ? 0 : -20;
+      targets[9] = v(30 * s * S, (-50 + slamDown) * S);
+      targets[10] = v(40 * s * S, (-35 + slamDown) * S);
+      const bodyBob = Math.sin(subAp * Math.PI) * 15;
+      for (let i = 0; i < 5; i++) targets[i].y += bodyBob;
     }
   }
 
@@ -433,7 +461,7 @@ const RagdollArena = () => {
       const tipX = hand.x + Math.cos(ang) * wl;
       const tipY = hand.y + Math.sin(ang) * wl;
 
-      const isAtk = ['slash', 'heavySlash', 'overhead', 'stab', 'jumpAtk', 'uppercut', 'spinSlash', 'dashStab', 'limbSmash'].includes(f.state);
+      const isAtk = ['slash', 'heavySlash', 'overhead', 'stab', 'jumpAtk', 'uppercut', 'spinSlash', 'dashStab', 'limbSmash', 'backflipKick', 'execution'].includes(f.state);
       const ap2 = f.dur > 0 ? f.frame / f.dur : 0;
       if (isAtk && ap2 > 0.2 && ap2 < 0.7) {
         // Weapon trail glow
@@ -556,8 +584,11 @@ const RagdollArena = () => {
       if (t === 'dashStab') { f.vx = f.facing * 12; }
       // Uppercut pops up
       if (t === 'uppercut') { f.vy = -6; f.grounded = false; }
-      // SpinSlash slight forward momentum
       if (t === 'spinSlash') { f.vx = f.facing * 5; }
+      // Backflip kick: jump backwards while flipping
+      if (t === 'backflipKick') { f.vy = -12; f.vx = -f.facing * 6; f.grounded = false; }
+      // Execution: lunge forward aggressively
+      if (t === 'execution') { f.vx = f.facing * 8; }
       spawnAfterimage(f);
       return true;
     };
@@ -656,7 +687,9 @@ const RagdollArena = () => {
       if (bot.heldLimb && r < 0.3) return d < 100 ? 'limbAttack' : r < 0.15 ? 'throwLimb' : 'rush';
 
       if (hp < 0.15) return r < 0.5 * p2.riskTaking ? 'rush' : r < 0.8 ? 'dodgeIn' : 'retreat';
-      if (plHp < 0.2) return r < 0.5 ? 'rush' : r < 0.7 ? 'executeCombo' : 'pressure';
+      if (plHp < 0.2) return r < 0.4 ? 'rush' : r < 0.6 ? 'executeCombo' : 'pressure';
+      // Try execution when opponent is very low
+      if (plHp < 0.3 && d < 80 && r < 0.35) return 'executeCombo';
       if (st < 0.15) return 'rest';
       if (m.lastAtkLanded && r < 0.6) return r < 0.3 ? 'executeCombo' : 'pressure';
       if (m.excitement > 5) return r < 0.4 ? 'rush' : r < 0.6 ? 'jumpAtk' : 'pressure';
@@ -676,20 +709,23 @@ const RagdollArena = () => {
     };
 
     const AI_COMBOS = [
-      // Long devastating combos
-      ['slash', 'slash', 'stab', 'slash', 'stab', 'stab', 'uppercut', 'jumpAtk', 'overhead', 'heavySlash'],
-      ['stab', 'stab', 'slash', 'stab', 'slash', 'uppercut', 'stab', 'spinSlash'],
+      // Long devastating combos with flips
+      ['slash', 'slash', 'stab', 'slash', 'stab', 'stab', 'uppercut', 'jumpAtk', 'backflipKick', 'heavySlash'],
+      ['stab', 'stab', 'slash', 'stab', 'slash', 'uppercut', 'backflipKick', 'spinSlash'],
       ['slash', 'stab', 'slash', 'stab', 'slash', 'stab', 'heavySlash'],
-      ['dashStab', 'slash', 'slash', 'uppercut', 'jumpAtk', 'overhead'],
-      ['slash', 'slash', 'slash', 'slash', 'spinSlash', 'heavySlash'],
-      ['stab', 'slash', 'stab', 'uppercut', 'jumpAtk'],
+      ['dashStab', 'slash', 'slash', 'uppercut', 'jumpAtk', 'backflipKick', 'overhead'],
+      ['slash', 'slash', 'slash', 'slash', 'spinSlash', 'backflipKick', 'heavySlash'],
+      ['stab', 'slash', 'stab', 'uppercut', 'backflipKick', 'jumpAtk'],
       ['dashStab', 'stab', 'stab', 'slash', 'slash', 'overhead'],
-      ['spinSlash', 'stab', 'slash', 'stab', 'uppercut', 'heavySlash'],
-      // Short brutal combos
-      ['uppercut', 'jumpAtk', 'overhead'],
-      ['dashStab', 'spinSlash', 'heavySlash'],
-      ['slash', 'slash', 'dashStab', 'uppercut'],
-      ['stab', 'stab', 'stab', 'stab', 'spinSlash'],
+      ['spinSlash', 'stab', 'slash', 'stab', 'uppercut', 'backflipKick', 'heavySlash'],
+      // Execution combos (finish them!)
+      ['uppercut', 'jumpAtk', 'backflipKick', 'execution'],
+      ['dashStab', 'spinSlash', 'backflipKick', 'heavySlash'],
+      ['slash', 'slash', 'dashStab', 'uppercut', 'backflipKick'],
+      ['stab', 'stab', 'stab', 'stab', 'spinSlash', 'execution'],
+      // Pure flip combos
+      ['backflipKick', 'dashStab', 'backflipKick', 'uppercut', 'jumpAtk'],
+      ['uppercut', 'backflipKick', 'spinSlash', 'backflipKick', 'execution'],
     ];
 
     const ai = (bot: Fighter, pl: Fighter, idx: number) => {
@@ -854,7 +890,7 @@ const RagdollArena = () => {
           mem.rushMomentum += 2;
           if (d > wr) { ss(bot, 'walk'); bot.vx += bot.facing * (8 + Math.min(mem.rushMomentum * 0.8, 12)); bot.aiTimer = 0; }
           else if (ca(bot)) {
-            doAtk(bot, pick(['dashStab', 'slash', 'slash', 'uppercut', 'spinSlash', 'stab']));
+            doAtk(bot, pick(['dashStab', 'slash', 'slash', 'uppercut', 'spinSlash', 'stab', 'backflipKick']));
             bot.aiTimer = 0; mem.comboStep = 1;
             if (mem.rushMomentum > 15) { mem.intent = 'executeCombo'; mem.comboSeq = [...pick(AI_COMBOS)]; mem.intentTimer = 20; mem.rushMomentum = 0; }
           }
@@ -1011,6 +1047,8 @@ const RagdollArena = () => {
         else if (f.state === 'spinSlash') { const spin = ap2 * Math.PI * 2; f.wTarget = Math.sin(spin) * 2.5; }
         else if (f.state === 'dashStab') f.wTarget = ap2 < 0.2 ? -0.2 : ap2 < 0.7 ? 0.1 : -0.3;
         else if (f.state === 'limbSmash') f.wTarget = ap2 < 0.3 ? -2.0 : ap2 < 0.55 ? 1.8 : 0.2;
+        else if (f.state === 'backflipKick') f.wTarget = ap2 < 0.3 ? -1.5 : ap2 < 0.6 ? 2.0 : 0.5;
+        else if (f.state === 'execution') { const subP = (ap2 * 5) % 1; f.wTarget = subP < 0.4 ? -2.5 : subP < 0.6 ? 2.5 : -0.5; }
         else f.wTarget = f.state === 'block' ? -1.3 : -0.5;
         f.wAngle += (f.wTarget - f.wAngle) * 0.38;
 
@@ -1028,7 +1066,7 @@ const RagdollArena = () => {
         if (f.comboTimer > 0) { f.comboTimer -= spd; if (f.comboTimer <= 0) f.combo = 0; }
 
         // Afterimage on fast movement
-        if (fc % 3 === 0 && (Math.abs(f.vx) > 4 || ['slash', 'heavySlash', 'jumpAtk', 'uppercut', 'spinSlash', 'dashStab', 'limbSmash', 'dodge'].includes(f.state))) {
+        if (fc % 3 === 0 && (Math.abs(f.vx) > 4 || ['slash', 'heavySlash', 'jumpAtk', 'uppercut', 'spinSlash', 'dashStab', 'limbSmash', 'backflipKick', 'execution', 'dodge'].includes(f.state))) {
           spawnAfterimage(f);
         }
 
@@ -1042,7 +1080,7 @@ const RagdollArena = () => {
         if (f.hp <= 0 && f.state !== 'ko') {
           f.hp = 0; ss(f, 'ko');
           startRagdoll(f, v(f.facing * -5, -6), 999);
-          o.wins++; g.rs = 'ko'; g.koTimer = 280; g.shake = 15;
+          o.wins++; g.rs = 'ko'; g.koTimer = 280;
         }
       });
 
@@ -1110,6 +1148,22 @@ const RagdollArena = () => {
             f.heldLimb = null;
             g.flash = 6; g.flashColor = '#ff4';
           }
+          // Execution: massive damage, brutal VFX
+          if (f.state === 'execution') {
+            dmg *= 2.5;
+            spawnBlood(hitPt.x, hitPt.y, f.facing, 80, 6);
+            spawnGore(hitPt.x, hitPt.y, 15, f.facing);
+            spawnRing(hitPt.x, hitPt.y, 120, '#f00');
+            spawnLightning(hitPt.x, hitPt.y - 50, hitPt.x + rng(-60, 60), hitPt.y + 30);
+            g.flash = 10; g.flashColor = '#a00';
+            g.slowMo = 0.15; g.slowTimer = 25;
+          }
+          // Backflip kick: launcher effect
+          if (f.state === 'backflipKick') {
+            dmg *= 1.3;
+            spawnRing(hitPt.x, hitPt.y, 80, '#ff8');
+            g.slowMo = 0.3; g.slowTimer = 12;
+          }
 
           const hitDir2 = v(f.facing, -0.3);
           if (aiData[idx]) { aiData[idx].mem.lastAtkLanded = true; aiData[idx].mem.excitement += 2; }
@@ -1119,7 +1173,7 @@ const RagdollArena = () => {
             o.vx = f.facing * ad.kb.x * 0.3; o.stamina -= dmg * 0.7;
             spawnSparks((f.x + o.x) / 2, hitPt.y, 15);
             spawnRing((f.x + o.x) / 2, hitPt.y, 50, '#ff8');
-            g.shake = 5;
+            // no shake on block - only dismemberments shake
             for (let i = 0; i < 5; i++) o.rag.pts[i].old = vsub(o.rag.pts[i].pos, vscl(hitDir2, -2.5));
           } else {
             f.combo++; f.comboTimer = 80;
@@ -1138,11 +1192,10 @@ const RagdollArena = () => {
 
             if (dmg >= 18) {
               startRagdoll(o, vscl(hitDir2, dmg * 0.5), 35 + dmg);
-              g.shake = 14; g.slowMo = 0.22; g.slowTimer = 16;
+              // no shake - only on dismemberment
               spawnRing(hitPt.x, hitPt.y, 70, '#a00');
             } else {
               ss(o, dmg >= 13 ? 'stagger' : 'hit', dmg >= 13 ? 25 : 14);
-              g.shake = 7;
             }
 
             // Blood
@@ -1173,7 +1226,7 @@ const RagdollArena = () => {
               ss(o, 'ko');
               startRagdoll(o, vscl(hitDir2, 22), 999);
               f.wins++; g.rs = 'ko'; g.koTimer = 280;
-              g.shake = 40; g.slowMo = 0.05; g.slowTimer = 55;
+              g.slowMo = 0.05; g.slowTimer = 55;
               g.flash = 15; g.flashColor = '#fff';
               spawnBlood(hitPt.x, hitPt.y, f.facing, 120, 7);
               spawnBlood(hitPt.x, hitPt.y - 25, -f.facing, 60, 6);
