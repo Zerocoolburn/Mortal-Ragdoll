@@ -2825,7 +2825,7 @@ const RagdollArena = () => {
           {/* Menu buttons */}
           <div className="flex flex-col gap-4 items-center">
             <button
-              onClick={() => setGameScreen('fight')}
+              onClick={() => setGameScreen('charSelect')}
               className="group relative px-12 py-4 text-xl font-bold tracking-[0.2em] uppercase transition-all duration-300 hover:scale-105"
               style={{
                 fontFamily: '"Orbitron", sans-serif',
