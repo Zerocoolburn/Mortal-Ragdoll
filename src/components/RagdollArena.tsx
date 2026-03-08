@@ -1178,29 +1178,45 @@ const RagdollArena = () => {
               g.shake = 5;
             }
 
-            // Blood
-            spawnBlood(hitPt.x, hitPt.y, f.facing, Math.round(dmg * 0.6), dmg / 12);
+            // Blood - MUCH more visible
+            spawnBlood(hitPt.x, hitPt.y, f.facing, Math.round(dmg * 1.5), dmg / 8);
+            spawnBlood(hitPt.x, hitPt.y - 10, f.facing * -0.5, Math.round(dmg * 0.8), dmg / 10);
 
-            // Joint-specific blood from hit point
+            // Joint-specific blood spray
             if (hitJoint >= 0 && hitJoint < o.rag.pts.length) {
-              spawnBlood(o.rag.pts[hitJoint].pos.x, o.rag.pts[hitJoint].pos.y, f.facing, 5, 1.5);
+              spawnBlood(o.rag.pts[hitJoint].pos.x, o.rag.pts[hitJoint].pos.y, f.facing, 12, 2);
+              spawnBlood(o.rag.pts[hitJoint].pos.x, o.rag.pts[hitJoint].pos.y - 5, 0, 6, 1.8);
             }
 
-            // Dismemberment
-            if (ad.canSever && o.hp < 20 && Math.random() < 0.4) {
+            // Dismemberment - much more frequent
+            if (ad.canSever && o.hp < 45 && Math.random() < 0.65) {
               const parts = ['leftArm', 'rightArm'].filter(p => !o.severed.has(p));
-              if (o.hp < 8) parts.push(...['leftLeg', 'rightLeg'].filter(p => !o.severed.has(p)));
+              if (o.hp < 30) parts.push(...['leftLeg', 'rightLeg'].filter(p => !o.severed.has(p)));
               if (o.hp <= 0) parts.push('head');
+              if (parts.length > 0) {
+                sever(o, parts[Math.floor(Math.random() * parts.length)], f.facing);
+                if (o.hp <= 0 && parts.length > 1 && Math.random() < 0.5) {
+                  const remaining = parts.filter(p => !o.severed.has(p));
+                  if (remaining.length > 0) sever(o, remaining[Math.floor(Math.random() * remaining.length)], f.facing);
+                }
+              }
+            }
+            if (!ad.canSever && o.hp < 10 && Math.random() < 0.3) {
+              const parts = ['leftArm', 'rightArm'].filter(p => !o.severed.has(p));
               if (parts.length > 0) sever(o, parts[Math.floor(Math.random() * parts.length)], f.facing);
             }
 
             // KO
             if (o.hp <= 0) {
               ss(o, 'ko');
-              startRagdoll(o, vscl(hitDir2, 15), 999);
+              startRagdoll(o, vscl(hitDir2, 18), 999);
               f.wins++; g.rs = 'ko'; g.koTimer = 200;
-              g.shake = 18; g.slowMo = 0.15; g.slowTimer = 30;
-              spawnBlood(hitPt.x, hitPt.y, f.facing, 35, 3);
+              g.shake = 22; g.slowMo = 0.12; g.slowTimer = 35;
+              spawnBlood(hitPt.x, hitPt.y, f.facing, 50, 4);
+              spawnBlood(hitPt.x, hitPt.y - 20, -f.facing, 25, 3);
+              if (!o.severed.has('head') && Math.random() < 0.4) sever(o, 'head', f.facing);
+              const limbParts = ['leftArm', 'rightArm', 'leftLeg', 'rightLeg'].filter(p => !o.severed.has(p));
+              if (limbParts.length > 0 && Math.random() < 0.6) sever(o, limbParts[Math.floor(Math.random() * limbParts.length)], f.facing);
             }
           }
         }
