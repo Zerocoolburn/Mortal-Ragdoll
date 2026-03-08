@@ -714,7 +714,7 @@ const RagdollArena = () => {
 
       const d = Math.abs(bot.x - pl.x);
       const wr = bot.weapon.len + 25;
-      const isPlAtk = ['slash', 'heavySlash', 'stab', 'overhead', 'jumpAtk', 'limbSmash'].includes(pl.state);
+      const isPlAtk = ['slash', 'heavySlash', 'stab', 'overhead', 'jumpAtk', 'uppercut', 'spinSlash', 'dashStab', 'limbSmash'].includes(pl.state);
       const isPlRecovering = pl.dur > 0 && pl.frame > pl.dur * 0.6;
       const st = bot.stamina / 100;
 
