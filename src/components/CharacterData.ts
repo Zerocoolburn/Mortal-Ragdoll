@@ -144,7 +144,7 @@ export const CHARACTERS: CharacterDef[] = [
     color: '#5a4a2a', color2: '#a88040',
     skin: '#6a4a2a', hair: '#000',
     weaponKey: 'axe', specialType: 'earthquake',
-    specialName: 'SEISMIC SLAM', specialColor: '#a80', specialGlow: '#fa0',
+    specialName: 'SEISMIC SLAM', specialColor: '#aa8800', specialGlow: '#ffaa00',
     aiStyles: ['juggernaut', 'berserker', 'guardian'],
     voicePitch: 0.6, voiceRate: 0.78,
     bodyScale: 1.4, headScale: 1.1,
