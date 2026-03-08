@@ -1975,7 +1975,7 @@ const RagdollArena = () => {
           f1.wins = p1.wins; f2.wins = p2.wins;
           g.fighters[0] = f1; g.fighters[1] = f2;
           g.blood = []; g.limbs = []; g.pools = []; g.sparks = []; g.gore = [];
-          g.afterimages = []; g.rings = []; g.lightnings = []; g.bullets = []; g.muzzleFlashes = []; g.wallSparks = []; g.fatalityTexts = []; g.thrownSwords = [];
+          g.afterimages = []; g.rings = []; g.lightnings = []; g.bullets = []; g.muzzleFlashes = []; g.wallSparks = []; g.fatalityTexts = []; g.thrownSwords = []; g.skullFires = []; g.dragons = [];
           g.rs = 'intro'; g.introTimer = 80; g.timer = 99 * 60;
           aiData[0] = { personality: mkPersonality(), mem: mkAiMem() }; aiData[1] = { personality: mkPersonality(), mem: mkAiMem() };
           playSFX('roundStart', sfxVolume);
