@@ -23,12 +23,13 @@ interface RPoint { pos: V; old: V; acc: V; mass: number; pinned: boolean }
 interface RStick { a: number; b: number; len: number; stiff: number }
 
 function createRagdoll(x: number, y: number) {
+  const S = 1.35; // character scale
   const offsets: V[] = [
-    v(0, -108), v(0, -93), v(0, -72), v(0, -52), v(0, -36),
-    v(-15, -86), v(-28, -64), v(-35, -46),
-    v(15, -86), v(28, -64), v(35, -46),
-    v(-9, -33), v(-11, -16), v(-9, -1),
-    v(9, -33), v(11, -16), v(9, -1),
+    v(0, -108*S), v(0, -93*S), v(0, -72*S), v(0, -52*S), v(0, -36*S),
+    v(-15*S, -86*S), v(-28*S, -64*S), v(-35*S, -46*S),
+    v(15*S, -86*S), v(28*S, -64*S), v(35*S, -46*S),
+    v(-9*S, -33*S), v(-11*S, -16*S), v(-9*S, -1),
+    v(9*S, -33*S), v(11*S, -16*S), v(9*S, -1),
   ];
   const pts: RPoint[] = offsets.map(o => ({
     pos: v(x + o.x, y + o.y), old: v(x + o.x, y + o.y),
