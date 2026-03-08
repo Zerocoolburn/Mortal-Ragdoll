@@ -4,7 +4,8 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 // MATH
 // ═══════════════════════════════════════════════════════
 const W = 1280, H = 720, GY = 575, GRAV = 0.4;
-const WALL_L = 50, WALL_R = W - 50;
+const WORLD_W = 6000;
+const WALL_L = 50, WALL_R = WORLD_W - 50;
 interface V { x: number; y: number }
 const v = (x = 0, y = 0): V => ({ x, y });
 const vadd = (a: V, b: V): V => ({ x: a.x + b.x, y: a.y + b.y });
