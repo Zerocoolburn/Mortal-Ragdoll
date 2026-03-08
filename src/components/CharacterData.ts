@@ -241,7 +241,7 @@ export const CHARACTERS: CharacterDef[] = [
   // ── 11. REAPER — Death Incarnate ──
   {
     id: 'reaper', name: 'REAPER', title: 'Death Incarnate',
-    color: '#1a1a1a', color2: '#4f4',
+    color: '#1a1a1a', color2: '#44ff44',
     skin: '#b8b0a8', hair: '#e8e0d8',
     weaponKey: 'spear', specialType: 'soulHarvest',
     specialName: 'SOUL HARVEST', specialColor: '#8f8', specialGlow: '#afa',
