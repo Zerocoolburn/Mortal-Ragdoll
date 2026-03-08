@@ -862,7 +862,7 @@ const RagdollArena = () => {
       if (d > 200 && r < 0.15) return 'shoot';
       if (d < 80 && r < 0.25) return 'kickCombo';
       if (hp < 0.15) return r < 0.4 ? 'rush' : r < 0.6 ? 'wallRun' : r < 0.8 ? 'shoot' : 'retreat';
-      if (plHp < 0.2) return r < 0.25 ? 'fatalityAttempt' : r < 0.5 ? 'executeCombo' : r < 0.7 ? 'kickCombo' : 'pressure';
+      if (plHp < 0.15) return r < 0.25 ? 'fatalityAttempt' : r < 0.5 ? 'executeCombo' : r < 0.7 ? 'kickCombo' : 'pressure';
       if (st < 0.15) return r < 0.3 ? 'shoot' : 'rest';
       if (m.lastAtkLanded && r < 0.5) return r < 0.15 ? 'shoot' : r < 0.35 ? 'executeCombo' : r < 0.45 ? 'kickCombo' : 'pressure';
       switch (p2.style) {
