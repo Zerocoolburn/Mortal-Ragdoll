@@ -2659,8 +2659,8 @@ const RagdollArena = () => {
         }
 
         f.x += f.vx * spd; f.vx *= 0.88;
-        if (f.state === 'walk') { f.x += f.facing * 3.0 * spd; f.walkCycle += 0.12 * spd; }
-        else if (f.state === 'walkBack') { f.x -= f.facing * 2.2 * spd; f.walkCycle += 0.1 * spd; }
+        if (f.state === 'walk') { f.x += f.facing * 3.0 * moveSpeed * spd; f.walkCycle += 0.14 * spd; }
+        else if (f.state === 'walkBack') { f.x -= f.facing * 2.4 * moveSpeed * spd; f.walkCycle += 0.12 * spd; }
         f.x = clamp(f.x, WALL_L, WALL_R); f.bob += 0.04 * spd;
         if (f.hitImpact > 0) f.hitImpact *= 0.84;
         if (f.state === 'limbSmash') { const ap2 = f.dur > 0 ? f.frame / f.dur : 0; f.limbSwingAng = ap2 < 0.3 ? -2.5 : ap2 < 0.6 ? 2.0 : 0; } else { f.limbSwingAng *= 0.85; }
