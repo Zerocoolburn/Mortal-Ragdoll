@@ -3090,6 +3090,24 @@ const RagdollArena = () => {
           {/* Menu buttons */}
           <div className="flex flex-col gap-4 items-center">
             <button
+              onClick={() => setGameScreen('campaignSelect')}
+              className="group relative px-12 py-4 text-xl font-bold tracking-[0.2em] uppercase transition-all duration-300 hover:scale-105"
+              style={{
+                fontFamily: '"Orbitron", sans-serif',
+                color: '#fff',
+                background: 'linear-gradient(180deg, rgba(200,120,0,0.8) 0%, rgba(100,50,0,0.9) 100%)',
+                border: '2px solid #da0',
+                clipPath: 'polygon(8% 0%, 100% 0%, 92% 100%, 0% 100%)',
+                textShadow: '0 0 10px #fa0',
+              }}
+            >
+              <span className="relative z-10">⚔ CAMPAIGN</span>
+              <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity" style={{
+                background: 'linear-gradient(180deg, rgba(255,150,0,0.3) 0%, rgba(180,80,0,0.4) 100%)',
+              }} />
+            </button>
+
+            <button
               onClick={() => setGameScreen('charSelect')}
               className="group relative px-12 py-4 text-xl font-bold tracking-[0.2em] uppercase transition-all duration-300 hover:scale-105"
               style={{
@@ -3101,7 +3119,7 @@ const RagdollArena = () => {
                 textShadow: '0 0 10px #f00',
               }}
             >
-              <span className="relative z-10">FIGHT</span>
+              <span className="relative z-10">AI vs AI</span>
               <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity" style={{
                 background: 'linear-gradient(180deg, rgba(255,0,0,0.3) 0%, rgba(180,0,0,0.4) 100%)',
               }} />
@@ -3122,12 +3140,12 @@ const RagdollArena = () => {
             </button>
           </div>
 
-          {/* Footer */}
-          <div className="mt-4 text-[10px] tracking-[0.3em] uppercase" style={{
-            fontFamily: '"Orbitron", sans-serif',
-            color: '#333',
-          }}>
-            AI vs AI • Watch the carnage
+          {/* Controls hint */}
+          <div className="mt-2 text-[9px] tracking-[0.2em] uppercase text-center" style={{ fontFamily: '"Orbitron", sans-serif', color: '#444' }}>
+            Campaign: WASD/Arrows move • J/Z slash • K/X heavy • L/C kick • Shift block • Space dodge • F shoot • Q+E special
+          </div>
+          <div className="text-[9px] tracking-[0.2em] uppercase text-center" style={{ fontFamily: '"Orbitron", sans-serif', color: '#333' }}>
+            PS4 Controller supported • □ slash • △ heavy • ○ kick • L1 block • R1+R2 special
           </div>
         </div>
       </div>
