@@ -1642,6 +1642,13 @@ const RagdollArena = () => {
               loser.rag.pts[i].old = vsub(loser.rag.pts[i].pos, v(winner.facing * rng(3, 8), -rng(2, 6)));
             }
             if (fc % 15 === 0) { spawnRing(hitPt.x, hitPt.y, 40, '#f80'); playSFX('hit', sfxVolume * 0.5); }
+            // Beatdown TTS
+            if (ttsEnabled && winner.groundBeatTimer > 60 && fc % 90 === 0) {
+              const wIdx = g.fighters.indexOf(winner);
+              const lIdx = g.fighters.indexOf(loser);
+              if (rng(0, 1) < 0.5) speakFighterLine(BEATDOWN_LINES_WINNER, wIdx);
+              else speakFighterLine(BEATDOWN_LINES_LOSER, lIdx);
+            }
           }
           stepRagdoll(winner.rag.pts, winner.rag.sticks, spd, 0.3);
           if (!winner.ragdolling) poseRagdoll(winner);
