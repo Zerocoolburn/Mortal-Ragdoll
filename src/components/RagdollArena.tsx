@@ -1166,6 +1166,7 @@ const RagdollArena = () => {
           }
 
           const hitDir2 = v(f.facing, -0.3);
+          if (aiData[idx]) { aiData[idx].mem.lastAtkLanded = true; aiData[idx].mem.excitement += 2; }
           if (aiData[1 - idx]) { aiData[1 - idx].mem.timesHit++; aiData[1 - idx].mem.lastAtkLanded = false; }
 
           if (o.state === 'block' && o.stamina > 5) {
