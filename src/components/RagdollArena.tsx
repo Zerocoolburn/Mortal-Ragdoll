@@ -3744,66 +3744,193 @@ const RagdollArena = () => {
 
   // ═══════════════════════════════════════════════════════
   if (gameScreen === 'settings') {
+    const tabStyle = (t: SettingsTab) => ({
+      fontFamily: '"Orbitron", sans-serif' as const,
+      color: settingsTab === t ? '#fa0' : '#666',
+      background: settingsTab === t ? 'rgba(255,150,0,0.15)' : 'transparent',
+      borderBottom: settingsTab === t ? '2px solid #fa0' : '2px solid transparent',
+    });
+    const sliderRow = (label: string, value: number, min: number, max: number, step: number, onChange: (v: number) => void, suffix = '') => (
+      <div className="flex flex-col gap-1">
+        <div className="flex justify-between">
+          <label className="text-[11px] font-bold tracking-widest uppercase" style={{ fontFamily: '"Orbitron", sans-serif', color: '#888' }}>{label}</label>
+          <span className="text-[11px]" style={{ fontFamily: '"Orbitron", sans-serif', color: '#aaa' }}>{typeof value === 'number' ? (step < 1 ? value.toFixed(2) : Math.round(value)) : value}{suffix}</span>
+        </div>
+        <input type="range" min={min} max={max} step={step} value={value} onChange={e => onChange(Number(e.target.value))}
+          className="w-full h-1.5 rounded-lg appearance-none cursor-pointer" style={{ accentColor: '#c00', background: 'linear-gradient(90deg, #400, #c00)' }} />
+      </div>
+    );
+    const toggleRow = (label: string, value: boolean, onChange: () => void) => (
+      <div className="flex items-center justify-between">
+        <label className="text-[11px] font-bold tracking-widest uppercase" style={{ fontFamily: '"Orbitron", sans-serif', color: '#888' }}>{label}</label>
+        <button onClick={onChange} className="px-3 py-1 text-[10px] font-bold transition-all" style={{
+          fontFamily: '"Orbitron", sans-serif', color: value ? '#0f0' : '#f00',
+          background: value ? 'rgba(0,80,0,0.4)' : 'rgba(80,0,0,0.4)', border: `1px solid ${value ? '#0a0' : '#a00'}`,
+        }}>{value ? 'ON' : 'OFF'}</button>
+      </div>
+    );
+
     return (
       <div className="relative w-full h-full flex items-center justify-center bg-black select-none overflow-hidden">
         <div className="absolute inset-0" style={{ background: 'radial-gradient(ellipse at 50% 50%, #0a0008 0%, #000 70%)' }} />
-
-        <div className="relative z-10 flex flex-col items-center gap-6 w-full max-w-md px-8">
-          <h2 className="text-3xl font-bold tracking-[0.3em] mb-6" style={{
-            fontFamily: '"Press Start 2P", cursive',
-            color: '#c00',
-            textShadow: '0 0 20px #a00',
-          }}>
-            SETTINGS
-          </h2>
-
-          <div className="w-full space-y-6">
-            {/* SFX Volume */}
-            <div className="flex flex-col gap-2">
-              <label className="text-sm font-bold tracking-widest uppercase" style={{ fontFamily: '"Orbitron", sans-serif', color: '#888' }}>
-                SFX Volume: {Math.round(sfxVolume * 100)}%
-              </label>
-              <input
-                type="range" min="0" max="100" value={sfxVolume * 100}
-                onChange={e => setSfxVolume(Number(e.target.value) / 100)}
-                className="w-full h-2 rounded-lg appearance-none cursor-pointer"
-                style={{ accentColor: '#c00', background: 'linear-gradient(90deg, #400, #c00)' }}
-              />
-            </div>
-
-            {/* TTS Toggle */}
-            <div className="flex items-center justify-between">
-              <label className="text-sm font-bold tracking-widest uppercase" style={{ fontFamily: '"Orbitron", sans-serif', color: '#888' }}>
-                Voice Lines (TTS)
-              </label>
-              <button
-                onClick={() => setTtsEnabled(!ttsEnabled)}
-                className="px-4 py-2 text-sm font-bold transition-all"
-                style={{
-                  fontFamily: '"Orbitron", sans-serif',
-                  color: ttsEnabled ? '#0f0' : '#f00',
-                  background: ttsEnabled ? 'rgba(0,80,0,0.4)' : 'rgba(80,0,0,0.4)',
-                  border: `1px solid ${ttsEnabled ? '#0a0' : '#a00'}`,
-                }}
-              >
-                {ttsEnabled ? 'ON' : 'OFF'}
-              </button>
-            </div>
+        <div className="relative z-10 flex flex-col items-center gap-3 w-full max-w-3xl px-6" style={{ maxHeight: '95vh', overflowY: 'auto' }}>
+          <h2 className="text-2xl font-bold tracking-[0.3em]" style={{ fontFamily: '"Press Start 2P", cursive', color: '#c00', textShadow: '0 0 20px #a00' }}>SETTINGS</h2>
+          
+          {/* Gamepad status */}
+          <div className="flex items-center gap-2 text-[10px]" style={{ fontFamily: '"Orbitron", sans-serif', color: gamepadConnected ? '#0f0' : '#666' }}>
+            <span className="w-2 h-2 rounded-full" style={{ background: gamepadConnected ? '#0f0' : '#600' }} />
+            {gamepadConnected ? '🎮 Controller Connected' : '🎮 No Controller Detected'}
           </div>
 
-          <div className="w-full h-[1px] my-4" style={{ background: 'linear-gradient(90deg, transparent, #333, transparent)' }} />
+          {/* Tabs */}
+          <div className="flex gap-0 w-full border-b border-[#333]">
+            {(['general', 'controls', 'gameplay', 'display'] as SettingsTab[]).map(t => (
+              <button key={t} onClick={() => setSettingsTab(t)} className="flex-1 py-2 text-[10px] font-bold tracking-[0.15em] uppercase transition-all" style={tabStyle(t)}>{t}</button>
+            ))}
+          </div>
 
-          <button
-            onClick={() => setGameScreen('menu')}
-            className="px-10 py-3 text-base font-bold tracking-[0.2em] uppercase transition-all hover:scale-105"
-            style={{
-              fontFamily: '"Orbitron", sans-serif',
-              color: '#aaa',
-              background: 'linear-gradient(180deg, rgba(40,40,40,0.8) 0%, rgba(20,20,20,0.9) 100%)',
-              border: '1px solid #444',
-              clipPath: 'polygon(6% 0%, 100% 0%, 94% 100%, 0% 100%)',
-            }}
-          >
+          <div className="w-full space-y-4 py-2">
+            {settingsTab === 'general' && <>
+              {sliderRow('SFX Volume', sfxVolume * 100, 0, 100, 1, v => setSfxVolume(v / 100), '%')}
+              {sliderRow('Music Volume', musicVolume * 100, 0, 100, 1, v => setMusicVolume(v / 100), '%')}
+              {toggleRow('Voice Lines (TTS)', ttsEnabled, () => setTtsEnabled(!ttsEnabled))}
+              {toggleRow('Screen Shake', screenShake, () => setScreenShake(!screenShake))}
+              {toggleRow('Show Damage Numbers', showDamageNumbers, () => setShowDamageNumbers(!showDamageNumbers))}
+              {toggleRow('Show Combo Counter', showComboCounter, () => setShowComboCounter(!showComboCounter))}
+            </>}
+
+            {settingsTab === 'controls' && <>
+              {/* KEYBOARD LAYOUT */}
+              <div className="p-3 rounded" style={{ background: 'rgba(20,20,20,0.8)', border: '1px solid #333' }}>
+                <h3 className="text-xs font-bold tracking-[0.2em] mb-3 text-center" style={{ fontFamily: '"Orbitron", sans-serif', color: '#fa0' }}>⌨ KEYBOARD LAYOUT</h3>
+                <div className="grid grid-cols-2 gap-x-6 gap-y-1.5 text-[10px]" style={{ fontFamily: '"Orbitron", sans-serif' }}>
+                  {[
+                    ['W / ↑', 'Jump'],
+                    ['A / ←', 'Move Left'],
+                    ['S / ↓', 'Crouch'],
+                    ['D / →', 'Move Right'],
+                    ['J / Z', 'Slash Attack'],
+                    ['K / X', 'Heavy Attack'],
+                    ['L / C', 'Kick'],
+                    ['Shift', 'Block'],
+                    ['Space', 'Dodge (+ dir)'],
+                    ['F', 'Shoot'],
+                    ['G', 'Grab / Limb Smash'],
+                    ['Q + E', 'Special Attack'],
+                    ['J + W', 'Uppercut'],
+                    ['J + S', 'Stab'],
+                    ['K + W', 'Spin Slash'],
+                    ['K + S', 'Overhead'],
+                    ['L + W', 'Head Kick'],
+                    ['L + S', 'Knee Strike'],
+                  ].map(([key, action]) => (
+                    <div key={key} className="flex justify-between">
+                      <span className="px-1.5 py-0.5 rounded" style={{ background: 'rgba(255,255,255,0.08)', color: '#ccc', fontSize: 9 }}>{key}</span>
+                      <span style={{ color: '#888' }}>{action}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* CONTROLLER LAYOUT */}
+              <div className="p-3 rounded" style={{ background: 'rgba(20,20,20,0.8)', border: '1px solid #333' }}>
+                <h3 className="text-xs font-bold tracking-[0.2em] mb-3 text-center" style={{ fontFamily: '"Orbitron", sans-serif', color: '#4af' }}>🎮 PS4 CONTROLLER LAYOUT</h3>
+                {/* Visual controller diagram */}
+                <div className="relative mx-auto mb-3" style={{ width: 280, height: 140 }}>
+                  <svg width={280} height={140} viewBox="0 0 280 140">
+                    {/* Controller body */}
+                    <path d="M40,30 Q60,10 140,10 Q220,10 240,30 Q260,50 260,80 Q260,110 230,130 Q210,140 190,120 Q170,100 140,100 Q110,100 90,120 Q70,140 50,130 Q20,110 20,80 Q20,50 40,30" fill="#2a2a2a" stroke="#444" strokeWidth={1.5} />
+                    {/* D-Pad */}
+                    <rect x={48} y={55} width={11} height={30} rx={2} fill="#444" />
+                    <rect x={38} y={65} width={30} height={11} rx={2} fill="#444" />
+                    <text x={53} y={83} fill="#aaa" fontSize={6} textAnchor="middle" fontFamily="Orbitron">D-PAD</text>
+                    <text x={53} y={53} fill="#8f8" fontSize={5} textAnchor="middle" fontFamily="Orbitron">MOVE</text>
+                    {/* Left stick */}
+                    <circle cx={80} cy={95} r={12} fill="#3a3a3a" stroke="#555" strokeWidth={1} />
+                    <circle cx={80} cy={95} r={8} fill="#4a4a4a" />
+                    <text x={80} y={114} fill="#8f8" fontSize={5} textAnchor="middle" fontFamily="Orbitron">ANALOG</text>
+                    {/* Right stick */}
+                    <circle cx={190} cy={95} r={12} fill="#3a3a3a" stroke="#555" strokeWidth={1} />
+                    <circle cx={190} cy={95} r={8} fill="#4a4a4a" />
+                    {/* Face buttons */}
+                    <circle cx={220} cy={55} r={8} fill="#2d4a2d" stroke="#4a4" strokeWidth={1} /> {/* Triangle */}
+                    <text x={220} y={58} fill="#8f8" fontSize={6} textAnchor="middle" fontWeight="bold">△</text>
+                    <circle cx={235} cy={68} r={8} fill="#4a2d2d" stroke="#a44" strokeWidth={1} /> {/* Circle */}
+                    <text x={235} y={71} fill="#f88" fontSize={6} textAnchor="middle" fontWeight="bold">○</text>
+                    <circle cx={220} cy={80} r={8} fill="#2d2d4a" stroke="#44a" strokeWidth={1} /> {/* Cross */}
+                    <text x={220} y={83} fill="#88f" fontSize={6} textAnchor="middle" fontWeight="bold">✕</text>
+                    <circle cx={205} cy={68} r={8} fill="#4a2d4a" stroke="#a4a" strokeWidth={1} /> {/* Square */}
+                    <text x={205} y={71} fill="#f8f" fontSize={6} textAnchor="middle" fontWeight="bold">□</text>
+                    {/* Labels */}
+                    <text x={205} y={56} fill="#f8f" fontSize={5} textAnchor="middle" fontFamily="Orbitron">SLASH</text>
+                    <text x={243} y={58} fill="#8f8" fontSize={5} textAnchor="start" fontFamily="Orbitron">HEAVY</text>
+                    <text x={243} y={72} fill="#f88" fontSize={5} textAnchor="start" fontFamily="Orbitron">KICK</text>
+                    <text x={220} y={96} fill="#88f" fontSize={5} textAnchor="middle" fontFamily="Orbitron">DODGE</text>
+                    {/* Bumpers */}
+                    <rect x={35} y={18} width={40} height={10} rx={4} fill="#3a3a3a" stroke="#666" strokeWidth={1} />
+                    <text x={55} y={26} fill="#ff8" fontSize={5} textAnchor="middle" fontFamily="Orbitron">L1 BLOCK</text>
+                    <rect x={205} y={18} width={40} height={10} rx={4} fill="#3a3a3a" stroke="#666" strokeWidth={1} />
+                    <text x={225} y={26} fill="#f84" fontSize={5} textAnchor="middle" fontFamily="Orbitron">R1</text>
+                    {/* Triggers */}
+                    <rect x={35} y={6} width={40} height={10} rx={4} fill="#333" stroke="#555" strokeWidth={1} />
+                    <text x={55} y={14} fill="#aaa" fontSize={5} textAnchor="middle" fontFamily="Orbitron">L2 GRAB</text>
+                    <rect x={205} y={6} width={40} height={10} rx={4} fill="#333" stroke="#555" strokeWidth={1} />
+                    <text x={225} y={14} fill="#f44" fontSize={5} textAnchor="middle" fontFamily="Orbitron">R2 SHOOT</text>
+                  </svg>
+                </div>
+                <div className="grid grid-cols-2 gap-x-6 gap-y-1 text-[9px]" style={{ fontFamily: '"Orbitron", sans-serif' }}>
+                  {[
+                    ['D-Pad / Left Stick', 'Move'],
+                    ['□ Square', 'Slash'],
+                    ['△ Triangle', 'Heavy Attack'],
+                    ['○ Circle', 'Kick'],
+                    ['✕ Cross + Dir', 'Dodge'],
+                    ['L1', 'Block'],
+                    ['R2', 'Shoot'],
+                    ['L2', 'Grab / Limb'],
+                    ['R1 + R2', 'Special Attack'],
+                    ['Options', 'Pause'],
+                    ['✕ Cross', 'Menu Confirm'],
+                    ['○ Circle', 'Menu Back'],
+                  ].map(([btn, action]) => (
+                    <div key={btn} className="flex justify-between">
+                      <span className="px-1 py-0.5 rounded" style={{ background: 'rgba(100,150,255,0.1)', color: '#8af', fontSize: 8 }}>{btn}</span>
+                      <span style={{ color: '#888' }}>{action}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {sliderRow('Stick Deadzone', gamepadDeadzone, 0.05, 0.5, 0.01, setGamepadDeadzone)}
+              {sliderRow('Move Speed', moveSpeed, 0.5, 2.5, 0.1, setMoveSpeed, 'x')}
+              {toggleRow('Auto-Face Enemy', autoFaceEnemy, () => setAutoFaceEnemy(!autoFaceEnemy))}
+            </>}
+
+            {settingsTab === 'gameplay' && <>
+              {sliderRow('Blood Amount', bloodAmount * 100, 0, 200, 10, v => setBloodAmount(v / 100), '%')}
+              {sliderRow('Slow-Mo Intensity', slowMoIntensity * 100, 0, 200, 10, v => setSlowMoIntensity(v / 100), '%')}
+              {toggleRow('Screen Shake', screenShake, () => setScreenShake(!screenShake))}
+              {toggleRow('Voice Lines (TTS)', ttsEnabled, () => setTtsEnabled(!ttsEnabled))}
+              <div className="w-full h-[1px]" style={{ background: '#222' }} />
+              <p className="text-[9px] italic" style={{ fontFamily: '"Orbitron", sans-serif', color: '#555' }}>
+                💡 Tip: Higher blood amount and slow-mo create more cinematic fights. Lower values improve performance.
+              </p>
+            </>}
+
+            {settingsTab === 'display' && <>
+              {sliderRow('Camera Zoom', cameraZoom * 100, 50, 150, 5, v => setCameraZoom(v / 100), '%')}
+              {toggleRow('Show Damage Numbers', showDamageNumbers, () => setShowDamageNumbers(!showDamageNumbers))}
+              {toggleRow('Show Combo Counter', showComboCounter, () => setShowComboCounter(!showComboCounter))}
+              <div className="w-full h-[1px]" style={{ background: '#222' }} />
+              <p className="text-[9px] italic" style={{ fontFamily: '"Orbitron", sans-serif', color: '#555' }}>
+                🖥 Resolution: {W}x{H} • Canvas renderer
+              </p>
+            </>}
+          </div>
+
+          <button onClick={() => setGameScreen('menu')}
+            className="px-10 py-2.5 text-sm font-bold tracking-[0.2em] uppercase transition-all hover:scale-105"
+            style={{ fontFamily: '"Orbitron", sans-serif', color: '#aaa', background: 'linear-gradient(180deg, rgba(40,40,40,0.8) 0%, rgba(20,20,20,0.9) 100%)', border: '1px solid #444', clipPath: 'polygon(6% 0%, 100% 0%, 94% 100%, 0% 100%)' }}>
             BACK
           </button>
         </div>
