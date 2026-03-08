@@ -1331,17 +1331,37 @@ const RagdollArena = () => {
   // ─── DRAW FIGHTER ──────────────────────────────────────
   const drawFighter = useCallback((ctx: CanvasRenderingContext2D, f: Fighter, t: number) => {
     const p = f.rag.pts;
+    const charDef = getCharacter(f.charId);
     const drawBone = (a: number, b: number, w: number, col: string) => {
       if (f.severed.has('leftArm') && [5, 6, 7].includes(a) && [5, 6, 7].includes(b)) return;
       if (f.severed.has('rightArm') && [8, 9, 10].includes(a) && [8, 9, 10].includes(b)) return;
       if (f.severed.has('leftLeg') && [11, 12, 13].includes(a) && [11, 12, 13].includes(b)) return;
       if (f.severed.has('rightLeg') && [14, 15, 16].includes(a) && [14, 15, 16].includes(b)) return;
-      ctx.strokeStyle = col; ctx.lineWidth = w; ctx.lineCap = 'round';
+      ctx.strokeStyle = col; ctx.lineWidth = w * (charDef.bodyScale ?? 1); ctx.lineCap = 'round';
       ctx.beginPath(); ctx.moveTo(p[a].pos.x, p[a].pos.y); ctx.lineTo(p[b].pos.x, p[b].pos.y); ctx.stroke();
     };
 
+    // Aura glow
+    if (charDef.glowColor) {
+      const glow = ctx.createRadialGradient(f.x, f.y - 50, 5, f.x, f.y - 50, 60);
+      glow.addColorStop(0, charDef.glowColor + '18'); glow.addColorStop(0.6, charDef.glowColor + '08'); glow.addColorStop(1, 'transparent');
+      ctx.fillStyle = glow; ctx.beginPath(); ctx.arc(f.x, f.y - 50, 60, 0, Math.PI * 2); ctx.fill();
+    }
+
+    // Cape
+    if (charDef.capeColor && !f.ragdolling) {
+      const spine = p[2].pos; const hip = p[4].pos;
+      const windOff = Math.sin(t * 0.03 + f.bob) * 8;
+      ctx.fillStyle = charDef.capeColor + 'cc';
+      ctx.beginPath();
+      ctx.moveTo(spine.x - 5 * f.facing, spine.y);
+      ctx.quadraticCurveTo(hip.x - 20 * f.facing + windOff, hip.y + 15, hip.x - 15 * f.facing + windOff * 1.5, hip.y + 40);
+      ctx.lineTo(hip.x - 5 * f.facing, hip.y);
+      ctx.fill();
+    }
+
     // Shadow
-    ctx.fillStyle = 'rgba(0,0,0,0.25)'; ctx.beginPath(); ctx.ellipse(p[4].pos.x, GY + 2, 30, 7, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = 'rgba(0,0,0,0.25)'; ctx.beginPath(); ctx.ellipse(p[4].pos.x, GY + 2, 30 * (charDef.bodyScale ?? 1), 7, 0, 0, Math.PI * 2); ctx.fill();
 
     // Wall run dust
     if (f.state === 'wallRun') {
@@ -1482,14 +1502,96 @@ const RagdollArena = () => {
       ctx.restore();
     }
 
+    // ── ARMOR DETAILS on torso ──
+    if (charDef.armorType === 'heavy') {
+      const chestTop = p[2].pos; const chestBot = p[3].pos;
+      ctx.strokeStyle = charDef.color2; ctx.lineWidth = 3; ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(chestTop.x - 8, chestTop.y); ctx.lineTo(chestTop.x + 8, chestTop.y); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(chestBot.x - 6, chestBot.y); ctx.lineTo(chestBot.x + 6, chestBot.y); ctx.stroke();
+    } else if (charDef.armorType === 'robe' && !f.ragdolling) {
+      const hip = p[4].pos;
+      ctx.fillStyle = f.color + 'aa';
+      ctx.beginPath();
+      ctx.moveTo(hip.x - 12, hip.y - 5); ctx.lineTo(hip.x - 15, hip.y + 30);
+      ctx.lineTo(hip.x + 15, hip.y + 30); ctx.lineTo(hip.x + 12, hip.y - 5);
+      ctx.fill();
+    }
+
+    // ── TATTOOS on body ──
+    if (charDef.tattooColor) {
+      const spine = p[3].pos;
+      ctx.strokeStyle = charDef.tattooColor + '60'; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.arc(spine.x, spine.y, 6, 0, Math.PI); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(spine.x - 4, spine.y + 3); ctx.lineTo(spine.x - 8, spine.y + 10); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(spine.x + 4, spine.y + 3); ctx.lineTo(spine.x + 8, spine.y + 10); ctx.stroke();
+    }
+
     // ── HEAD ──
     if (!f.severed.has('head')) {
       const hPos = p[0].pos, nPos = p[1].pos;
       const headAng = Math.atan2(hPos.x - nPos.x, -(hPos.y - nPos.y));
+      const hs = charDef.headScale ?? 1;
       ctx.save(); ctx.translate(hPos.x, hPos.y); ctx.rotate(headAng);
-      ctx.fillStyle = f.hair; ctx.beginPath(); ctx.arc(0, 0, 15, Math.PI * 1.1, -0.1 * Math.PI); ctx.fill();
-      ctx.fillStyle = f.skin; ctx.beginPath(); ctx.arc(0, 0, 13, 0, Math.PI * 2); ctx.fill();
-      ctx.fillStyle = f.color; ctx.fillRect(-14, -8, 28, 5);
+      ctx.fillStyle = f.hair; ctx.beginPath(); ctx.arc(0, 0, 15 * hs, Math.PI * 1.1, -0.1 * Math.PI); ctx.fill();
+      ctx.fillStyle = f.skin; ctx.beginPath(); ctx.arc(0, 0, 13 * hs, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = f.color; ctx.fillRect(-14 * hs, -8, 28 * hs, 5);
+
+      // Helmet
+      if (charDef.helmetType === 'crown') {
+        ctx.fillStyle = '#daa520';
+        ctx.fillRect(-10 * hs, -16 * hs, 20 * hs, 4);
+        for (let i = -2; i <= 2; i++) ctx.fillRect(i * 4 * hs - 1, -20 * hs, 3, 4);
+      } else if (charDef.helmetType === 'horns') {
+        ctx.strokeStyle = '#888'; ctx.lineWidth = 2.5;
+        ctx.beginPath(); ctx.moveTo(-10 * hs, -8); ctx.quadraticCurveTo(-18 * hs, -28, -12 * hs, -30); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(10 * hs, -8); ctx.quadraticCurveTo(18 * hs, -28, 12 * hs, -30); ctx.stroke();
+      } else if (charDef.helmetType === 'hood') {
+        ctx.fillStyle = f.color;
+        ctx.beginPath(); ctx.arc(0, 0, 17 * hs, Math.PI * 0.75, Math.PI * 0.25, true); ctx.lineTo(14 * hs, 5); ctx.lineTo(-14 * hs, 5); ctx.fill();
+      } else if (charDef.helmetType === 'mask') {
+        ctx.fillStyle = '#333';
+        ctx.beginPath(); ctx.ellipse(0, 2, 11 * hs, 8 * hs, 0, 0, Math.PI); ctx.fill();
+      } else if (charDef.helmetType === 'bandana') {
+        ctx.fillStyle = f.color;
+        ctx.fillRect(-14 * hs, -10, 28 * hs, 5);
+        ctx.beginPath(); ctx.moveTo(14 * hs, -10); ctx.lineTo(22 * hs, -4); ctx.lineTo(14 * hs, -5); ctx.fill();
+      } else if (charDef.helmetType === 'mohawk') {
+        ctx.fillStyle = charDef.hair;
+        ctx.fillRect(-2 * hs, -26 * hs, 4 * hs, 16 * hs);
+      } else if (charDef.helmetType === 'spikes') {
+        ctx.fillStyle = '#666';
+        for (let i = -2; i <= 2; i++) {
+          ctx.beginPath(); ctx.moveTo(i * 5 * hs - 2, -12); ctx.lineTo(i * 5 * hs, -24); ctx.lineTo(i * 5 * hs + 2, -12); ctx.fill();
+        }
+      } else if (charDef.helmetType === 'halo') {
+        ctx.strokeStyle = '#fc0'; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.ellipse(0, -18 * hs, 14 * hs, 4, 0, 0, Math.PI * 2); ctx.stroke();
+      } else if (charDef.helmetType === 'skull') {
+        ctx.fillStyle = '#ddd';
+        ctx.beginPath(); ctx.arc(0, 0, 13 * hs, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#111';
+        ctx.beginPath(); ctx.ellipse(-4 * hs, -2, 3, 4, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.ellipse(4 * hs, -2, 3, 4, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#333';
+        for (let tt = -3; tt <= 3; tt++) ctx.fillRect(tt * 2.5 * hs - 1, 6, 2, 4);
+      } else if (charDef.helmetType === 'flame') {
+        for (let i = 0; i < 5; i++) {
+          const fx = (Math.random() - 0.5) * 16 * hs;
+          const fh = 8 + Math.random() * 14;
+          const fg = ctx.createRadialGradient(fx, -12 - fh * 0.5, 1, fx, -12 - fh * 0.5, fh * 0.5);
+          fg.addColorStop(0, 'rgba(255,180,0,0.5)'); fg.addColorStop(0.5, 'rgba(255,80,0,0.2)'); fg.addColorStop(1, 'transparent');
+          ctx.fillStyle = fg; ctx.beginPath(); ctx.arc(fx, -12 - fh * 0.5, fh * 0.5, 0, Math.PI * 2); ctx.fill();
+        }
+      }
+
+      // Scars
+      if (charDef.scarCount > 0) {
+        ctx.strokeStyle = 'rgba(150,50,50,0.5)'; ctx.lineWidth = 1.5;
+        if (charDef.scarCount >= 1) { ctx.beginPath(); ctx.moveTo(3, -6); ctx.lineTo(8, 4); ctx.stroke(); }
+        if (charDef.scarCount >= 2) { ctx.beginPath(); ctx.moveTo(-6, -4); ctx.lineTo(-2, 6); ctx.stroke(); }
+        if (charDef.scarCount >= 3) { ctx.beginPath(); ctx.moveTo(-3, 0); ctx.lineTo(5, 0); ctx.stroke(); }
+      }
+
       if (f.headHits > 0) {
         const bruise = Math.min(f.headHits / 8, 1);
         ctx.fillStyle = `rgba(100,0,100,${bruise * 0.4})`; ctx.beginPath(); ctx.arc(3, -2, 6, 0, Math.PI * 2); ctx.fill();
@@ -1502,9 +1604,19 @@ const RagdollArena = () => {
         ctx.fillStyle = '#111'; ctx.fillRect(-7, -4, 3, 4); ctx.fillRect(4, -4, 3, 4);
         ctx.strokeStyle = '#444'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(0, 6, 5, 0, Math.PI); ctx.stroke();
       } else {
-        const ed = f.facing > 0 ? 1 : -1;
-        ctx.fillStyle = '#111'; ctx.fillRect(-7 * ed - 1, -4, 3, 4); ctx.fillRect(3 * ed, -4, 3, 4);
-        ctx.fillStyle = '#eee'; ctx.fillRect(-7 * ed, -3, 1.5, 1.5); ctx.fillRect(3 * ed + 1, -3, 1.5, 1.5);
+        // Eyes with optional glow
+        if (charDef.eyeGlow) {
+          const eg1 = ctx.createRadialGradient(-5, -2, 1, -5, -2, 5);
+          eg1.addColorStop(0, charDef.eyeColor); eg1.addColorStop(1, 'transparent');
+          ctx.fillStyle = eg1; ctx.beginPath(); ctx.arc(-5, -2, 5, 0, Math.PI * 2); ctx.fill();
+          const eg2 = ctx.createRadialGradient(5, -2, 1, 5, -2, 5);
+          eg2.addColorStop(0, charDef.eyeColor); eg2.addColorStop(1, 'transparent');
+          ctx.fillStyle = eg2; ctx.beginPath(); ctx.arc(5, -2, 5, 0, Math.PI * 2); ctx.fill();
+        } else {
+          const ed = f.facing > 0 ? 1 : -1;
+          ctx.fillStyle = '#111'; ctx.fillRect(-7 * ed - 1, -4, 3, 4); ctx.fillRect(3 * ed, -4, 3, 4);
+          ctx.fillStyle = charDef.eyeColor; ctx.fillRect(-7 * ed, -3, 1.5, 1.5); ctx.fillRect(3 * ed + 1, -3, 1.5, 1.5);
+        }
       }
       ctx.strokeStyle = '#444'; ctx.lineWidth = 1.5; ctx.beginPath();
       if (f.state === 'hit' || f.state === 'stagger' || f.state === 'ragdoll') ctx.arc(0, 7, 4, 0, Math.PI);
@@ -2825,7 +2937,7 @@ const RagdollArena = () => {
           {/* Menu buttons */}
           <div className="flex flex-col gap-4 items-center">
             <button
-              onClick={() => setGameScreen('fight')}
+              onClick={() => setGameScreen('charSelect')}
               className="group relative px-12 py-4 text-xl font-bold tracking-[0.2em] uppercase transition-all duration-300 hover:scale-105"
               style={{
                 fontFamily: '"Orbitron", sans-serif',
@@ -2941,7 +3053,367 @@ const RagdollArena = () => {
   }
 
   // ═══════════════════════════════════════════════════════
-  // FIGHT SCREEN - MK-STYLE HUD
+  // CHARACTER SELECT SCREEN
+  // ═══════════════════════════════════════════════════════
+  if (gameScreen === 'charSelect') {
+    const drawCharPreview = (ctx2d: CanvasRenderingContext2D, charDef: CharacterDef, cx: number, cy: number, scale: number, selected: boolean) => {
+      const s = scale;
+      ctx2d.save();
+      ctx2d.translate(cx, cy);
+
+      // Aura glow
+      if (charDef.glowColor) {
+        const aGlow = ctx2d.createRadialGradient(0, -20 * s, 5 * s, 0, -20 * s, 50 * s);
+        aGlow.addColorStop(0, charDef.glowColor + '40');
+        aGlow.addColorStop(1, 'transparent');
+        ctx2d.fillStyle = aGlow;
+        ctx2d.beginPath(); ctx2d.arc(0, -20 * s, 50 * s, 0, Math.PI * 2); ctx2d.fill();
+      }
+
+      // Cape
+      if (charDef.capeColor) {
+        ctx2d.fillStyle = charDef.capeColor;
+        ctx2d.beginPath();
+        ctx2d.moveTo(-8 * s, -40 * s);
+        ctx2d.quadraticCurveTo(-15 * s, 10 * s, -10 * s, 30 * s);
+        ctx2d.lineTo(10 * s, 30 * s);
+        ctx2d.quadraticCurveTo(15 * s, 10 * s, 8 * s, -40 * s);
+        ctx2d.fill();
+      }
+
+      // Legs
+      ctx2d.strokeStyle = charDef.color; ctx2d.lineWidth = 7 * s; ctx2d.lineCap = 'round';
+      ctx2d.beginPath(); ctx2d.moveTo(0, 0); ctx2d.lineTo(-10 * s, 35 * s); ctx2d.stroke();
+      ctx2d.beginPath(); ctx2d.moveTo(0, 0); ctx2d.lineTo(10 * s, 35 * s); ctx2d.stroke();
+      // Boots
+      ctx2d.fillStyle = '#333';
+      ctx2d.beginPath(); ctx2d.ellipse(-10 * s, 37 * s, 8 * s, 4 * s, 0, 0, Math.PI * 2); ctx2d.fill();
+      ctx2d.beginPath(); ctx2d.ellipse(10 * s, 37 * s, 8 * s, 4 * s, 0, 0, Math.PI * 2); ctx2d.fill();
+
+      // Torso
+      ctx2d.strokeStyle = charDef.color; ctx2d.lineWidth = 10 * s;
+      ctx2d.beginPath(); ctx2d.moveTo(0, 0); ctx2d.lineTo(0, -35 * s); ctx2d.stroke();
+
+      // Armor detail
+      if (charDef.armorType === 'heavy') {
+        ctx2d.strokeStyle = charDef.color2; ctx2d.lineWidth = 12 * s;
+        ctx2d.beginPath(); ctx2d.moveTo(-12 * s, -30 * s); ctx2d.lineTo(12 * s, -30 * s); ctx2d.stroke();
+        ctx2d.fillStyle = charDef.color2;
+        ctx2d.fillRect(-6 * s, -28 * s, 12 * s, 20 * s);
+      } else if (charDef.armorType === 'medium') {
+        ctx2d.strokeStyle = charDef.color2; ctx2d.lineWidth = 2 * s;
+        ctx2d.beginPath(); ctx2d.moveTo(-8 * s, -32 * s); ctx2d.lineTo(8 * s, -32 * s); ctx2d.stroke();
+        ctx2d.beginPath(); ctx2d.moveTo(-6 * s, -22 * s); ctx2d.lineTo(6 * s, -22 * s); ctx2d.stroke();
+      } else if (charDef.armorType === 'robe') {
+        ctx2d.fillStyle = charDef.color + 'cc';
+        ctx2d.beginPath();
+        ctx2d.moveTo(-12 * s, -35 * s); ctx2d.lineTo(-16 * s, 30 * s);
+        ctx2d.lineTo(16 * s, 30 * s); ctx2d.lineTo(12 * s, -35 * s);
+        ctx2d.fill();
+      }
+
+      // Tattoos
+      if (charDef.tattooColor) {
+        ctx2d.strokeStyle = charDef.tattooColor + '80'; ctx2d.lineWidth = 1.5 * s;
+        ctx2d.beginPath(); ctx2d.arc(0, -18 * s, 6 * s, 0, Math.PI); ctx2d.stroke();
+        ctx2d.beginPath(); ctx2d.moveTo(-4 * s, -15 * s); ctx2d.lineTo(-8 * s, -8 * s); ctx2d.stroke();
+        ctx2d.beginPath(); ctx2d.moveTo(4 * s, -15 * s); ctx2d.lineTo(8 * s, -8 * s); ctx2d.stroke();
+      }
+
+      // Arms
+      ctx2d.strokeStyle = charDef.skin; ctx2d.lineWidth = 5 * s; ctx2d.lineCap = 'round';
+      ctx2d.beginPath(); ctx2d.moveTo(-12 * s, -30 * s); ctx2d.lineTo(-20 * s, -10 * s); ctx2d.stroke();
+      ctx2d.beginPath(); ctx2d.moveTo(12 * s, -30 * s); ctx2d.lineTo(20 * s, -15 * s); ctx2d.stroke();
+
+      // Weapon in right hand
+      const wep = charDef.weaponKey;
+      ctx2d.strokeStyle = '#aaa'; ctx2d.lineWidth = 3 * s;
+      if (wep === 'greatsword') {
+        ctx2d.strokeStyle = '#bbc'; ctx2d.lineWidth = 4 * s;
+        ctx2d.beginPath(); ctx2d.moveTo(20 * s, -15 * s); ctx2d.lineTo(28 * s, -55 * s); ctx2d.stroke();
+        ctx2d.strokeStyle = charDef.color2; ctx2d.lineWidth = 2 * s;
+        ctx2d.beginPath(); ctx2d.moveTo(16 * s, -15 * s); ctx2d.lineTo(24 * s, -15 * s); ctx2d.stroke();
+      } else if (wep === 'axe') {
+        ctx2d.beginPath(); ctx2d.moveTo(20 * s, -15 * s); ctx2d.lineTo(26 * s, -50 * s); ctx2d.stroke();
+        ctx2d.fillStyle = '#888';
+        ctx2d.beginPath(); ctx2d.moveTo(22 * s, -48 * s); ctx2d.lineTo(32 * s, -55 * s); ctx2d.lineTo(32 * s, -42 * s); ctx2d.closePath(); ctx2d.fill();
+      } else if (wep === 'spear') {
+        ctx2d.lineWidth = 2.5 * s;
+        ctx2d.beginPath(); ctx2d.moveTo(20 * s, -15 * s); ctx2d.lineTo(24 * s, -60 * s); ctx2d.stroke();
+        ctx2d.fillStyle = '#ccd';
+        ctx2d.beginPath(); ctx2d.moveTo(24 * s, -60 * s); ctx2d.lineTo(21 * s, -52 * s); ctx2d.lineTo(27 * s, -52 * s); ctx2d.closePath(); ctx2d.fill();
+      } else {
+        ctx2d.beginPath(); ctx2d.moveTo(20 * s, -15 * s); ctx2d.lineTo(26 * s, -48 * s); ctx2d.stroke();
+      }
+
+      // Head
+      const hs = charDef.headScale;
+      ctx2d.fillStyle = charDef.hair;
+      ctx2d.beginPath(); ctx2d.arc(0, -45 * s, 14 * s * hs, Math.PI * 1.1, -0.1 * Math.PI); ctx2d.fill();
+      ctx2d.fillStyle = charDef.skin;
+      ctx2d.beginPath(); ctx2d.arc(0, -45 * s, 12 * s * hs, 0, Math.PI * 2); ctx2d.fill();
+
+      // Helmet/headgear
+      if (charDef.helmetType === 'crown') {
+        ctx2d.fillStyle = '#daa520';
+        ctx2d.fillRect(-10 * s * hs, -58 * s, 20 * s * hs, 5 * s);
+        for (let i = -2; i <= 2; i++) {
+          ctx2d.fillRect((i * 4 - 1) * s * hs, -62 * s, 3 * s * hs, 4 * s);
+        }
+      } else if (charDef.helmetType === 'horns') {
+        ctx2d.strokeStyle = '#888'; ctx2d.lineWidth = 3 * s;
+        ctx2d.beginPath(); ctx2d.moveTo(-10 * s * hs, -52 * s); ctx2d.quadraticCurveTo(-18 * s * hs, -70 * s, -12 * s * hs, -72 * s); ctx2d.stroke();
+        ctx2d.beginPath(); ctx2d.moveTo(10 * s * hs, -52 * s); ctx2d.quadraticCurveTo(18 * s * hs, -70 * s, 12 * s * hs, -72 * s); ctx2d.stroke();
+      } else if (charDef.helmetType === 'hood') {
+        ctx2d.fillStyle = charDef.color;
+        ctx2d.beginPath(); ctx2d.arc(0, -45 * s, 16 * s * hs, Math.PI * 0.8, Math.PI * 0.2, true); ctx2d.lineTo(14 * s * hs, -35 * s); ctx2d.lineTo(-14 * s * hs, -35 * s); ctx2d.fill();
+      } else if (charDef.helmetType === 'mask') {
+        ctx2d.fillStyle = '#333';
+        ctx2d.beginPath(); ctx2d.ellipse(0, -43 * s, 10 * s * hs, 8 * s * hs, 0, 0, Math.PI); ctx2d.fill();
+      } else if (charDef.helmetType === 'visor') {
+        ctx2d.fillStyle = '#555';
+        ctx2d.fillRect(-11 * s * hs, -49 * s, 22 * s * hs, 6 * s);
+      } else if (charDef.helmetType === 'bandana') {
+        ctx2d.fillStyle = charDef.color;
+        ctx2d.fillRect(-13 * s * hs, -52 * s, 26 * s * hs, 5 * s);
+        ctx2d.beginPath(); ctx2d.moveTo(13 * s * hs, -52 * s); ctx2d.lineTo(22 * s * hs, -46 * s); ctx2d.lineTo(13 * s * hs, -47 * s); ctx2d.fill();
+      } else if (charDef.helmetType === 'mohawk') {
+        ctx2d.fillStyle = charDef.hair;
+        for (let i = 0; i < 6; i++) {
+          ctx2d.fillRect((-4 + i * 0) * s * hs, (-60 - i * 2) * s, 4 * s * hs, (8 + i * 2) * s);
+        }
+        ctx2d.fillRect(-2 * s * hs, -68 * s, 4 * s * hs, 16 * s);
+      } else if (charDef.helmetType === 'spikes') {
+        ctx2d.fillStyle = '#666';
+        for (let i = -2; i <= 2; i++) {
+          ctx2d.beginPath(); ctx2d.moveTo((i * 5 - 2) * s * hs, -55 * s); ctx2d.lineTo(i * 5 * s * hs, -66 * s); ctx2d.lineTo((i * 5 + 2) * s * hs, -55 * s); ctx2d.fill();
+        }
+      } else if (charDef.helmetType === 'halo') {
+        ctx2d.strokeStyle = '#fc0'; ctx2d.lineWidth = 2 * s;
+        ctx2d.beginPath(); ctx2d.ellipse(0, -60 * s, 14 * s * hs, 4 * s * hs, 0, 0, Math.PI * 2); ctx2d.stroke();
+        const haloGlow = ctx2d.createRadialGradient(0, -60 * s, 8 * s, 0, -60 * s, 18 * s);
+        haloGlow.addColorStop(0, 'rgba(255,200,0,0.2)'); haloGlow.addColorStop(1, 'transparent');
+        ctx2d.fillStyle = haloGlow; ctx2d.beginPath(); ctx2d.arc(0, -60 * s, 18 * s, 0, Math.PI * 2); ctx2d.fill();
+      } else if (charDef.helmetType === 'skull') {
+        ctx2d.fillStyle = '#ddd';
+        ctx2d.beginPath(); ctx2d.arc(0, -45 * s, 13 * s * hs, 0, Math.PI * 2); ctx2d.fill();
+        ctx2d.fillStyle = '#111';
+        ctx2d.beginPath(); ctx2d.ellipse(-4 * s * hs, -47 * s, 3 * s, 4 * s, 0, 0, Math.PI * 2); ctx2d.fill();
+        ctx2d.beginPath(); ctx2d.ellipse(4 * s * hs, -47 * s, 3 * s, 4 * s, 0, 0, Math.PI * 2); ctx2d.fill();
+        ctx2d.fillStyle = '#333';
+        ctx2d.beginPath(); ctx2d.moveTo(-2 * s, -42 * s); ctx2d.lineTo(2 * s, -42 * s); ctx2d.lineTo(0, -39 * s); ctx2d.fill();
+        for (let t = -3; t <= 3; t++) ctx2d.fillRect(t * 2.5 * s * hs - 1, -38 * s, 2, 4 * s);
+      } else if (charDef.helmetType === 'flame') {
+        for (let i = 0; i < 8; i++) {
+          const fx = (Math.random() - 0.5) * 16 * s * hs;
+          const fh = 10 + Math.random() * 20;
+          const fg = ctx2d.createRadialGradient(fx, -55 * s - fh * 0.5, 1, fx, -55 * s - fh * 0.5, fh * s * 0.5);
+          fg.addColorStop(0, 'rgba(255,180,0,0.6)'); fg.addColorStop(0.5, 'rgba(255,80,0,0.3)'); fg.addColorStop(1, 'transparent');
+          ctx2d.fillStyle = fg; ctx2d.beginPath(); ctx2d.arc(fx, -55 * s - fh * 0.5, fh * s * 0.5, 0, Math.PI * 2); ctx2d.fill();
+        }
+      }
+
+      // Eyes
+      if (charDef.eyeGlow) {
+        const eg = ctx2d.createRadialGradient(-4 * s * hs, -46 * s, 1, -4 * s * hs, -46 * s, 5 * s);
+        eg.addColorStop(0, charDef.eyeColor); eg.addColorStop(1, 'transparent');
+        ctx2d.fillStyle = eg; ctx2d.beginPath(); ctx2d.arc(-4 * s * hs, -46 * s, 5 * s, 0, Math.PI * 2); ctx2d.fill();
+        const eg2 = ctx2d.createRadialGradient(4 * s * hs, -46 * s, 1, 4 * s * hs, -46 * s, 5 * s);
+        eg2.addColorStop(0, charDef.eyeColor); eg2.addColorStop(1, 'transparent');
+        ctx2d.fillStyle = eg2; ctx2d.beginPath(); ctx2d.arc(4 * s * hs, -46 * s, 5 * s, 0, Math.PI * 2); ctx2d.fill();
+      } else {
+        ctx2d.fillStyle = '#111';
+        ctx2d.fillRect(-6 * s * hs, -48 * s, 3 * s, 3 * s);
+        ctx2d.fillRect(3 * s * hs, -48 * s, 3 * s, 3 * s);
+      }
+
+      // Scars
+      if (charDef.scarCount > 0) {
+        ctx2d.strokeStyle = 'rgba(150,50,50,0.5)'; ctx2d.lineWidth = 1.5 * s;
+        if (charDef.scarCount >= 1) { ctx2d.beginPath(); ctx2d.moveTo(3 * s, -50 * s); ctx2d.lineTo(8 * s, -40 * s); ctx2d.stroke(); }
+        if (charDef.scarCount >= 2) { ctx2d.beginPath(); ctx2d.moveTo(-6 * s, -48 * s); ctx2d.lineTo(-2 * s, -38 * s); ctx2d.stroke(); }
+        if (charDef.scarCount >= 3) { ctx2d.beginPath(); ctx2d.moveTo(-3 * s, -44 * s); ctx2d.lineTo(5 * s, -44 * s); ctx2d.stroke(); }
+      }
+
+      // Selection indicator
+      if (selected) {
+        ctx2d.strokeStyle = '#fff'; ctx2d.lineWidth = 2;
+        ctx2d.setLineDash([4, 4]);
+        ctx2d.beginPath(); ctx2d.arc(0, -10 * s, 45 * s, 0, Math.PI * 2); ctx2d.stroke();
+        ctx2d.setLineDash([]);
+      }
+
+      ctx2d.restore();
+    };
+
+    return (
+      <div className="relative w-full h-full flex flex-col items-center justify-center bg-black select-none overflow-hidden">
+        {/* Background */}
+        <div className="absolute inset-0" style={{
+          background: 'radial-gradient(ellipse at center, rgba(40,0,0,0.6) 0%, rgba(0,0,0,0.95) 70%)',
+        }} />
+
+        {/* Title */}
+        <div className="relative z-10 mb-4">
+          <h2 className="text-3xl font-bold tracking-[0.3em] uppercase text-center" style={{
+            fontFamily: '"Orbitron", sans-serif',
+            color: '#f44',
+            textShadow: '0 0 20px rgba(255,0,0,0.5), 0 0 40px rgba(255,0,0,0.2)',
+          }}>
+            CHOOSE YOUR FIGHTERS
+          </h2>
+          <p className="text-center text-sm mt-1" style={{
+            fontFamily: '"Orbitron", sans-serif',
+            color: selectingFor === 1 ? '#f88' : '#88f',
+          }}>
+            Selecting for {selectingFor === 1 ? 'PLAYER 1 (LEFT)' : 'PLAYER 2 (RIGHT)'}
+          </p>
+        </div>
+
+        {/* Character Grid */}
+        <div className="relative z-10 grid grid-cols-6 gap-2 px-4 max-w-5xl">
+          {CHARACTERS.map((char) => {
+            const isP1 = selectedP1 === char.id;
+            const isP2 = selectedP2 === char.id;
+            return (
+              <button
+                key={char.id}
+                onClick={() => {
+                  if (selectingFor === 1) {
+                    setSelectedP1(char.id);
+                    setSelectingFor(2);
+                  } else {
+                    setSelectedP2(char.id);
+                    setSelectingFor(1);
+                  }
+                }}
+                className="relative flex flex-col items-center p-2 rounded transition-all duration-200 hover:scale-110"
+                style={{
+                  background: isP1 ? 'rgba(255,0,0,0.25)' : isP2 ? 'rgba(0,100,255,0.25)' : 'rgba(30,30,30,0.6)',
+                  border: isP1 ? '2px solid #f44' : isP2 ? '2px solid #48f' : '1px solid #333',
+                  boxShadow: isP1 ? '0 0 15px rgba(255,0,0,0.3)' : isP2 ? '0 0 15px rgba(0,100,255,0.3)' : 'none',
+                }}
+              >
+                {/* Mini canvas for character preview */}
+                <canvas
+                  ref={(cvs) => {
+                    if (cvs) {
+                      const ctx2 = cvs.getContext('2d');
+                      if (ctx2) {
+                        ctx2.clearRect(0, 0, 80, 100);
+                        drawCharPreview(ctx2, char, 40, 80, 0.7, false);
+                      }
+                    }
+                  }}
+                  width={80}
+                  height={100}
+                  className="pointer-events-none"
+                />
+                <span className="text-[9px] font-bold tracking-wider mt-1" style={{
+                  fontFamily: '"Orbitron", sans-serif',
+                  color: isP1 ? '#f88' : isP2 ? '#88f' : '#aaa',
+                }}>{char.name}</span>
+                <span className="text-[7px]" style={{
+                  fontFamily: '"Orbitron", sans-serif',
+                  color: '#666',
+                }}>{char.title}</span>
+                {isP1 && <span className="absolute top-0 left-0 text-[8px] px-1 font-bold" style={{ background: '#a00', color: '#fff' }}>P1</span>}
+                {isP2 && <span className="absolute top-0 right-0 text-[8px] px-1 font-bold" style={{ background: '#00a', color: '#fff' }}>P2</span>}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Selected fighters display */}
+        <div className="relative z-10 flex items-center gap-8 mt-4">
+          <div className="text-center">
+            <canvas
+              ref={(cvs) => {
+                if (cvs) {
+                  const ctx2 = cvs.getContext('2d');
+                  if (ctx2) {
+                    ctx2.clearRect(0, 0, 120, 150);
+                    drawCharPreview(ctx2, getCharacter(selectedP1), 60, 120, 1.1, true);
+                  }
+                }
+              }}
+              width={120}
+              height={150}
+              className="pointer-events-none"
+            />
+            <p className="text-sm font-bold" style={{ fontFamily: '"Orbitron", sans-serif', color: '#f44', textShadow: '0 0 8px rgba(255,0,0,0.5)' }}>
+              {getCharacter(selectedP1).name}
+            </p>
+            <p className="text-[10px]" style={{ fontFamily: '"Orbitron", sans-serif', color: '#888' }}>
+              {getCharacter(selectedP1).specialName}
+            </p>
+          </div>
+
+          <div className="text-4xl font-black" style={{
+            fontFamily: '"Orbitron", sans-serif',
+            color: '#fff',
+            textShadow: '0 0 20px rgba(255,255,255,0.3)',
+          }}>VS</div>
+
+          <div className="text-center">
+            <canvas
+              ref={(cvs) => {
+                if (cvs) {
+                  const ctx2 = cvs.getContext('2d');
+                  if (ctx2) {
+                    ctx2.clearRect(0, 0, 120, 150);
+                    drawCharPreview(ctx2, getCharacter(selectedP2), 60, 120, 1.1, true);
+                  }
+                }
+              }}
+              width={120}
+              height={150}
+              className="pointer-events-none"
+            />
+            <p className="text-sm font-bold" style={{ fontFamily: '"Orbitron", sans-serif', color: '#48f', textShadow: '0 0 8px rgba(0,100,255,0.5)' }}>
+              {getCharacter(selectedP2).name}
+            </p>
+            <p className="text-[10px]" style={{ fontFamily: '"Orbitron", sans-serif', color: '#888' }}>
+              {getCharacter(selectedP2).specialName}
+            </p>
+          </div>
+        </div>
+
+        {/* Buttons */}
+        <div className="relative z-10 flex gap-4 mt-4">
+          <button
+            onClick={() => setGameScreen('fight')}
+            className="px-10 py-3 text-lg font-bold tracking-[0.2em] uppercase transition-all hover:scale-105"
+            style={{
+              fontFamily: '"Orbitron", sans-serif',
+              color: '#fff',
+              background: 'linear-gradient(180deg, rgba(180,0,0,0.8) 0%, rgba(80,0,0,0.9) 100%)',
+              border: '2px solid #a00',
+              clipPath: 'polygon(8% 0%, 100% 0%, 92% 100%, 0% 100%)',
+              textShadow: '0 0 10px #f00',
+            }}
+          >
+            FIGHT!
+          </button>
+          <button
+            onClick={() => setGameScreen('menu')}
+            className="px-8 py-3 text-sm font-bold tracking-[0.2em] uppercase transition-all hover:scale-105"
+            style={{
+              fontFamily: '"Orbitron", sans-serif',
+              color: '#aaa',
+              background: 'rgba(30,30,30,0.8)',
+              border: '1px solid #444',
+              clipPath: 'polygon(6% 0%, 100% 0%, 94% 100%, 0% 100%)',
+            }}
+          >
+            BACK
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+
   // ═══════════════════════════════════════════════════════
   const p1Pct = Math.max(0, (hud.p1hp / MAX_HP) * 100);
   const p2Pct = Math.max(0, (hud.p2hp / MAX_HP) * 100);
