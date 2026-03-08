@@ -182,6 +182,26 @@ const LIMB_LOST_LINES = [
   "You fight like a goddamn blender!",
   "Alright who ordered the amputation?!",
   "FUCK FUCK FUCK FUCK FUCKKKK!",
+  "Oh great now my blood's everywhere! Who's cleaning this?!",
+  "You pulled that off like a drumstick at Thanksgiving!",
+  "My arm is waving at me from over there and that's fucked up!",
+  "This isn't Build-A-Bear you can't just rip parts off!",
+  "I was gonna use that to hold my beer later!",
+  "You popped my arm off like a Lego piece what the FUCK!",
+  "Is there a lost and found for body parts?!",
+  "Oh cool so we're doing war crimes today!",
+  "My leg just yeeted itself across the arena!",
+  "I need an adult! A MEDICAL adult!",
+  "That wasn't a joint it was a BONE you dipshit!",
+  "I bet you pull wings off flies too you sick freak!",
+  "My stump is making noises I don't like!",
+  "This is NOT what my horoscope predicted today!",
+  "Well that arm had a good run. RIP lefty.",
+  "How dare you! That arm was an INNOCENT BYSTANDER!",
+  "I'm gonna need so much therapy after this!",
+  "Oh wonderful now I'm a pirate! Where's my parrot?!",
+  "I can feel it! I can still feel it twitching over there!",
+  "That was my drinking arm you ANIMAL!",
 ];
 
 // Lines when YOUR head gets severed
@@ -196,6 +216,11 @@ const HEAD_LOST_LINES = [
   "That's... that's not supposed to come off...",
   "Oh so we're doing decapitations today cool cool",
   "I was using that!",
+  "My brain was in there you know!",
+  "Great now I'm a headless horseman without the horse!",
+  "Huh. So that's what my neck looks like inside.",
+  "Three stars, would not recommend getting decapitated!",
+  "Tell my barber he doesn't need to hold the appointment!",
 ];
 
 // Lines spoken by the WINNER after KO
@@ -250,6 +275,31 @@ const KO_WINNER_LINES = [
   "I didn't know they let punching bags in the arena!",
   "Flawless victory! Just kidding I got a scratch!",
   "Sorry not sorry!",
+  "I just turned you into a before picture!",
+  "Your remains are gonna need remains!",
+  "I'd say good fight but... it really wasn't!",
+  "You just got folded like a lawn chair!",
+  "That was me at like fifteen percent effort!",
+  "Your corpse is lowering property values!",
+  "I'm gonna teabag you but respectfully!",
+  "You got clapped so hard your ancestors winced!",
+  "That was less of a fight and more of a charity event!",
+  "Pro tip: try not dying next time!",
+  "I just turned you into a cautionary tale!",
+  "You fought like a screen door in a hurricane!",
+  "I'd give you a participation trophy but you lost that too!",
+  "Your blood is all over my good shoes you dick!",
+  "That kill was so clean I should frame it!",
+  "I'm gonna put your skull on my mantle!",
+  "I hit you so hard your grandkids will feel it!",
+  "Consider yourself unalived with extreme prejudice!",
+  "You just speedran losing!",
+  "That wasn't a fight, that was assisted suicide!",
+  "Your fighting skills are a hate crime against combat!",
+  "I turned your skeleton into abstract art!",
+  "You should've stayed in bed today champ!",
+  "I fight better with my eyes closed! Which I tried!",
+  "Thanks for the workout! Barely broke a sweat!",
 ];
 
 // Lines spoken by the LOSER during/after KO
@@ -304,6 +354,32 @@ const KO_LOSER_LINES = [
   "Note to self never do this again!",
   "This is the worst Tuesday ever!",
   "I think that last hit dislocated my SOUL!",
+  "I just shit myself and I'm not even embarrassed anymore!",
+  "My blood type is now sidewalk!",
+  "I've been turned into a human pretzel!",
+  "Quick question can you die twice?!",
+  "I think my organs just became outgans!",
+  "My last words are... this guy's a dick!",
+  "Can I get a do-over?! Please?! PLEASE?!",
+  "I just got murdered in front of God and everybody!",
+  "Alexa call an ambulance! ALEXA!",
+  "I didn't know my body could bend that direction!",
+  "My ribs are in places ribs shouldn't be!",
+  "That was my last good kidney you jerk!",
+  "I've been killed but I want it on record I think it's unfair!",
+  "Delete the footage! DELETE THE FOOTAGE!",
+  "I'm gonna haunt your ass so hard!",
+  "My whole life flashed before my eyes and it was BORING!",
+  "You just turned me into a crime scene!",
+  "Is there a complaint department in the afterlife?!",
+  "That was so overkill it was underkill and then overkill again!",
+  "My tombstone is gonna say killed by a tryhard!",
+  "Well that was the worst three seconds of my existence!",
+  "I hope you know I'm sending you the medical bill!",
+  "You murdered me and you didn't even look cool doing it!",
+  "This is bullshit! I call hacks!",
+  "I've been absolutely violated in every conceivable way!",
+  "My ghost is already filing a police report!",
 ];
 
 // Lines during the ground beatdown
@@ -318,6 +394,16 @@ const BEATDOWN_LINES_WINNER = [
   "Take that! And that! AND THAT!",
   "Oh you want more?! HERE!",
   "I'm not done with you yet!",
+  "You're a piñata and I want candy!",
+  "This is what peak performance looks like!",
+  "I'm doing this for the audience!",
+  "You're already dead, this is just dessert!",
+  "Hold still I'm trying to rearrange your face!",
+  "I could stop but I don't WANT to!",
+  "Somebody stop me! Actually don't!",
+  "This is therapeutic! For ME not for you!",
+  "Your face was ugly anyway I'm doing you a favor!",
+  "I'm redecorating the floor with your skull!",
 ];
 
 const BEATDOWN_LINES_LOSER = [
@@ -331,6 +417,16 @@ const BEATDOWN_LINES_LOSER = [
   "This is excessive force!",
   "Someone call the ref! THE REF!",
   "I'LL GIVE YOU MY WALLET JUST STOP!",
+  "I YIELD! I YIELD! WHAT DOES YIELD MEAN?!",
+  "My corpse is filing a complaint!",
+  "Even my ghost is getting punched right now!",
+  "This is just rude at this point!",
+  "I forgive you just please STOP!",
+  "My mother would be horrified!",
+  "I can't even feel it anymore which is WORSE!",
+  "You know I'm dead right?! RIGHT?!",
+  "This is gonna be a closed casket for sure!",
+  "I'm starting to think you have anger issues!",
 ];
 
 // Announcer lines
@@ -338,6 +434,8 @@ const KO_ANNOUNCER_LINES = [
   "FINISH HIM!", "DESTROYED!", "OBLITERATED!", "ANNIHILATED!",
   "WASTED!", "GAME OVER MAN!", "ABSOLUTELY BODIED!", "SENT TO THE SHADOW REALM!",
   "BRUTAL!", "SAVAGE!", "FATALITY!", "TOASTY!",
+  "DEVASTATION!", "TOTAL ANNIHILATION!", "SLAUGHTERED!",
+  "BUTCHERED!", "MASSACRED!", "EVISCERATED!",
 ];
 
 // 3 distinct male English voices: Fighter 1, Fighter 2, Commentator
@@ -925,12 +1023,14 @@ function poseRagdoll(f: Fighter) {
     if (f.y + targets[i].y > GY) targets[i].y = GY - f.y;
   }
 
-  const blend = f.ragdolling ? 0 : 0.35;
+  // Use softer blend for smoother transitions, especially during KO/fatality
+  const isKoState = f.state === 'ko' || f.state === 'fatality';
+  const blend = f.ragdolling ? 0 : isKoState ? 0.2 : 0.3;
   for (let i = 0; i < r.pts.length && i < targets.length; i++) {
     const target = vadd(v(f.x, f.y), targets[i]);
-    const b = (i >= 11) ? Math.min(blend * 1.3, 0.5) : blend;
+    const b = (i >= 11) ? Math.min(blend * 1.2, 0.45) : blend;
     r.pts[i].pos = vlerp(r.pts[i].pos, target, b);
-    if (!f.ragdolling) r.pts[i].old = vlerp(r.pts[i].old, target, b * 0.8);
+    if (!f.ragdolling) r.pts[i].old = vlerp(r.pts[i].old, target, b * 0.7);
   }
 }
 
@@ -1657,19 +1757,19 @@ const RagdollArena = () => {
             winner.x += winner.facing * 3 * spd;
             ss(winner, 'walk');
           } else if (ca(winner) || winner.state === 'idle') {
-            const beatAtk = pick(['kick', 'headKick', 'kneeStrike', 'punch', 'headbutt', 'roundhouse', 'stomp']);
-            if (beatAtk === 'stomp') {
-              winner.vy = -8; winner.grounded = false; ss(winner, 'divekick' as FState, 20);
-            } else {
+            // Only attack every ~20 frames to prevent jitter
+            if (winner.groundBeatTimer % 20 < spd) {
+              const beatAtk = pick(['kick', 'headKick', 'kneeStrike', 'punch', 'headbutt', 'roundhouse']);
               doAtk(winner, beatAtk);
+              const hitPt = loser.rag.pts[Math.floor(rng(0, loser.rag.pts.length))].pos;
+              spawnBlood(hitPt.x, hitPt.y, winner.facing, 15, 2.5);
+              spawnGore(hitPt.x, hitPt.y, 2, winner.facing);
+              // Gentle push on loser ragdoll (not every frame!)
+              for (let i = 0; i < loser.rag.pts.length; i++) {
+                loser.rag.pts[i].old = vsub(loser.rag.pts[i].pos, v(winner.facing * rng(1, 4), -rng(1, 3)));
+              }
+              spawnRing(hitPt.x, hitPt.y, 40, '#f80'); playSFX('hit', sfxVolume * 0.5);
             }
-            const hitPt = loser.rag.pts[Math.floor(rng(0, loser.rag.pts.length))].pos;
-            spawnBlood(hitPt.x, hitPt.y, winner.facing, 20, 3);
-            spawnGore(hitPt.x, hitPt.y, 3, winner.facing);
-            for (let i = 0; i < loser.rag.pts.length; i++) {
-              loser.rag.pts[i].old = vsub(loser.rag.pts[i].pos, v(winner.facing * rng(3, 8), -rng(2, 6)));
-            }
-            if (fc % 15 === 0) { spawnRing(hitPt.x, hitPt.y, 40, '#f80'); playSFX('hit', sfxVolume * 0.5); }
             // Beatdown TTS
             if (ttsEnabled && winner.groundBeatTimer > 60 && fc % 90 === 0) {
               const wIdx = g.fighters.indexOf(winner);
@@ -1678,12 +1778,18 @@ const RagdollArena = () => {
               else speakFighterLine(BEATDOWN_LINES_LOSER, lIdx);
             }
           }
+          // Smooth ragdoll stepping for both
           stepRagdoll(winner.rag.pts, winner.rag.sticks, spd, 0.3);
           if (!winner.ragdolling) poseRagdoll(winner);
-          stepRagdoll(loser.rag.pts, loser.rag.sticks, spd, 0.3);
+          stepRagdoll(loser.rag.pts, loser.rag.sticks, spd, 0.4);
           if (!winner.grounded) { winner.vy += GRAV * spd; winner.y += winner.vy * spd; if (winner.y >= GY) { winner.y = GY; winner.vy = 0; winner.grounded = true; } }
           winner.x += winner.vx * spd; winner.vx *= 0.86;
           winner.bob += 0.04 * spd;
+          // Dampen loser velocity to prevent jitter
+          for (const pt of loser.rag.pts) {
+            const vel = vsub(pt.pos, pt.old);
+            pt.old = vlerp(pt.old, pt.pos, 0.15); // heavy damping
+          }
         }
         if (g.koTimer <= 0) {
           g.round++;
@@ -2443,7 +2549,7 @@ const RagdollArena = () => {
       {/* MK-STYLE HUD OVERLAY */}
       <div className="absolute top-0 left-0 right-0 pointer-events-none" style={{ maxWidth: W, margin: '0 auto' }}>
         {/* Top bar background */}
-        <div className="relative" style={{ height: 72, background: 'linear-gradient(180deg, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.4) 80%, transparent 100%)' }}>
+        <div className="relative" style={{ height: 80, paddingTop: 8, background: 'linear-gradient(180deg, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.4) 80%, transparent 100%)' }}>
 
           {/* Timer center */}
           <div className="absolute left-1/2 -translate-x-1/2 top-1 z-10">
