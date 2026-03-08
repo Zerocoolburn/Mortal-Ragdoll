@@ -916,7 +916,7 @@ const RagdollArena = () => {
   const [gameScreen, setGameScreen] = useState<GameScreen>('menu');
   const [sfxVolume, setSfxVolume] = useState(0.15);
   const [ttsEnabled, setTtsEnabled] = useState(true);
-  const [showControls, setShowControls] = useState(false);
+  
 
   const G = useRef({
     fighters: [
