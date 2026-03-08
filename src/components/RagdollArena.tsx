@@ -1693,7 +1693,7 @@ const RagdollArena = () => {
         else { p2.wins++; ss(p1, 'ko'); startRagdoll(p1, v(-5, -8), 999); }
         g.rs = 'ko'; g.koTimer = 180;
         playSFX('ko', sfxVolume);
-        if (ttsEnabled) speakLine(pick(KO_LINES), 0.6, 0.9);
+        if (ttsEnabled) speakLine(pick(KO_ANNOUNCER_LINES), 0.5, 0.8);
       }
 
       // Both fighters are AI controlled
