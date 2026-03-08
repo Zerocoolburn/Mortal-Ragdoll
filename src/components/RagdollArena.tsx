@@ -671,14 +671,23 @@ function createRagdoll(x: number, y: number) {
 }
 
 function stepRagdoll(pts: RPoint[], sticks: RStick[], dt: number, bounce: number) {
+  const MIN_Y = -400; // hard ceiling - nothing flies above this
+  const MIN_X = -50;
+  const MAX_X = WORLD_W + 50;
   for (const p of pts) {
     if (p.pinned) continue;
     const vel = vsub(p.pos, p.old);
+    // Clamp velocity to prevent explosion
+    const spd = vlen(vel);
+    const clampedVel = spd > 40 ? vscl(vnorm(vel), 40) : vel;
     p.old = { ...p.pos };
-    p.pos = vadd(p.pos, vadd(vscl(vel, 0.97), vscl(p.acc, dt * dt)));
+    p.pos = vadd(p.pos, vadd(vscl(clampedVel, 0.97), vscl(p.acc, dt * dt)));
     p.acc = v(0, GRAV * p.mass);
     if (p.pos.y > GY) { p.pos.y = GY; if (vel.y > 0) p.old.y = p.pos.y + vel.y * bounce; p.old.x = p.pos.x - vel.x * 0.7; }
-    p.pos.x = clamp(p.pos.x, 30, WORLD_W - 30);
+    if (p.pos.y < MIN_Y) { p.pos.y = MIN_Y; p.old.y = MIN_Y; }
+    p.pos.x = clamp(p.pos.x, MIN_X, MAX_X);
+    p.old.x = clamp(p.old.x, MIN_X, MAX_X);
+    p.old.y = clamp(p.old.y, MIN_Y, GY + 20);
   }
   for (let iter = 0; iter < 6; iter++) {
     for (const s of sticks) {
@@ -690,7 +699,47 @@ function stepRagdoll(pts: RPoint[], sticks: RStick[], dt: number, bounce: number
       if (!a.pinned) a.pos = vsub(a.pos, offset);
       if (!b.pinned) b.pos = vadd(b.pos, offset);
     }
-    for (const p of pts) { if (p.pos.y > GY) p.pos.y = GY; }
+    for (const p of pts) {
+      if (p.pos.y > GY) p.pos.y = GY;
+      if (p.pos.y < MIN_Y) p.pos.y = MIN_Y;
+      p.pos.x = clamp(p.pos.x, MIN_X, MAX_X);
+    }
+  }
+}
+
+// Sanity check: snap ragdoll back if center of mass drifts too far
+function clampRagdollToArena(f: { rag: { pts: RPoint[] }, x: number, y: number, severed: Set<string> }) {
+  const pts = f.rag.pts;
+  // Calculate center of mass of torso (pts 0-4)
+  let cx = 0, cy = 0, count = 0;
+  for (let i = 0; i < Math.min(5, pts.length); i++) {
+    cx += pts[i].pos.x; cy += pts[i].pos.y; count++;
+  }
+  if (count === 0) return;
+  cx /= count; cy /= count;
+  
+  // If center is way off, snap everything back
+  const targetX = clamp(cx, WALL_L - 20, WALL_R + 20);
+  const targetY = clamp(cy, -300, GY);
+  const dx = targetX - cx;
+  const dy = targetY - cy;
+  if (Math.abs(dx) > 1 || Math.abs(dy) > 1) {
+    for (const p of pts) {
+      p.pos.x += dx; p.pos.y += dy;
+      p.old.x += dx; p.old.y += dy;
+    }
+  }
+  
+  // If heavily severed (3+ limbs), add strong gravity pull to keep grounded
+  if (f.severed.size >= 3) {
+    for (const p of pts) {
+      if (p.pos.y < GY - 30) {
+        p.pos.y += 2; // extra gravity pull
+      }
+      // Heavy damping to prevent floating
+      const vel = vsub(p.pos, p.old);
+      p.old = vlerp(p.old, p.pos, 0.1);
+    }
   }
 }
 
