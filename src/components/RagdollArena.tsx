@@ -198,31 +198,56 @@ function poseRagdoll(f: Fighter) {
     for (let i = 0; i < targets.length; i++) { targets[i].y += Math.sin(roll) * 20; targets[i].x += Math.cos(roll) * 5 * s; }
   }
 
-  if (['slash', 'heavySlash', 'stab', 'overhead', 'jumpAtk', 'uppercut', 'spinSlash', 'dashStab', 'limbSmash'].includes(f.state)) {
+  if (['slash', 'heavySlash', 'stab', 'overhead', 'jumpAtk', 'uppercut', 'spinSlash', 'dashStab', 'limbSmash', 'backflipKick', 'execution'].includes(f.state)) {
     const reach = ap < 0.3 ? -15 : ap < 0.6 ? 28 : 10;
     const lift = ap < 0.3 ? -25 : ap < 0.6 ? 5 : -5;
-    targets[9] = v((28 + reach) * s, -64 + lift + bob2 + co + jmp);
-    targets[10] = v((35 + reach * 1.3) * s, -46 + lift + bob2 + co + jmp);
+    targets[9] = v((28 + reach) * s * S, (-64 + lift) * S + bob2 + co + jmp);
+    targets[10] = v((35 + reach * 1.3) * s * S, (-46 + lift) * S + bob2 + co + jmp);
     if (f.state === 'uppercut') {
       const uLift = ap < 0.25 ? 0 : ap < 0.5 ? -30 : -15;
-      targets[9] = v((20 + reach * 0.6) * s, -74 + uLift + bob2 + jmp);
-      targets[10] = v((25 + reach * 0.8) * s, -56 + uLift + bob2 + jmp);
+      targets[9] = v((20 + reach * 0.6) * s * S, (-74 + uLift) * S + bob2 + jmp);
+      targets[10] = v((25 + reach * 0.8) * s * S, (-56 + uLift) * S + bob2 + jmp);
     }
     if (f.state === 'spinSlash') {
       const spinAng = ap * Math.PI * 2;
       const sx2 = Math.cos(spinAng) * 30, sy2 = Math.sin(spinAng) * 15;
-      targets[9] = v((28 + sx2) * s, -64 + sy2 + bob2 + jmp);
-      targets[10] = v((35 + sx2 * 1.2) * s, -46 + sy2 + bob2 + jmp);
+      targets[9] = v((28 + sx2) * s * S, (-64 + sy2) * S + bob2 + jmp);
+      targets[10] = v((35 + sx2 * 1.2) * s * S, (-46 + sy2) * S + bob2 + jmp);
     }
     if (f.state === 'dashStab') {
-      targets[9] = v((30 + reach * 1.5) * s, -70 + bob2 + jmp);
-      targets[10] = v((40 + reach * 1.8) * s, -62 + bob2 + jmp);
+      targets[9] = v((30 + reach * 1.5) * s * S, -70 * S + bob2 + jmp);
+      targets[10] = v((40 + reach * 1.8) * s * S, -62 * S + bob2 + jmp);
     }
     if (f.state === 'limbSmash' && f.heldLimb) {
       const limbReach = ap < 0.25 ? -20 : ap < 0.55 ? 35 : 5;
       const limbLift = ap < 0.25 ? -35 : ap < 0.55 ? 10 : -10;
-      targets[6] = v((-28 + limbReach) * s, -64 + limbLift + bob2 + co + jmp);
-      targets[7] = v((-35 + limbReach * 1.3) * s, -46 + limbLift + bob2 + co + jmp);
+      targets[6] = v((-28 + limbReach) * s * S, (-64 + limbLift) * S + bob2 + co + jmp);
+      targets[7] = v((-35 + limbReach * 1.3) * s * S, (-46 + limbLift) * S + bob2 + co + jmp);
+    }
+    // Backflip kick: full body rotation in air
+    if (f.state === 'backflipKick') {
+      const flipAng = ap * Math.PI * 2;
+      const flipH = Math.sin(flipAng) * 70;
+      const flipX = -Math.cos(flipAng) * 25 * s;
+      for (let i = 0; i < targets.length; i++) {
+        const cx = 0, cy = -60 * S;
+        const dx2 = targets[i].x - cx, dy2 = targets[i].y - cy;
+        targets[i].x = cx + dx2 * Math.cos(flipAng) - dy2 * Math.sin(flipAng) + flipX;
+        targets[i].y = cy + dx2 * Math.sin(flipAng) + dy2 * Math.cos(flipAng) + flipH - 50;
+      }
+      if (ap > 0.3 && ap < 0.7) {
+        targets[16] = v(s * 55 * S, -90 * S + flipH);
+        targets[15] = v(s * 35 * S, -70 * S + flipH);
+      }
+    }
+    // Execution: repeated ground slams
+    if (f.state === 'execution') {
+      const subAp = (ap * 5) % 1;
+      const slamDown = subAp < 0.4 ? -40 + subAp * 100 : subAp < 0.6 ? 0 : -20;
+      targets[9] = v(30 * s * S, (-50 + slamDown) * S);
+      targets[10] = v(40 * s * S, (-35 + slamDown) * S);
+      const bodyBob = Math.sin(subAp * Math.PI) * 15;
+      for (let i = 0; i < 5; i++) targets[i].y += bodyBob;
     }
   }
 
