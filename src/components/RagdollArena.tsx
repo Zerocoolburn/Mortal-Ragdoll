@@ -2667,7 +2667,7 @@ const RagdollArena = () => {
       });
 
       // ── DRAGON SPECIAL ──
-      g.dragons.forEach(dr => {
+      g.specials.filter(s => s.type === 'dragonStrike').forEach(dr => {
         const alpha = dr.phase === 'flyAway' ? Math.max(0, dr.life / (dr.maxLife * 0.3)) : 1;
         // Trail
         dr.trail.forEach(t => {
