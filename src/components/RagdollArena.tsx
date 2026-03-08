@@ -1597,7 +1597,7 @@ const RagdollArena = () => {
               {hud.p2limb && <span className="text-[9px] text-yellow-400 font-mono">🦴</span>}
             </div>
             <div className="h-5 bg-black/80 border border-blue-900/50 rounded-sm overflow-hidden">
-              <div className="h-full transition-all duration-300 ml-auto" style={{ width: `${hud.p2hp}%`, background: 'linear-gradient(180deg,#33a,#226)' }} />
+              <div className="h-full transition-all duration-300 ml-auto" style={{ width: `${(hud.p2hp / 250) * 100}%`, background: 'linear-gradient(180deg,#33a,#226)' }} />
             </div>
             <div className="h-1.5 bg-black/50 border border-yellow-900/30 mt-0.5 rounded-sm overflow-hidden">
               <div className="h-full transition-all duration-200 ml-auto" style={{ width: `${hud.p2st}%`, background: 'linear-gradient(90deg,#cc0,#a80)' }} />
