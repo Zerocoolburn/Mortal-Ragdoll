@@ -237,12 +237,12 @@ function poseRagdoll(f: Fighter) {
   const rKneeY = (hipY + footY) / 2 - legBend - 4 * S;
 
   const targets: V[] = [
-    v(0, -108 * S + bob2 + co + jmp), v(0, -93 * S + bob2 + co + jmp),
-    v(0, -72 * S + bob2 + co + jmp), v(0, -52 * S + co + jmp), v(0, hipY),
-    v(-15 * s * S, -86 * S + bob2 + co + jmp), v(-28 * s * S, -64 * S + bob2 + co + jmp), v(-35 * s * S, -46 * S + bob2 + co + jmp),
-    v(15 * s * S, -86 * S + bob2 + co + jmp), v(28 * s * S, -64 * S + bob2 + co + jmp), v(35 * s * S, -46 * S + bob2 + co + jmp),
-    v(lHipX, hipY), v(lKneeX, lKneeY + jmp), v(lFootX, footY),
-    v(rHipX, hipY), v(rKneeX, rKneeY + jmp), v(rFootX, footY),
+    v(sway * 0.5, -108 * S + bob2 + co + jmp + breathe * 0.3), v(sway * 0.4, -93 * S + bob2 + co + jmp + breathe * 0.5),
+    v(sway * 0.3, -72 * S + bob2 + co + jmp + breathe), v(sway * 0.2, -52 * S + co + jmp + breathe * 0.5), v(weightShift, hipY),
+    v(-15 * s * S + armIdle * 0.3, -86 * S + bob2 + co + jmp + breathe * 0.4), v(-28 * s * S + armIdle * 0.6, -64 * S + bob2 + co + jmp + armIdle * 0.5), v(-35 * s * S + armIdle, -46 * S + bob2 + co + jmp + armIdle * 0.8),
+    v(15 * s * S - armIdle * 0.2, -86 * S + bob2 + co + jmp + breathe * 0.4), v(28 * s * S - armIdle * 0.4, -64 * S + bob2 + co + jmp - armIdle * 0.3), v(35 * s * S - armIdle * 0.5, -46 * S + bob2 + co + jmp - armIdle * 0.5),
+    v(lHipX + weightShift, hipY), v(lKneeX + weightShift * 0.5, lKneeY + jmp), v(lFootX + weightShift * 0.3, footY),
+    v(rHipX - weightShift, hipY), v(rKneeX - weightShift * 0.5, rKneeY + jmp), v(rFootX - weightShift * 0.3, footY),
   ];
 
   if (f.hitImpact > 0) {
