@@ -721,7 +721,7 @@ const RagdollArena = () => {
       mem.intentTimer--;
       if (mem.intentTimer <= 0) {
         mem.intent = pickIntent(bot, pl, pers, mem);
-        mem.intentTimer = 12 + Math.floor(rng(0, 30));
+        mem.intentTimer = 5 + Math.floor(rng(0, 12));
       }
 
       // Reactive layer
