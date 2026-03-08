@@ -534,8 +534,8 @@ const RagdollArena = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const G = useRef({
     fighters: [
-      mkFighter(350, 'SIEGFRIED', '#8B0000', '#e8b878', '#2a1a0a', 'greatsword', true),
-      mkFighter(930, 'NIGHTMARE', '#1a1a4a', '#c4956a', '#111', 'axe', true),
+      mkFighter(2800, 'SIEGFRIED', '#8B0000', '#e8b878', '#2a1a0a', 'greatsword', true),
+      mkFighter(3200, 'NIGHTMARE', '#1a1a4a', '#c4956a', '#111', 'axe', true),
     ],
     blood: [] as Blood[], sparks: [] as Spark[], pools: [] as Pool[],
     limbs: [] as SevLimb[], gore: [] as GoreChunk[], afterimages: [] as Afterimage[],
@@ -546,8 +546,38 @@ const RagdollArena = () => {
     round: 1, timer: 99 * 60,
     rs: 'intro' as 'intro' | 'fight' | 'ko',
     introTimer: 100, koTimer: 0, keys: new Set<string>(), bgTime: 0,
-    clouds: Array.from({ length: 8 }, () => ({ x: rng(0, W), y: rng(20, 200), w: rng(60, 200), speed: rng(0.1, 0.5), opacity: rng(0.02, 0.08) })),
-    torches: [{ x: 505, y: GY - 55 }, { x: 775, y: GY - 55 }, { x: 90, y: GY - 45 }, { x: 1190, y: GY - 45 }],
+    camX: 2360, // camera center X in world coords
+    clouds: Array.from({ length: 12 }, () => ({ x: rng(0, WORLD_W), y: rng(20, 200), w: rng(60, 200), speed: rng(0.1, 0.5), opacity: rng(0.02, 0.08) })),
+    torches: [] as { x: number; y: number }[],
+    // Random scenery distributed across the world
+    scenery: (() => {
+      const items: { type: string; x: number; scale: number; flip: boolean }[] = [];
+      // Dead trees
+      for (let i = 0; i < 25; i++) items.push({ type: 'deadTree', x: rng(100, WORLD_W - 100), scale: 0.7 + rng(0, 0.6), flip: Math.random() > 0.5 });
+      // Gravestones
+      for (let i = 0; i < 30; i++) items.push({ type: 'grave', x: rng(100, WORLD_W - 100), scale: 0.6 + rng(0, 0.5), flip: Math.random() > 0.5 });
+      // Ruined pillars
+      for (let i = 0; i < 12; i++) items.push({ type: 'pillar', x: rng(200, WORLD_W - 200), scale: 0.8 + rng(0, 0.4), flip: Math.random() > 0.5 });
+      // Standing stones
+      for (let i = 0; i < 15; i++) items.push({ type: 'stone', x: rng(100, WORLD_W - 100), scale: 0.5 + rng(0, 0.7), flip: false });
+      // Fences
+      for (let i = 0; i < 18; i++) items.push({ type: 'fence', x: rng(100, WORLD_W - 100), scale: 0.8 + rng(0, 0.3), flip: false });
+      // Skulls on stakes
+      for (let i = 0; i < 10; i++) items.push({ type: 'skull', x: rng(200, WORLD_W - 200), scale: 0.7 + rng(0, 0.4), flip: Math.random() > 0.5 });
+      // Castles (a few spread out)
+      for (let i = 0; i < 4; i++) items.push({ type: 'castle', x: 800 + i * 1400, scale: 0.8 + rng(0, 0.4), flip: false });
+      items.sort((a, b) => a.x - b.x);
+      return items;
+    })(),
+    // Far mountains generated for the whole world
+    farMountains: Array.from({ length: 120 }, (_, i) => ({
+      x: i * (WORLD_W / 40),
+      h: 80 + Math.sin(i * 0.25) * 50 + Math.sin(i * 0.08) * 30 + rng(0, 20),
+    })),
+    nearMountains: Array.from({ length: 80 }, (_, i) => ({
+      x: i * (WORLD_W / 30),
+      h: 50 + Math.sin(i * 0.35 + 1) * 35 + rng(0, 15),
+    })),
   });
   const [hud, setHud] = useState({
     p1hp: 100, p2hp: 100, timer: 99, round: 1,
