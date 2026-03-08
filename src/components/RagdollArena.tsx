@@ -2115,6 +2115,109 @@ const RagdollArena = () => {
         if (['slash', 'heavySlash', 'stab', 'overhead', 'jumpAtk', 'uppercut', 'spinSlash', 'dashStab', 'backflipKick', 'execution', 'wallFlip', 'divekick', 'kick', 'headKick', 'roundhouse', 'fatality', 'headbutt', 'punch', 'swordThrow'].includes(f.state) && fc % 3 === 0) spawnAfterimage(f);
       });
 
+      // ── FIGHTER-TO-FIGHTER COLLISION ──
+      {
+        const MIN_DIST = 45;
+        const dx = p2.x - p1.x;
+        const dist = Math.abs(dx);
+        if (dist < MIN_DIST && dist > 0.1) {
+          const push = (MIN_DIST - dist) * 0.5;
+          const dir = dx > 0 ? 1 : -1;
+          if (p1.state !== 'ko' && p1.state !== 'ragdoll') { p1.x -= dir * push; p1.vx -= dir * 0.5; }
+          if (p2.state !== 'ko' && p2.state !== 'ragdoll') { p2.x += dir * push; p2.vx += dir * 0.5; }
+          p1.x = clamp(p1.x, WALL_L, WALL_R);
+          p2.x = clamp(p2.x, WALL_L, WALL_R);
+        }
+      }
+
+      // ── SPECIAL ENTITY UPDATES ──
+      // Skull Fire
+      g.skullFires = g.skullFires.filter(sk => {
+        sk.life -= spd;
+        const progress = 1 - sk.life / sk.maxLife;
+        if (progress < 0.2) { sk.phase = 'rise'; sk.y -= 1.5 * spd; }
+        else if (progress < 0.85) {
+          sk.phase = 'breathe';
+          // Spawn fire particles
+          if (fc % 2 === 0) {
+            for (let i = 0; i < 4; i++) {
+              sk.fireParticles.push({
+                x: sk.x + sk.facing * 30, y: sk.y + rng(-10, 10),
+                vx: sk.facing * (8 + rng(0, 12)), vy: rng(-3, 3),
+                life: 20 + rng(0, 15), sz: 3 + rng(0, 6),
+              });
+            }
+          }
+          // Hit opponent
+          const target = g.fighters[1 - sk.owner];
+          if (target.state !== 'ko' && target.state !== 'dodge') {
+            const fireReach = sk.facing > 0 ? (target.x > sk.x && target.x < sk.x + 250) : (target.x < sk.x && target.x > sk.x - 250);
+            if (fireReach && Math.abs(target.y - 60 - sk.y) < 80 && fc % 8 === 0) {
+              target.hp = Math.max(0, target.hp - 4);
+              target.vx += sk.facing * 2;
+              target.hitDir = v(sk.facing, -0.2); target.hitImpact = 5;
+              spawnBlood(target.x, target.y - 50, sk.facing, 8, 2);
+              if (target.hp <= 0) {
+                const attacker = g.fighters[sk.owner];
+                ss(target, 'ko'); startRagdoll(target, v(sk.facing * 20, -10), 999);
+                attacker.wins++; g.rs = 'ko'; g.koTimer = 340; g.slowMo = 0.05; g.slowTimer = 55; g.flash = 15; g.flashColor = '#f60';
+                spawnBlood(target.x, target.y - 50, sk.facing, 100, 6); spawnGore(target.x, target.y - 50, 15, sk.facing);
+                playSFX('ko', sfxVolume);
+                if (ttsEnabled) { speakAnnouncer(pick(KO_ANNOUNCER_LINES)); setTimeout(() => speakFighterLine(KO_WINNER_LINES, sk.owner), 2000); }
+              }
+            }
+          }
+        } else { sk.phase = 'fade'; }
+        // Update fire particles
+        sk.fireParticles = sk.fireParticles.filter(fp => {
+          fp.x += fp.vx * spd; fp.y += fp.vy * spd; fp.vy += 0.1 * spd; fp.life -= spd;
+          return fp.life > 0;
+        });
+        return sk.life > 0;
+      });
+
+      // Dragon
+      g.dragons = g.dragons.filter(dr => {
+        dr.life -= spd;
+        const progress = 1 - dr.life / dr.maxLife;
+        dr.trail.push({ x: dr.x, y: dr.y, alpha: 0.6 }); if (dr.trail.length > 20) dr.trail.shift();
+        dr.trail.forEach(t => t.alpha -= 0.02);
+        if (progress < 0.35) {
+          dr.phase = 'swoop';
+          dr.x += dr.facing * 12 * spd;
+          dr.y = -100 + Math.sin(progress / 0.35 * Math.PI) * 300;
+          dr.swoopY = dr.y;
+        } else if (progress < 0.7) {
+          dr.phase = 'strike';
+          const strikeP = (progress - 0.35) / 0.35;
+          dr.x = dr.targetX + dr.facing * (1 - strikeP) * 150;
+          dr.y = GY - 120 + Math.sin(strikeP * Math.PI) * 60;
+          // Hit opponent
+          const target = g.fighters[1 - dr.owner];
+          if (target.state !== 'ko' && target.state !== 'dodge' && Math.abs(dr.x - target.x) < 80 && fc % 6 === 0) {
+            target.hp = Math.max(0, target.hp - 6);
+            target.vx += dr.facing * 5; target.vy = -6; target.grounded = false;
+            target.hitDir = v(dr.facing, -0.5); target.hitImpact = 8;
+            spawnBlood(target.x, target.y - 50, dr.facing, 15, 3);
+            spawnRing(target.x, target.y - 50, 60, '#0af');
+            if (target.hp <= 0) {
+              const attacker = g.fighters[dr.owner];
+              ss(target, 'ko'); startRagdoll(target, v(dr.facing * 25, -15), 999);
+              attacker.wins++; g.rs = 'ko'; g.koTimer = 340; g.slowMo = 0.05; g.slowTimer = 55; g.flash = 15; g.flashColor = '#08f';
+              spawnBlood(target.x, target.y - 50, dr.facing, 100, 6); spawnGore(target.x, target.y - 50, 15, dr.facing);
+              playSFX('ko', sfxVolume);
+              if (ttsEnabled) { speakAnnouncer(pick(KO_ANNOUNCER_LINES)); setTimeout(() => speakFighterLine(KO_WINNER_LINES, dr.owner), 2000); }
+            }
+          }
+          if (fc % 3 === 0) spawnSparks(dr.x + rng(-20, 20), dr.y + rng(-10, 10), 3);
+        } else {
+          dr.phase = 'flyAway';
+          dr.x += dr.facing * 15 * spd;
+          dr.y -= 5 * spd;
+        }
+        return dr.life > 0;
+      });
+
       // Bullets
       g.bullets = g.bullets.filter(b => {
         b.x += b.vx * spd; b.y += b.vy * spd; b.vy += 0.05 * spd;
