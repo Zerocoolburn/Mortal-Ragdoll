@@ -340,60 +340,88 @@ const KO_ANNOUNCER_LINES = [
   "BRUTAL!", "SAVAGE!", "FATALITY!", "TOASTY!",
 ];
 
-// Fighter voice configs
-interface VoiceConfig { pitch: number; rate: number; voiceIdx: number }
-const FIGHTER_VOICES: VoiceConfig[] = [
-  { pitch: 0.7, rate: 0.95, voiceIdx: 0 },   // Fighter 1: deep, slow
-  { pitch: 1.5, rate: 1.15, voiceIdx: 2 },   // Fighter 2: high, fast
+// 3 distinct male English voices: Fighter 1, Fighter 2, Commentator
+// We pick voices by name preference for clarity and distinction
+const MALE_VOICE_PREFS = [
+  // Fighter 1 - deeper, authoritative
+  ['Google UK English Male', 'Microsoft George', 'Daniel', 'Google US English', 'Alex', 'Fred', 'Male'],
+  // Fighter 2 - slightly different character
+  ['Microsoft David', 'Google US English', 'Aaron', 'Tom', 'Rishi', 'Male'],
+  // Commentator/Announcer - clear, energetic
+  ['Microsoft Mark', 'Google UK English Male', 'Samantha', 'Karen', 'Google US English', 'Male'],
+];
+
+// Voice settings per role - all kept natural and clear
+const VOICE_SETTINGS = [
+  { pitch: 0.85, rate: 0.92 },   // Fighter 1: slightly deep, steady pace
+  { pitch: 1.05, rate: 0.95 },   // Fighter 2: natural, slightly different
+  { pitch: 0.95, rate: 1.0 },    // Commentator: clear, normal speed
 ];
 
 let lastTTSTime = 0;
-let lastTTSByFighter = [0, 0];
+let lastTTSByFighter = [0, 0, 0];
+let cachedVoices: SpeechSynthesisVoice[] = [];
+let voicesLoaded = false;
 
-const getVoices = (): SpeechSynthesisVoice[] => {
-  const voices = speechSynthesis.getVoices();
-  return voices.length > 0 ? voices : [];
+// Preload voices
+if (typeof window !== 'undefined' && window.speechSynthesis) {
+  const loadVoices = () => {
+    cachedVoices = speechSynthesis.getVoices();
+    if (cachedVoices.length > 0) voicesLoaded = true;
+  };
+  loadVoices();
+  speechSynthesis.onvoiceschanged = loadVoices;
+}
+
+const findBestVoice = (roleIdx: number): SpeechSynthesisVoice | null => {
+  if (!voicesLoaded) cachedVoices = speechSynthesis.getVoices();
+  if (cachedVoices.length === 0) return null;
+  
+  const prefs = MALE_VOICE_PREFS[roleIdx] || MALE_VOICE_PREFS[0];
+  const enVoices = cachedVoices.filter(v2 => v2.lang.startsWith('en'));
+  const pool = enVoices.length > 0 ? enVoices : cachedVoices;
+  
+  // Try to match by name preference
+  for (const pref of prefs) {
+    const match = pool.find(v2 => v2.name.toLowerCase().includes(pref.toLowerCase()));
+    if (match) return match;
+  }
+  
+  // Fallback: pick different voices by index for each role
+  const idx = roleIdx % pool.length;
+  return pool[idx];
 };
 
-const speakLine = (text: string, pitch = 1, rate = 1, fighterIdx = -1) => {
+const speakLine = (text: string, pitch = 1, rate = 1, roleIdx = 2) => {
   try {
     const now = Date.now();
-    if (now - lastTTSTime < 1800) return;
-    if (fighterIdx >= 0 && now - lastTTSByFighter[fighterIdx] < 2500) return;
+    if (now - lastTTSTime < 1500) return;
+    if (now - lastTTSByFighter[roleIdx] < 2200) return;
     lastTTSTime = now;
-    if (fighterIdx >= 0) lastTTSByFighter[fighterIdx] = now;
+    lastTTSByFighter[roleIdx] = now;
+    
+    speechSynthesis.cancel();
     
     const u = new SpeechSynthesisUtterance(text);
-    const voices = getVoices();
+    const settings = VOICE_SETTINGS[roleIdx] || VOICE_SETTINGS[2];
+    u.pitch = settings.pitch;
+    u.rate = settings.rate;
+    u.volume = 0.85;
     
-    if (fighterIdx >= 0 && fighterIdx < FIGHTER_VOICES.length) {
-      const vc = FIGHTER_VOICES[fighterIdx];
-      u.pitch = vc.pitch;
-      u.rate = vc.rate;
-      // Try to pick different voices for each fighter
-      if (voices.length > 0) {
-        const enVoices = voices.filter(v2 => v2.lang.startsWith('en'));
-        const pool = enVoices.length > 0 ? enVoices : voices;
-        u.voice = pool[vc.voiceIdx % pool.length];
-      }
-    } else {
-      u.pitch = pitch;
-      u.rate = rate;
-      // Announcer voice: deep and boomy
-      if (voices.length > 0) {
-        const enVoices = voices.filter(v2 => v2.lang.startsWith('en'));
-        const pool = enVoices.length > 0 ? enVoices : voices;
-        u.voice = pool[Math.min(1, pool.length - 1)];
-      }
-    }
-    u.volume = 0.8;
-    speechSynthesis.cancel();
+    const voice = findBestVoice(roleIdx);
+    if (voice) u.voice = voice;
+    
     speechSynthesis.speak(u);
   } catch (e) { /* TTS not available */ }
 };
 
 const speakFighterLine = (lines: string[], fighterIdx: number) => {
-  speakLine(pick(lines), 1, 1, fighterIdx);
+  // fighterIdx 0 or 1 maps to role 0 or 1
+  speakLine(pick(lines), 1, 1, Math.min(fighterIdx, 1));
+};
+
+const speakAnnouncer = (text: string) => {
+  speakLine(text, 1, 1, 2);
 };
 
 // ═══════════════════════════════════════════════════════
@@ -1693,7 +1721,7 @@ const RagdollArena = () => {
         else { p2.wins++; ss(p1, 'ko'); startRagdoll(p1, v(-5, -8), 999); }
         g.rs = 'ko'; g.koTimer = 180;
         playSFX('ko', sfxVolume);
-        if (ttsEnabled) speakLine(pick(KO_ANNOUNCER_LINES), 0.5, 0.8);
+        if (ttsEnabled) speakAnnouncer(pick(KO_ANNOUNCER_LINES));
       }
 
       // Both fighters are AI controlled
@@ -1788,7 +1816,7 @@ const RagdollArena = () => {
               if (target.hp <= 0) {
                 const shooter = g.fighters[b.owner]; ss(target, 'ko'); startRagdoll(target, vscl(hitDir, 18), 999); shooter.wins++; g.rs = 'ko'; g.koTimer = 340; g.slowMo = 0.05; g.slowTimer = 55; g.flash = 15; g.flashColor = '#fff'; spawnBlood(b.x, b.y, hitDir.x > 0 ? 1 : -1, 80, 6); spawnGore(b.x, b.y, 10, hitDir.x > 0 ? 1 : -1); spawnRing(b.x, b.y, 100, '#f00');
                 playSFX('ko', sfxVolume);
-                if (ttsEnabled) { speakLine(pick(KO_ANNOUNCER_LINES), 0.5, 0.8); setTimeout(() => speakFighterLine(KO_LOSER_LINES, 1 - b.owner), 2000); setTimeout(() => speakFighterLine(KO_WINNER_LINES, b.owner), 4000); }
+                if (ttsEnabled) { speakAnnouncer(pick(KO_ANNOUNCER_LINES)); setTimeout(() => speakFighterLine(KO_LOSER_LINES, 1 - b.owner), 2000); setTimeout(() => speakFighterLine(KO_WINNER_LINES, b.owner), 4000); }
               }
               return false;
             }
@@ -1933,7 +1961,7 @@ const RagdollArena = () => {
               const lp = ['leftArm', 'rightArm', 'leftLeg', 'rightLeg'].filter(p3 => !o.severed.has(p3));
               if (lp.length > 0) sever(o, pick(lp), f.facing);
               playSFX('ko', sfxVolume);
-              if (ttsEnabled) { speakLine(pick(KO_ANNOUNCER_LINES), 0.5, 0.8); setTimeout(() => speakFighterLine(KO_LOSER_LINES, 1 - idx), 2000); setTimeout(() => speakFighterLine(KO_WINNER_LINES, idx), 4000); }
+              if (ttsEnabled) { speakAnnouncer(pick(KO_ANNOUNCER_LINES)); setTimeout(() => speakFighterLine(KO_LOSER_LINES, 1 - idx), 2000); setTimeout(() => speakFighterLine(KO_WINNER_LINES, idx), 4000); }
             }
           }
         }
@@ -1973,7 +2001,7 @@ const RagdollArena = () => {
                 g.fighters[ts.owner].wins++; g.rs = 'ko'; g.koTimer = 340;
                 g.slowMo = 0.05; g.slowTimer = 40; g.flash = 12; g.flashColor = '#fff';
                 playSFX('ko', sfxVolume);
-                if (ttsEnabled) { speakLine(pick(KO_ANNOUNCER_LINES), 0.5, 0.8); setTimeout(() => speakFighterLine(KO_LOSER_LINES, 1 - ts.owner), 2000); }
+                if (ttsEnabled) { speakAnnouncer(pick(KO_ANNOUNCER_LINES)); setTimeout(() => speakFighterLine(KO_LOSER_LINES, 1 - ts.owner), 2000); }
               }
               ts.stuck = true; ts.vx = 0; ts.vy = 0; ts.life = 60;
               return true;
