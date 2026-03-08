@@ -62,7 +62,7 @@ export const CHARACTERS: CharacterDef[] = [
   {
     id: 'nightmare', name: 'NIGHTMARE', title: 'Dark Knight',
     color: '#1a1a4a', color2: '#6a0a6a',
-    skin: '#c4956a', hair: '#111',
+    skin: '#c4956a', hair: '#111111',
     weaponKey: 'axe', specialType: 'dragonStrike',
     specialName: 'DRAGON FURY', specialColor: '#0088ff', specialGlow: '#00aaff',
     aiStyles: ['assassin', 'wild', 'tactician'],
