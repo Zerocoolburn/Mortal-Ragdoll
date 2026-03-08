@@ -2626,10 +2626,11 @@ const RagdollArena = () => {
       // ── SKULL FIRE SPECIAL ──
       g.specials.filter(s => s.type === 'skullFire').forEach(sk => {
         const progress = 1 - sk.life / sk.maxLife;
-        const alpha = sk.phase === 'fade' ? (sk.life / (sk.maxLife * 0.15)) : 1;
+        const phase = progress < 0.15 ? 'rise' : progress < 0.85 ? 'breathe' : 'fade';
+        const alpha = phase === 'fade' ? (sk.life / (sk.maxLife * 0.15)) : 1;
         ctx.save(); ctx.globalAlpha = alpha;
         // Giant skull
-        const skullSize = sk.phase === 'rise' ? 30 + progress * 40 : 70;
+        const skullSize = phase === 'rise' ? 30 + progress * 40 : 70;
         const bobY = Math.sin(progress * 8) * 5;
         ctx.translate(sk.x, sk.y + bobY);
         // Skull glow
@@ -2652,14 +2653,14 @@ const RagdollArena = () => {
         ctx.fillStyle = '#ddd';
         for (let t = -3; t <= 3; t++) { ctx.fillRect(t * skullSize * 0.06 - 2, skullSize * 0.25, 4, 8); }
         // Jaw opening for fire
-        if (sk.phase === 'breathe') {
+        if (phase === 'breathe') {
           const jawOpen = 6 + Math.sin(progress * 12) * 3;
           ctx.fillStyle = '#ff3300'; ctx.beginPath(); ctx.ellipse(0, skullSize * 0.3 + jawOpen, skullSize * 0.2, jawOpen, 0, 0, Math.PI * 2); ctx.fill();
         }
         ctx.restore();
-        // Fire stream
-        if (sk.phase === 'breathe') {
-          sk.fireParticles.forEach(fp => {
+        // Fire stream particles
+        if (phase === 'breathe') {
+          sk.particles.forEach(fp => {
             const fpAlpha = fp.life / 35;
             const grad = ctx.createRadialGradient(fp.x, fp.y, 0, fp.x, fp.y, fp.sz * 2);
             grad.addColorStop(0, `rgba(255,220,50,${fpAlpha})`); grad.addColorStop(0.4, `rgba(255,100,0,${fpAlpha * 0.7})`); grad.addColorStop(1, `rgba(200,0,0,0)`);
