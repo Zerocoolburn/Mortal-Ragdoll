@@ -489,7 +489,7 @@ function runAI(b: Bot, s: GameState) {
       }
       if (!b.atk) strafe(b.circleDir, wRange * 0.6);
       else { if (d > wRange * 0.5) { b.moveX = Math.cos(b.facing) * 0.65; b.moveY = Math.sin(b.facing) * 0.65; } else { b.moveX *= 0.25; b.moveY *= 0.25; } }
-      if (b.rage > 80 && b.stamina > 35 && d < wRange && rng() < 0.06) { startAtk(b, 'spin'); b.rage = 0; }
+      if (b.rage > 90 && b.stamina > 45 && d < wRange * 0.9 && rng() < 0.02) { startAtk(b, 'spin'); b.rage = 0; }
       if (d > engRange + 50) b.aiState = 'approach';
       break;
     }
