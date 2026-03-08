@@ -1367,7 +1367,7 @@ const RagdollArena = () => {
               if (i === 0) target.headHits += 2; // Bullet to the head counts extra
               spawnBlood(b.x, b.y, hitDir.x > 0 ? 1 : -1, 25, 3); spawnSparks(b.x, b.y, 8); spawnRing(b.x, b.y, 30, '#fa0');
               if (b.dmg >= 10) ss(target, 'hit', 12);
-              if (target.hp <= 0) { const shooter = g.fighters[b.owner]; ss(target, 'ko'); startRagdoll(target, vscl(hitDir, 18), 999); shooter.wins++; g.rs = 'ko'; g.koTimer = 280; g.slowMo = 0.05; g.slowTimer = 55; g.flash = 15; g.flashColor = '#fff'; spawnBlood(b.x, b.y, hitDir.x > 0 ? 1 : -1, 80, 6); spawnGore(b.x, b.y, 10, hitDir.x > 0 ? 1 : -1); spawnRing(b.x, b.y, 100, '#f00'); }
+              if (target.hp <= 0) { const shooter = g.fighters[b.owner]; ss(target, 'ko'); startRagdoll(target, vscl(hitDir, 18), 999); shooter.wins++; g.rs = 'ko'; g.koTimer = 340; g.slowMo = 0.05; g.slowTimer = 55; g.flash = 15; g.flashColor = '#fff'; spawnBlood(b.x, b.y, hitDir.x > 0 ? 1 : -1, 80, 6); spawnGore(b.x, b.y, 10, hitDir.x > 0 ? 1 : -1); spawnRing(b.x, b.y, 100, '#f00'); }
               return false;
             }
           }
