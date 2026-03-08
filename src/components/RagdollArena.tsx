@@ -1148,8 +1148,23 @@ const RagdollArena = () => {
             f.heldLimb = null;
             g.flash = 6; g.flashColor = '#ff4';
           }
+          // Execution: massive damage, brutal VFX
+          if (f.state === 'execution') {
+            dmg *= 2.5;
+            spawnBlood(hitPt.x, hitPt.y, f.facing, 80, 6);
+            spawnGore(hitPt.x, hitPt.y, 15, f.facing);
+            spawnRing(hitPt.x, hitPt.y, 120, '#f00');
+            spawnLightning(hitPt.x, hitPt.y - 50, hitPt.x + rng(-60, 60), hitPt.y + 30);
+            g.flash = 10; g.flashColor = '#a00';
+            g.slowMo = 0.15; g.slowTimer = 25;
+          }
+          // Backflip kick: launcher effect
+          if (f.state === 'backflipKick') {
+            dmg *= 1.3;
+            spawnRing(hitPt.x, hitPt.y, 80, '#ff8');
+            g.slowMo = 0.3; g.slowTimer = 12;
+          }
 
-          const hitDir2 = v(f.facing, -0.3);
           if (aiData[idx]) { aiData[idx].mem.lastAtkLanded = true; aiData[idx].mem.excitement += 2; }
           if (aiData[1 - idx]) { aiData[1 - idx].mem.timesHit++; aiData[1 - idx].mem.lastAtkLanded = false; }
 
