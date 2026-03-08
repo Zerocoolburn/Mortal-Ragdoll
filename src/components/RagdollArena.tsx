@@ -159,6 +159,7 @@ function mkFighter(x: number, name: string, color: string, skin: string, hair: s
 function poseRagdoll(f: Fighter) {
   const r = f.rag;
   const s = f.facing;
+  const S = 1.35;
   const bob2 = f.state === 'idle' ? Math.sin(f.bob) * 2 : 0;
   const co = f.state === 'crouch' ? 15 : 0;
   const wk = f.state === 'walk' || f.state === 'walkBack' ? f.walkCycle : 0;
