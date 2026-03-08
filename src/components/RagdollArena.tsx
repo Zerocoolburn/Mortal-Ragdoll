@@ -213,7 +213,12 @@ function poseRagdoll(f: Fighter) {
   const r = f.rag;
   const s = f.facing;
   const S = 1.35;
-  const bob2 = f.state === 'idle' ? Math.sin(f.bob) * 2 : 0;
+  const isIdle = f.state === 'idle';
+  const bob2 = isIdle ? Math.sin(f.bob) * 2 : 0;
+  const breathe = isIdle ? Math.sin(f.bob * 1.2) * 1.5 : 0;
+  const sway = isIdle ? Math.sin(f.bob * 0.7) * 3 : 0;
+  const weightShift = isIdle ? Math.sin(f.bob * 0.5) * 2 : 0;
+  const armIdle = isIdle ? Math.sin(f.bob * 0.9) * 4 : 0;
   const co = f.state === 'crouch' ? 15 : 0;
   const wk = f.state === 'walk' || f.state === 'walkBack' ? f.walkCycle : 0;
   const ap = f.dur > 0 ? f.frame / f.dur : 0;
