@@ -1208,26 +1208,28 @@ function poseRagdoll(f: Fighter) {
 // ═══════════════════════════════════════════════════════
 // COMPONENT
 // ═══════════════════════════════════════════════════════
-type GameScreen = 'menu' | 'settings' | 'fight';
+type GameScreen = 'menu' | 'settings' | 'fight' | 'charSelect';
 
 const RagdollArena = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [gameScreen, setGameScreen] = useState<GameScreen>('menu');
   const [sfxVolume, setSfxVolume] = useState(0.15);
   const [ttsEnabled, setTtsEnabled] = useState(true);
-  
+  const [selectedP1, setSelectedP1] = useState<string>('siegfried');
+  const [selectedP2, setSelectedP2] = useState<string>('nightmare');
+  const [selectingFor, setSelectingFor] = useState<1 | 2>(1);
 
   const G = useRef({
     fighters: [
-      mkFighter(2800, 'SIEGFRIED', '#8B0000', '#e8b878', '#2a1a0a', 'greatsword', true),
-      mkFighter(3200, 'NIGHTMARE', '#1a1a4a', '#c4956a', '#111', 'axe', true),
+      mkFighterFromChar(2800, CHARACTERS[0], true),
+      mkFighterFromChar(3200, CHARACTERS[1], true),
     ],
     blood: [] as Blood[], sparks: [] as Spark[], pools: [] as Pool[],
     limbs: [] as SevLimb[], gore: [] as GoreChunk[], afterimages: [] as Afterimage[],
     rings: [] as ImpactRing[], lightnings: [] as Lightning[],
     bullets: [] as Bullet[], muzzleFlashes: [] as MuzzleFlash[], wallSparks: [] as WallSpark[],
     fatalityTexts: [] as FatalityText[], thrownSwords: [] as ThrownSword[],
-    skullFires: [] as SkullFireEntity[], dragons: [] as DragonEntity[],
+    specials: [] as SpecialEntity[],
     slowMo: 1, slowTimer: 0, flash: 0, flashColor: '#fff',
     round: 1, timer: 99 * 60,
     rs: 'intro' as 'intro' | 'fight' | 'ko',
