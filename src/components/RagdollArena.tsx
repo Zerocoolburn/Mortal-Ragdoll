@@ -996,8 +996,8 @@ const RagdollArena = () => {
       }
 
       // Both fighters use AI (p1 only when no keyboard input)
-      if (!p1HasInput) ai(p1, p2);
-      ai(p2, p1);
+      if (!p1HasInput) ai(p1, p2, 0);
+      ai(p2, p1, 1);
 
       // Update fighters
       g.fighters.forEach((f, idx) => {
