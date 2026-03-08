@@ -671,14 +671,23 @@ function createRagdoll(x: number, y: number) {
 }
 
 function stepRagdoll(pts: RPoint[], sticks: RStick[], dt: number, bounce: number) {
+  const MIN_Y = -400; // hard ceiling - nothing flies above this
+  const MIN_X = -50;
+  const MAX_X = WORLD_W + 50;
   for (const p of pts) {
     if (p.pinned) continue;
     const vel = vsub(p.pos, p.old);
+    // Clamp velocity to prevent explosion
+    const spd = vlen(vel);
+    const clampedVel = spd > 40 ? vscl(vnorm(vel), 40) : vel;
     p.old = { ...p.pos };
-    p.pos = vadd(p.pos, vadd(vscl(vel, 0.97), vscl(p.acc, dt * dt)));
+    p.pos = vadd(p.pos, vadd(vscl(clampedVel, 0.97), vscl(p.acc, dt * dt)));
     p.acc = v(0, GRAV * p.mass);
     if (p.pos.y > GY) { p.pos.y = GY; if (vel.y > 0) p.old.y = p.pos.y + vel.y * bounce; p.old.x = p.pos.x - vel.x * 0.7; }
-    p.pos.x = clamp(p.pos.x, 30, WORLD_W - 30);
+    if (p.pos.y < MIN_Y) { p.pos.y = MIN_Y; p.old.y = MIN_Y; }
+    p.pos.x = clamp(p.pos.x, MIN_X, MAX_X);
+    p.old.x = clamp(p.old.x, MIN_X, MAX_X);
+    p.old.y = clamp(p.old.y, MIN_Y, GY + 20);
   }
   for (let iter = 0; iter < 6; iter++) {
     for (const s of sticks) {
@@ -690,7 +699,47 @@ function stepRagdoll(pts: RPoint[], sticks: RStick[], dt: number, bounce: number
       if (!a.pinned) a.pos = vsub(a.pos, offset);
       if (!b.pinned) b.pos = vadd(b.pos, offset);
     }
-    for (const p of pts) { if (p.pos.y > GY) p.pos.y = GY; }
+    for (const p of pts) {
+      if (p.pos.y > GY) p.pos.y = GY;
+      if (p.pos.y < MIN_Y) p.pos.y = MIN_Y;
+      p.pos.x = clamp(p.pos.x, MIN_X, MAX_X);
+    }
+  }
+}
+
+// Sanity check: snap ragdoll back if center of mass drifts too far
+function clampRagdollToArena(f: { rag: { pts: RPoint[] }, x: number, y: number, severed: Set<string> }) {
+  const pts = f.rag.pts;
+  // Calculate center of mass of torso (pts 0-4)
+  let cx = 0, cy = 0, count = 0;
+  for (let i = 0; i < Math.min(5, pts.length); i++) {
+    cx += pts[i].pos.x; cy += pts[i].pos.y; count++;
+  }
+  if (count === 0) return;
+  cx /= count; cy /= count;
+  
+  // If center is way off, snap everything back
+  const targetX = clamp(cx, WALL_L - 20, WALL_R + 20);
+  const targetY = clamp(cy, -300, GY);
+  const dx = targetX - cx;
+  const dy = targetY - cy;
+  if (Math.abs(dx) > 1 || Math.abs(dy) > 1) {
+    for (const p of pts) {
+      p.pos.x += dx; p.pos.y += dy;
+      p.old.x += dx; p.old.y += dy;
+    }
+  }
+  
+  // If heavily severed (3+ limbs), add strong gravity pull to keep grounded
+  if (f.severed.size >= 3) {
+    for (const p of pts) {
+      if (p.pos.y < GY - 30) {
+        p.pos.y += 2; // extra gravity pull
+      }
+      // Heavy damping to prevent floating
+      const vel = vsub(p.pos, p.old);
+      p.old = vlerp(p.old, p.pos, 0.1);
+    }
   }
 }
 
@@ -1885,16 +1934,23 @@ const RagdollArena = () => {
           }
           // Smooth ragdoll stepping for both
           stepRagdoll(winner.rag.pts, winner.rag.sticks, spd, 0.3);
+          clampRagdollToArena(winner);
           if (!winner.ragdolling) poseRagdoll(winner);
           stepRagdoll(loser.rag.pts, loser.rag.sticks, spd, 0.4);
+          clampRagdollToArena(loser);
           if (!winner.grounded) { winner.vy += GRAV * spd; winner.y += winner.vy * spd; if (winner.y >= GY) { winner.y = GY; winner.vy = 0; winner.grounded = true; } }
           winner.x += winner.vx * spd; winner.vx *= 0.86;
+          winner.x = clamp(winner.x, WALL_L, WALL_R);
           winner.bob += 0.04 * spd;
           // Dampen loser velocity to prevent jitter
           for (const pt of loser.rag.pts) {
             const vel = vsub(pt.pos, pt.old);
             pt.old = vlerp(pt.old, pt.pos, 0.15); // heavy damping
           }
+          // Keep loser position synced to ragdoll center
+          const loserCenter = loser.rag.pts[4].pos;
+          loser.x = clamp(loserCenter.x, WALL_L, WALL_R);
+          loser.y = Math.min(loserCenter.y, GY);
         }
         if (g.koTimer <= 0) {
           g.round++;
@@ -1912,7 +1968,7 @@ const RagdollArena = () => {
       }
 
       if (g.rs !== 'fight' && g.rs !== 'ko') {
-        g.fighters.forEach(f => { if (f.ragdolling) stepRagdoll(f.rag.pts, f.rag.sticks, spd, 0.3); });
+        g.fighters.forEach(f => { if (f.ragdolling) { stepRagdoll(f.rag.pts, f.rag.sticks, spd, 0.3); clampRagdollToArena(f); } });
         if (fc % 3 === 0) setHud({ p1hp: p1.hp, p2hp: p2.hp, timer: Math.ceil(g.timer / 60), round: g.round, p1st: p1.stamina, p2st: p2.stamina, p1w: p1.wins, p2w: p2.wins, rs: g.rs, n1: p1.name, n2: p2.name, w1: p1.weapon.name, w2: p2.weapon.name, p1limb: !!p1.heldLimb, p2limb: !!p2.heldLimb });
         return;
       }
@@ -2000,6 +2056,7 @@ const RagdollArena = () => {
         if (f.bleedTimer > 0) { f.bleedTimer -= spd; f.severed.forEach(part => { const pidx = part === 'leftArm' ? 5 : part === 'rightArm' ? 8 : part === 'leftLeg' ? 11 : part === 'rightLeg' ? 14 : 1; if (fc % 4 === 0 && f.rag.pts[pidx]) spawnBlood(f.rag.pts[pidx].pos.x, f.rag.pts[pidx].pos.y, rng(-1, 1), 4, 2.5); }); }
         if (f.comboTimer > 0) { f.comboTimer -= spd; if (f.comboTimer <= 0) f.combo = 0; }
         stepRagdoll(f.rag.pts, f.rag.sticks, spd, 0.3);
+        clampRagdollToArena(f);
         if (!f.ragdolling) poseRagdoll(f);
         if (['slash', 'heavySlash', 'stab', 'overhead', 'jumpAtk', 'uppercut', 'spinSlash', 'dashStab', 'backflipKick', 'execution', 'wallFlip', 'divekick', 'kick', 'headKick', 'roundhouse', 'fatality', 'headbutt', 'punch', 'swordThrow'].includes(f.state) && fc % 3 === 0) spawnAfterimage(f);
       });
