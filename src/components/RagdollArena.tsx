@@ -1265,6 +1265,9 @@ const RagdollArena = () => {
         else if (g.keys.has('h')) { doAtk(p1, 'headKick'); p1HasInput = true; }
         else if (g.keys.has('n')) { doAtk(p1, 'kneeStrike'); p1HasInput = true; }
         else if (g.keys.has('m')) { doAtk(p1, 'roundhouse'); p1HasInput = true; }
+        else if (g.keys.has('b')) { doAtk(p1, 'headbutt'); p1HasInput = true; }
+        else if (g.keys.has('v')) { doSwordThrow(p1, 0); p1HasInput = true; }
+        else if (g.keys.has('c')) { doAtk(p1, 'punch'); p1HasInput = true; }
         else if (g.keys.has('x')) { doFatality(p1, p2); p1HasInput = true; }
         else if (g.keys.has('s') && g.keys.has('shift')) { ss(p1, 'block'); p1HasInput = true; }
         else if (g.keys.has('s')) { ss(p1, 'crouch'); p1HasInput = true; }
