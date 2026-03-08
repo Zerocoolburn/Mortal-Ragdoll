@@ -461,7 +461,7 @@ const RagdollArena = () => {
       const tipX = hand.x + Math.cos(ang) * wl;
       const tipY = hand.y + Math.sin(ang) * wl;
 
-      const isAtk = ['slash', 'heavySlash', 'overhead', 'stab', 'jumpAtk', 'uppercut', 'spinSlash', 'dashStab', 'limbSmash'].includes(f.state);
+      const isAtk = ['slash', 'heavySlash', 'overhead', 'stab', 'jumpAtk', 'uppercut', 'spinSlash', 'dashStab', 'limbSmash', 'backflipKick', 'execution'].includes(f.state);
       const ap2 = f.dur > 0 ? f.frame / f.dur : 0;
       if (isAtk && ap2 > 0.2 && ap2 < 0.7) {
         // Weapon trail glow
