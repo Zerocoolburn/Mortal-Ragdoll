@@ -195,12 +195,26 @@ function poseRagdoll(f: Fighter) {
     for (let i = 0; i < targets.length; i++) { targets[i].y += Math.sin(roll) * 20; targets[i].x += Math.cos(roll) * 5 * s; }
   }
 
-  if (['slash', 'heavySlash', 'stab', 'overhead', 'jumpAtk', 'limbSmash'].includes(f.state)) {
+  if (['slash', 'heavySlash', 'stab', 'overhead', 'jumpAtk', 'uppercut', 'spinSlash', 'dashStab', 'limbSmash'].includes(f.state)) {
     const reach = ap < 0.3 ? -15 : ap < 0.6 ? 28 : 10;
     const lift = ap < 0.3 ? -25 : ap < 0.6 ? 5 : -5;
     targets[9] = v((28 + reach) * s, -64 + lift + bob2 + co + jmp);
     targets[10] = v((35 + reach * 1.3) * s, -46 + lift + bob2 + co + jmp);
-    // For limb smash, also swing left arm wide
+    if (f.state === 'uppercut') {
+      const uLift = ap < 0.25 ? 0 : ap < 0.5 ? -30 : -15;
+      targets[9] = v((20 + reach * 0.6) * s, -74 + uLift + bob2 + jmp);
+      targets[10] = v((25 + reach * 0.8) * s, -56 + uLift + bob2 + jmp);
+    }
+    if (f.state === 'spinSlash') {
+      const spinAng = ap * Math.PI * 2;
+      const sx2 = Math.cos(spinAng) * 30, sy2 = Math.sin(spinAng) * 15;
+      targets[9] = v((28 + sx2) * s, -64 + sy2 + bob2 + jmp);
+      targets[10] = v((35 + sx2 * 1.2) * s, -46 + sy2 + bob2 + jmp);
+    }
+    if (f.state === 'dashStab') {
+      targets[9] = v((30 + reach * 1.5) * s, -70 + bob2 + jmp);
+      targets[10] = v((40 + reach * 1.8) * s, -62 + bob2 + jmp);
+    }
     if (f.state === 'limbSmash' && f.heldLimb) {
       const limbReach = ap < 0.25 ? -20 : ap < 0.55 ? 35 : 5;
       const limbLift = ap < 0.25 ? -35 : ap < 0.55 ? 10 : -10;
