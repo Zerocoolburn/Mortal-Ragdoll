@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { CHARACTERS, getCharacter, type CharacterDef } from './CharacterData';
+import { CHARACTERS, getCharacter, type CharacterDef, BOSSES, getBoss, type BossDef } from './CharacterData';
 
 // ═══════════════════════════════════════════════════════
 // MATH
