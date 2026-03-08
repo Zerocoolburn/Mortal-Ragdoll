@@ -126,7 +126,7 @@ const WEAPONS: Record<string, Weapon> = {
   spear:      { name: 'Spear',      len: 110, weight: 0.8, slashDmg: 7,  stabDmg: 16, heavyDmg: 14, speed: 1.4, color: '#876', blade: '#bbc', type: 'spear' },
 };
 
-interface AtkDef { frames: number; hitStart: number; hitEnd: number; dmgKey: 'slashDmg' | 'stabDmg' | 'heavyDmg'; kb: V; stCost: number; canSever: boolean; isKick?: boolean }
+interface AtkDef { frames: number; hitStart: number; hitEnd: number; dmgKey: 'slashDmg' | 'stabDmg' | 'heavyDmg'; kb: V; stCost: number; canSever: boolean; isKick?: boolean; isHeadbutt?: boolean; isPunch?: boolean }
 const ATK: Record<string, AtkDef> = {
   slash:        { frames: 18, hitStart: 5,  hitEnd: 11, dmgKey: 'slashDmg', kb: v(5, -1),   stCost: 8,  canSever: true },
   heavySlash:   { frames: 32, hitStart: 12, hitEnd: 22, dmgKey: 'heavyDmg', kb: v(12, -6),  stCost: 18, canSever: true },
@@ -146,6 +146,9 @@ const ATK: Record<string, AtkDef> = {
   headKick:     { frames: 20, hitStart: 6,  hitEnd: 14, dmgKey: 'heavyDmg', kb: v(6, -12),  stCost: 10, canSever: true, isKick: true },
   kneeStrike:   { frames: 14, hitStart: 3,  hitEnd: 10, dmgKey: 'stabDmg',  kb: v(3, -5),   stCost: 5,  canSever: false, isKick: true },
   roundhouse:   { frames: 22, hitStart: 6,  hitEnd: 16, dmgKey: 'heavyDmg', kb: v(14, -8),  stCost: 14, canSever: true, isKick: true },
+  headbutt:     { frames: 16, hitStart: 4,  hitEnd: 10, dmgKey: 'stabDmg',  kb: v(10, -6),  stCost: 8,  canSever: false, isHeadbutt: true },
+  swordThrow:   { frames: 20, hitStart: 6,  hitEnd: 8,  dmgKey: 'heavyDmg', kb: v(12, -4),  stCost: 5,  canSever: true },
+  punch:        { frames: 12, hitStart: 3,  hitEnd: 8,  dmgKey: 'stabDmg',  kb: v(6, -2),   stCost: 4,  canSever: false, isPunch: true },
   fatality:     { frames: 80, hitStart: 10, hitEnd: 70, dmgKey: 'heavyDmg', kb: v(2, -2),   stCost: 0,  canSever: true },
 };
 
